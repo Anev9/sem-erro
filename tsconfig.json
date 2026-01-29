@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "app/scripts/importar-alunos.js"  ],
   "exclude": ["node_modules"]
 }
