@@ -26,8 +26,6 @@ export default function LoginPage() {
     
     if (!password) {
       newErrors.password = 'Por favor, insira sua senha';
-    } else if (password.length < 6) {
-      newErrors.password = 'A senha deve ter pelo menos 6 caracteres';
     }
     
     setErrors(newErrors);
@@ -36,36 +34,29 @@ export default function LoginPage() {
       setLoading(true);
       
       try {
-        // AUTENTICAÇÃO COM SUPABASE
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { data: aluno, error } = await supabase
+          .from('alunos')
+          .select('*')
+          .eq('e-mail', email)
+          .eq('senha', password)
+          .single();
 
-        if (authError) {
+        if (error || !aluno) {
           throw new Error('E-mail ou senha incorretos');
         }
 
-        // BUSCAR O PERFIL DO USUÁRIO PARA SABER SE É ADMIN OU ALUNO
-        const { data: profile, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', authData.user.id)
-          .single();
-
-        if (profileError) {
-          throw new Error('Erro ao buscar perfil do usuário');
-        }
-
-        // REDIRECIONAR BASEADO NO ROLE
-        if (profile.role === 'admin') {
+        // SALVAR DADOS DO ALUNO NO LOCALSTORAGE
+        localStorage.setItem('aluno', JSON.stringify(aluno));
+        
+        // REDIRECIONAR BASEADO NO TIPO
+        if (aluno.tipo === 'admin') {
           router.push('/dashboard-admin');
         } else {
           router.push('/dashboard-aluno');
         }
         
       } catch (error: any) {
-        setErrors({ ...newErrors, password: error.message || 'Erro ao fazer login. Tente novamente.' });
+        setErrors({ ...newErrors, password: error.message || 'E-mail ou senha incorretos' });
         setLoading(false);
       }
     }
@@ -107,7 +98,6 @@ export default function LoginPage() {
         position: 'relative',
         overflow: 'hidden'
       }}>
-        {/* Background decorations */}
         <div style={{
           position: 'absolute',
           top: '10%',
@@ -137,14 +127,12 @@ export default function LoginPage() {
           position: 'relative',
           zIndex: 1
         }}>
-          {/* Card de Login */}
           <div style={{
             backgroundColor: 'white',
             borderRadius: '1.5rem',
             padding: '3rem 2.5rem',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)'
           }}>
-            {/* Logo e Título */}
             <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
               <div className="floating" style={{
                 width: '5rem',
@@ -180,9 +168,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Formulário */}
             <form onSubmit={handleSubmit}>
-              {/* Campo E-mail */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ position: 'relative' }}>
                   <Mail style={{
@@ -238,7 +224,6 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Campo Senha */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ position: 'relative' }}>
                   <Lock style={{
@@ -320,7 +305,6 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Lembrar-me e Esqueci senha */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -378,7 +362,6 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              {/* Botão Entrar */}
               <button 
                 type="submit"
                 disabled={loading}
@@ -430,7 +413,6 @@ export default function LoginPage() {
                 )}
               </button>
 
-              {/* Botão Voltar para o site */}
               <button 
                 type="button"
                 onClick={() => router.push('/')}
@@ -464,10 +446,8 @@ export default function LoginPage() {
                 Voltar para o site
               </button>
             </form>
-
           </div>
 
-          {/* Footer */}
           <div style={{
             textAlign: 'center',
             marginTop: '2rem',

@@ -1,26 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User } from 'lucide-react'
 
-export default function DashboardAdmin() {
+export default function DashboardAluno() {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
-
-  useEffect(() => {
-    const alunoData = localStorage.getItem('aluno')
-    if (!alunoData) {
-      router.push('/login')
-      return
-    }
-    const aluno = JSON.parse(alunoData)
-    if (aluno.tipo !== 'admin') {
-      alert('Acesso negado!')
-      router.push('/dashboard-aluno')
-    }
-  }, [router])
 
   const menuItems = [
     {
@@ -32,29 +19,26 @@ export default function DashboardAdmin() {
       submenu: [
         { label: 'Checklists futuros', href: '/checklists-futuros' },
         { label: 'Checklists criados', href: '/checklists-criados' },
+        { label: 'Upload checklist excel', href: '/upload-questionarios' },
+        { label: 'Alertas adicionais', href: '/alertas-adicionais' },
       ]
     },
     {
       title: 'Organização',
       submenu: [
-        { label: 'Visão Geral', href: '/organizacao' },
-        { label: 'Grupos de Empresa', href: '/organizacao/grupos-empresa' },
-        { label: 'Copilotos', href: '/organizacao/copilotos' },
-        { label: 'Tipos de Negócio', href: '/organizacao/tipos-negocio' },
+        { label: 'Colaboradores', href: '/colaboradores' },
+        { label: 'Minhas empresas', href: '/minhas-empresas' },
       ]
     },
     {
       title: 'Relatórios',
       submenu: [
-        { label: 'Performance', href: '/performance' },
+        { label: 'Performance dos funcionários', href: '/performance-funcionarios' },
         { label: 'Respostas', href: '/respostas' },
-      ]
-    },
-    {
-      title: 'Sistema',
-      submenu: [
-        { label: 'Usuários', href: '/usuarios' },
-        { label: 'Tutorial', href: '/tutorial' },
+        { label: 'Resultados checklist', href: '/resultados-checklist' },
+        { label: 'Feitos por empresa', href: '/feitos-por-empresa' },
+        { label: 'Indicador', href: '/indicador' },
+        { label: 'Feitos por departamento', href: '/feitos-por-departamento' },
       ]
     }
   ]
@@ -83,7 +67,7 @@ export default function DashboardAdmin() {
                 <div style={{ width: '3rem', height: '3rem', borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: 'white' }}>
                   <img src="/logo-semerro.jpg" alt="Sem Erro" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
-                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>SEM ERRO - ADMIN</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>SEM ERRO</span>
               </div>
 
               <div className="desktop-menu" style={{ gap: '0.5rem', alignItems: 'center' }}>
@@ -116,7 +100,7 @@ export default function DashboardAdmin() {
                     <User size={18} />
                     Perfil
                   </button>
-                  <button onClick={() => { localStorage.removeItem('aluno'); router.push('/login'); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
+                  <button onClick={() => router.push('/login')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
                     <LogOut size={18} />
                     Sair
                   </button>
@@ -139,7 +123,7 @@ export default function DashboardAdmin() {
               </div>
               <div style={{ padding: '1.5rem', textAlign: 'center', color: '#9ca3af' }}>
                 <CheckSquare size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                <p>Nenhum checklist cadastrado ainda</p>
+                <p style={{ margin: 0 }}>Nenhum checklist cadastrado ainda</p>
               </div>
             </div>
 
@@ -150,7 +134,7 @@ export default function DashboardAdmin() {
               <div style={{ padding: '1.5rem', minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#9ca3af' }}>
                 <div>
                   <FileText size={48} style={{ margin: '0 auto 1rem' }} />
-                  <p>Gráfico de performance</p>
+                  <p>Gráfico de performance será exibido aqui</p>
                 </div>
               </div>
             </div>
