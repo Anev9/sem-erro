@@ -35,6 +35,7 @@ export default function DashboardAluno() {
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [performance, setPerformance] = useState<PerformanceData[]>([])
   const [loading, setLoading] = useState(true)
+  const [userName, setUserName] = useState('')
 
   const menuItems = [
     {
@@ -71,8 +72,21 @@ export default function DashboardAluno() {
   ]
 
   useEffect(() => {
+    // ✅ VERIFICAÇÃO ATUALIZADA
+    const userData = localStorage.getItem('user')
+    if (!userData) {
+      router.push('/login')
+      return
+    }
+    const user = JSON.parse(userData)
+    // Se for admin, redireciona para dashboard admin
+    if (user.role === 'admin') {
+      router.push('/dashboard-admin')
+      return
+    }
+    setUserName(user.full_name || user.email)
     buscarDados()
-  }, [])
+  }, [router])
 
   async function buscarDados() {
     try {
@@ -166,6 +180,11 @@ export default function DashboardAluno() {
     }
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('user')
+    router.push('/login')
+  }
+
   return (
     <>
       <style>{`
@@ -230,7 +249,7 @@ export default function DashboardAluno() {
                     <User size={18} />
                     Perfil
                   </button>
-                  <button onClick={() => router.push('/login')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
+                  <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
                     <LogOut size={18} />
                     Sair
                   </button>
@@ -306,7 +325,7 @@ export default function DashboardAluno() {
                     Perfil
                   </button>
                   <button 
-                    onClick={() => router.push('/login')}
+                    onClick={handleLogout}
                     style={{
                       flex: 1,
                       padding: '0.5rem',
@@ -327,6 +346,13 @@ export default function DashboardAluno() {
 
         {/* Conteúdo Principal */}
         <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+          <div style={{ marginBottom: '2rem' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
+              Bem-vindo, {userName}!
+            </h1>
+            <p style={{ color: '#6b7280' }}>Painel do Cliente</p>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
             
             {/* Card: Checklists dos Últimos 30 Dias */}

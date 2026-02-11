@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Calendar, Save, Plus, Trash2, Copy, Key, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-// Tipos
 type Template = {
   id: string
   nome: string
   descricao: string | null
   categoria: string | null
-  total_itens: number
+  total_itens?: number
 }
 
 type ItemChecklist = {
@@ -23,28 +22,26 @@ type ItemChecklist = {
 export default function CriarChecklistFuturoPage() {
   const router = useRouter()
   
-  // Estados básicos
-  const [recorrente, setRecorrente] = useState<'modelo' | 'proprio' | 'chave'>('modelo')
+  const [recorrente, setRecorrente] = useState<'modelo' | 'proprio' | 'chave'>('proprio')
   const [proximaExecucao, setProximaExecucao] = useState('')
   const [tipoNegocio, setTipoNegocio] = useState('')
   const [nomeChecklist, setNomeChecklist] = useState('')
   const [descricao, setDescricao] = useState('')
   const [loading, setLoading] = useState(false)
   
-  // Estados para templates
   const [templates, setTemplates] = useState<Template[]>([])
   const [templateSelecionado, setTemplateSelecionado] = useState<string>('')
   const [loadingTemplates, setLoadingTemplates] = useState(false)
+  const [itensDoTemplate, setItensDoTemplate] = useState<{[key: string]: any[]}>({})
+  const [templateExpandido, setTemplateExpandido] = useState<string | null>(null)
   
-  // Estados para criar do próprio jeito
   const [itens, setItens] = useState<ItemChecklist[]>([
     { titulo: '', descricao: '', ordem: 1 }
   ])
   
-  // Estados para usar chave
   const [chaveCompartilhamento, setChaveCompartilhamento] = useState('')
+  const [mensagemSalvamento, setMensagemSalvamento] = useState('')
 
-  // Buscar templates quando selecionar essa opção
   useEffect(() => {
     if (recorrente === 'modelo') {
       buscarTemplates()
@@ -52,41 +49,34 @@ export default function CriarChecklistFuturoPage() {
   }, [recorrente])
 
   async function buscarTemplates() {
-    const { data: { session } } = await supabase.auth.getSession()
-    console.log('🔐 Sessão:', session)
-    console.log('👤 Usuário:', session?.user?.email)
-    
-    if (!session) {
-      alert('Você não está autenticado!')
-      return
-    }
-
     setLoadingTemplates(true)
+    
     try {
-      // Primeiro, buscar os templates
       const { data: templatesData, error: errorTemplates } = await supabase
         .from('checklist_templates')
         .select('id, nome, descricao, categoria')
         .order('nome')
 
-      if (errorTemplates) {
-        console.error('❌ Erro ao buscar templates:', errorTemplates)
-        throw errorTemplates
-      }
+      if (errorTemplates) throw errorTemplates
 
-      console.log('📋 Templates encontrados:', templatesData)
+      const templatesUnicosPorId = templatesData?.reduce((acc: Template[], current) => {
+        const existe = acc.find(item => item.id === current.id)
+        if (!existe) acc.push(current)
+        return acc
+      }, []) || []
 
-      // Depois, buscar a contagem de itens para cada template
+      const templatesUnicos = templatesUnicosPorId.reduce((acc: Template[], current) => {
+        const existe = acc.find(item => item.nome === current.nome)
+        if (!existe) acc.push(current)
+        return acc
+      }, [])
+
       const templatesComContagem = await Promise.all(
-        (templatesData || []).map(async (template) => {
-          const { count, error: errorCount } = await supabase
+        templatesUnicos.map(async (template) => {
+          const { count } = await supabase
             .from('checklist_template_itens')
             .select('*', { count: 'exact', head: true })
             .eq('template_id', template.id)
-
-          if (errorCount) {
-            console.error(`❌ Erro ao contar itens do template ${template.id}:`, errorCount)
-          }
 
           return {
             ...template,
@@ -95,35 +85,60 @@ export default function CriarChecklistFuturoPage() {
         })
       )
 
-      console.log('✅ Templates formatados:', templatesComContagem)
       setTemplates(templatesComContagem)
 
     } catch (error) {
-      console.error('❌ Erro geral:', error)
-      alert('Erro ao carregar templates: ' + (error as Error).message)
+      console.error('Erro ao carregar templates:', error)
     } finally {
       setLoadingTemplates(false)
     }
   }
 
-  // Adicionar novo item
+  async function verItensDoTemplate(templateId: string) {
+    if (templateExpandido === templateId) {
+      setTemplateExpandido(null)
+      return
+    }
+
+    if (itensDoTemplate[templateId]) {
+      setTemplateExpandido(templateId)
+      return
+    }
+
+    try {
+      const { data: itens, error } = await supabase
+        .from('checklist_template_itens')
+        .select('*')
+        .eq('template_id', templateId)
+        .order('ordem')
+
+      if (error) throw error
+
+      setItensDoTemplate(prev => ({
+        ...prev,
+        [templateId]: itens || []
+      }))
+      setTemplateExpandido(templateId)
+
+    } catch (error) {
+      console.error('Erro ao buscar itens:', error)
+    }
+  }
+
   function adicionarItem() {
     setItens([...itens, { titulo: '', descricao: '', ordem: itens.length + 1 }])
   }
 
-  // Remover item
   function removerItem(index: number) {
     if (itens.length === 1) {
       alert('Você precisa ter pelo menos 1 item no checklist')
       return
     }
     const novosItens = itens.filter((_, i) => i !== index)
-    // Reordenar
     novosItens.forEach((item, i) => item.ordem = i + 1)
     setItens(novosItens)
   }
 
-  // Atualizar item
   function atualizarItem(index: number, campo: 'titulo' | 'descricao', valor: string) {
     const novosItens = [...itens]
     novosItens[index][campo] = valor
@@ -133,21 +148,69 @@ export default function CriarChecklistFuturoPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setMensagemSalvamento('')
 
     try {
-      if (recorrente === 'modelo') {
-        await criarDeTemplate()
-      } else if (recorrente === 'proprio') {
+      if (recorrente === 'proprio') {
         await criarPropio()
+      } else if (recorrente === 'modelo') {
+        await criarDeTemplate()
       } else if (recorrente === 'chave') {
         await criarDeChave()
       }
-    } catch (error) {
-      console.error('Erro ao criar checklist:', error)
-      alert('Erro ao criar checklist')
+    } catch (error: any) {
+      console.error('ERRO:', error)
+      alert(`Erro: ${error?.message || 'Erro desconhecido'}`)
+      setMensagemSalvamento(`❌ Erro: ${error?.message || 'Erro desconhecido'}`)
     } finally {
       setLoading(false)
     }
+  }
+
+  async function criarPropio() {
+    const itensValidos = itens.filter(item => item.titulo.trim() !== '')
+    
+    if (itensValidos.length === 0) {
+      alert('❌ Adicione pelo menos 1 item com título')
+      return
+    }
+
+    setMensagemSalvamento('⏳ Salvando checklist...')
+
+    const { data: checklistFuturo, error: errorChecklist } = await supabase
+      .from('checklists_futuros')
+      .insert({
+        nome: nomeChecklist,
+        descricao: descricao || null,
+        tipo_negocio: tipoNegocio,
+        proxima_execucao: proximaExecucao,
+        ativo: true
+      })
+      .select()
+      .single()
+
+    if (errorChecklist) throw errorChecklist
+
+    setMensagemSalvamento('⏳ Salvando itens...')
+
+    const itensParaInserir = itensValidos.map((item: ItemChecklist) => ({
+      checklist_futuro_id: checklistFuturo.id,
+      titulo: item.titulo,
+      descricao: item.descricao || null,
+      ordem: item.ordem
+    }))
+
+    const { error: errorItens } = await supabase
+      .from('checklist_futuro_itens')
+      .insert(itensParaInserir)
+
+    if (errorItens) throw errorItens
+
+    setMensagemSalvamento(`✅ Sucesso! "${nomeChecklist}" criado!`)
+
+    setTimeout(() => {
+      router.push('/checklists-futuros')
+    }, 1500)
   }
 
   async function criarDeTemplate() {
@@ -156,7 +219,8 @@ export default function CriarChecklistFuturoPage() {
       return
     }
 
-    // 1. Buscar itens do template
+    setMensagemSalvamento('⏳ Buscando template...')
+
     const { data: itensTemplate, error: errorItens } = await supabase
       .from('checklist_template_itens')
       .select('*')
@@ -165,12 +229,13 @@ export default function CriarChecklistFuturoPage() {
 
     if (errorItens) throw errorItens
 
-    // 2. Criar checklist futuro
+    setMensagemSalvamento('⏳ Criando checklist...')
+
     const { data: checklistFuturo, error: errorChecklist } = await supabase
       .from('checklists_futuros')
       .insert({
         nome: nomeChecklist,
-        descricao,
+        descricao: descricao || null,
         tipo_negocio: tipoNegocio,
         proxima_execucao: proximaExecucao,
         template_id: templateSelecionado,
@@ -181,11 +246,12 @@ export default function CriarChecklistFuturoPage() {
 
     if (errorChecklist) throw errorChecklist
 
-    // 3. Copiar itens para o checklist futuro
+    setMensagemSalvamento('⏳ Salvando itens...')
+
     const itensParaInserir = itensTemplate.map((item: any) => ({
       checklist_futuro_id: checklistFuturo.id,
       titulo: item.titulo,
-      descricao: item.descricao,
+      descricao: item.descricao || null,
       ordem: item.ordem
     }))
 
@@ -195,50 +261,11 @@ export default function CriarChecklistFuturoPage() {
 
     if (errorItensInserir) throw errorItensInserir
 
-    alert('Checklist criado com sucesso!')
-    router.push('/checklists-futuros')
-  }
-
-  async function criarPropio() {
-    // Validar itens
-    const itensValidos = itens.filter(item => item.titulo.trim() !== '')
+    setMensagemSalvamento(`✅ Checklist criado com ${itensTemplate.length} itens!`)
     
-    if (itensValidos.length === 0) {
-      alert('Adicione pelo menos 1 item com título')
-      return
-    }
-
-    // 1. Criar checklist futuro
-    const { data: checklistFuturo, error: errorChecklist } = await supabase
-      .from('checklists_futuros')
-      .insert({
-        nome: nomeChecklist,
-        descricao,
-        tipo_negocio: tipoNegocio,
-        proxima_execucao: proximaExecucao,
-        ativo: true
-      })
-      .select()
-      .single()
-
-    if (errorChecklist) throw errorChecklist
-
-    // 2. Inserir itens
-    const itensParaInserir = itensValidos.map((item: ItemChecklist) => ({
-      checklist_futuro_id: checklistFuturo.id,
-      titulo: item.titulo,
-      descricao: item.descricao,
-      ordem: item.ordem
-    }))
-
-    const { error: errorItens } = await supabase
-      .from('checklist_futuro_itens')
-      .insert(itensParaInserir)
-
-    if (errorItens) throw errorItens
-
-    alert('Checklist criado com sucesso!')
-    router.push('/checklists-futuros')
+    setTimeout(() => {
+      router.push('/checklists-futuros')
+    }, 1500)
   }
 
   async function criarDeChave() {
@@ -247,7 +274,8 @@ export default function CriarChecklistFuturoPage() {
       return
     }
 
-    // 1. Buscar checklist pela chave
+    setMensagemSalvamento('⏳ Buscando checklist...')
+
     const { data: checklistOriginal, error: errorBusca } = await supabase
       .from('checklists_futuros')
       .select(`
@@ -258,11 +286,13 @@ export default function CriarChecklistFuturoPage() {
       .single()
 
     if (errorBusca || !checklistOriginal) {
-      alert('Chave inválida ou checklist não encontrado')
+      alert('Chave inválida')
+      setMensagemSalvamento('❌ Chave inválida')
       return
     }
 
-    // 2. Criar cópia do checklist
+    setMensagemSalvamento('⏳ Importando...')
+
     const { data: novoChecklist, error: errorChecklist } = await supabase
       .from('checklists_futuros')
       .insert({
@@ -277,7 +307,6 @@ export default function CriarChecklistFuturoPage() {
 
     if (errorChecklist) throw errorChecklist
 
-    // 3. Copiar itens
     const itensParaInserir = checklistOriginal.itens.map((item: any) => ({
       checklist_futuro_id: novoChecklist.id,
       titulo: item.titulo,
@@ -291,16 +320,19 @@ export default function CriarChecklistFuturoPage() {
 
     if (errorItens) throw errorItens
 
-    alert('Checklist importado com sucesso!')
-    router.push('/checklists-futuros')
+    setMensagemSalvamento('✅ Checklist importado!')
+    
+    setTimeout(() => {
+      router.push('/checklists-futuros')
+    }, 1500)
   }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1.5rem' }}>
         
-        {/* Botão Voltar */}
         <button
+          type="button"
           onClick={() => router.push('/checklists-futuros')}
           style={{
             display: 'flex',
@@ -317,10 +349,9 @@ export default function CriarChecklistFuturoPage() {
           }}
         >
           <ArrowLeft size={18} />
-          Voltar para Checklists Programados
+          Voltar
         </button>
 
-        {/* Card principal */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '1rem',
@@ -334,12 +365,11 @@ export default function CriarChecklistFuturoPage() {
             color: '#1f2937',
             marginBottom: '0.5rem'
           }}>
-            Criando novo checklist que vai acontecer no futuro
+            Criar Checklist Futuro
           </h1>
 
           <form onSubmit={handleSubmit}>
             
-            {/* Seção Recorrente */}
             <div style={{ marginTop: '2rem', marginBottom: '2rem' }}>
               <h3 style={{ 
                 fontSize: '1.125rem', 
@@ -347,40 +377,10 @@ export default function CriarChecklistFuturoPage() {
                 color: '#1f2937',
                 marginBottom: '1rem'
               }}>
-                Recorrente
+                Como deseja criar?
               </h3>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  padding: '0.75rem',
-                  borderRadius: '0.5rem',
-                  backgroundColor: recorrente === 'modelo' ? '#eff6ff' : 'transparent',
-                  border: `2px solid ${recorrente === 'modelo' ? '#3b82f6' : 'transparent'}`,
-                  transition: 'all 0.2s ease'
-                }}>
-                  <input
-                    type="radio"
-                    name="recorrente"
-                    value="modelo"
-                    checked={recorrente === 'modelo'}
-                    onChange={() => setRecorrente('modelo')}
-                    style={{ 
-                      width: '1.25rem', 
-                      height: '1.25rem', 
-                      cursor: 'pointer',
-                      accentColor: '#3b82f6'
-                    }}
-                  />
-                  <Copy size={20} color={recorrente === 'modelo' ? '#3b82f6' : '#6b7280'} />
-                  <span style={{ fontSize: '1rem', color: '#374151', fontWeight: recorrente === 'modelo' ? '600' : '400' }}>
-                    Copiar um modelo pronto pra mim
-                  </span>
-                </label>
-
                 <label style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -418,6 +418,36 @@ export default function CriarChecklistFuturoPage() {
                   cursor: 'pointer',
                   padding: '0.75rem',
                   borderRadius: '0.5rem',
+                  backgroundColor: recorrente === 'modelo' ? '#eff6ff' : 'transparent',
+                  border: `2px solid ${recorrente === 'modelo' ? '#3b82f6' : 'transparent'}`,
+                  transition: 'all 0.2s ease'
+                }}>
+                  <input
+                    type="radio"
+                    name="recorrente"
+                    value="modelo"
+                    checked={recorrente === 'modelo'}
+                    onChange={() => setRecorrente('modelo')}
+                    style={{ 
+                      width: '1.25rem', 
+                      height: '1.25rem', 
+                      cursor: 'pointer',
+                      accentColor: '#3b82f6'
+                    }}
+                  />
+                  <Copy size={20} color={recorrente === 'modelo' ? '#3b82f6' : '#6b7280'} />
+                  <span style={{ fontSize: '1rem', color: '#374151', fontWeight: recorrente === 'modelo' ? '600' : '400' }}>
+                    Copiar um modelo pronto
+                  </span>
+                </label>
+
+                <label style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.75rem',
+                  cursor: 'pointer',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
                   backgroundColor: recorrente === 'chave' ? '#eff6ff' : 'transparent',
                   border: `2px solid ${recorrente === 'chave' ? '#3b82f6' : 'transparent'}`,
                   transition: 'all 0.2s ease'
@@ -437,15 +467,13 @@ export default function CriarChecklistFuturoPage() {
                   />
                   <Key size={20} color={recorrente === 'chave' ? '#3b82f6' : '#6b7280'} />
                   <span style={{ fontSize: '1rem', color: '#374151', fontWeight: recorrente === 'chave' ? '600' : '400' }}>
-                    Usar uma chave
+                    Usar chave de compartilhamento
                   </span>
                 </label>
               </div>
             </div>
 
-            {/* CONTEÚDO BASEADO NA SELEÇÃO */}
-            
-            {/* OPÇÃO 1: COPIAR MODELO */}
+            {/* SEÇÃO: COPIAR MODELO */}
             {recorrente === 'modelo' && (
               <div style={{ 
                 padding: '1.5rem', 
@@ -473,63 +501,136 @@ export default function CriarChecklistFuturoPage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {templates.map((template) => (
-                      <label
-                        key={template.id}
-                        style={{
-                          display: 'flex',
-                          padding: '1rem',
-                          backgroundColor: templateSelecionado === template.id ? '#eff6ff' : 'white',
-                          border: `2px solid ${templateSelecionado === template.id ? '#3b82f6' : '#e5e7eb'}`,
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="template"
-                          value={template.id}
-                          checked={templateSelecionado === template.id}
-                          onChange={(e) => setTemplateSelecionado(e.target.value)}
-                          style={{ 
-                            marginRight: '0.75rem',
-                            width: '1.125rem',
-                            height: '1.125rem',
+                      <div key={template.id}>
+                        <label
+                          style={{
+                            display: 'flex',
+                            padding: '1rem',
+                            backgroundColor: templateSelecionado === template.id ? '#eff6ff' : 'white',
+                            border: `2px solid ${templateSelecionado === template.id ? '#3b82f6' : '#e5e7eb'}`,
+                            borderRadius: templateExpandido === template.id ? '0.5rem 0.5rem 0 0' : '0.5rem',
                             cursor: 'pointer',
-                            accentColor: '#3b82f6'
+                            transition: 'all 0.2s ease'
                           }}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ 
-                            fontWeight: '600', 
-                            color: '#1f2937',
-                            marginBottom: '0.25rem'
-                          }}>
-                            {template.nome}
+                        >
+                          <input
+                            type="radio"
+                            name="template"
+                            value={template.id}
+                            checked={templateSelecionado === template.id}
+                            onChange={(e) => setTemplateSelecionado(e.target.value)}
+                            style={{ 
+                              marginRight: '0.75rem',
+                              width: '1.125rem',
+                              height: '1.125rem',
+                              cursor: 'pointer',
+                              accentColor: '#3b82f6',
+                              flexShrink: 0
+                            }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ 
+                              fontWeight: '600', 
+                              color: '#1f2937',
+                              marginBottom: '0.25rem'
+                            }}>
+                              {template.nome}
+                            </div>
+                            <div style={{ 
+                              fontSize: '0.875rem', 
+                              color: '#6b7280',
+                              marginBottom: '0.5rem'
+                            }}>
+                              {template.descricao || 'Sem descrição'}
+                            </div>
+                            <div style={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem'
+                            }}>
+                              <span style={{ 
+                                fontSize: '0.8rem', 
+                                color: '#9ca3af'
+                              }}>
+                                {template.total_itens} {template.total_itens === 1 ? 'item' : 'itens'}
+                                {template.categoria && ` • ${template.categoria}`}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  verItensDoTemplate(template.id)
+                                }}
+                                style={{
+                                  fontSize: '0.8rem',
+                                  color: '#3b82f6',
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  textDecoration: 'underline',
+                                  padding: 0
+                                }}
+                              >
+                                {templateExpandido === template.id ? '▲ Ocultar itens' : '▼ Ver itens'}
+                              </button>
+                            </div>
                           </div>
-                          <div style={{ 
-                            fontSize: '0.875rem', 
-                            color: '#6b7280',
-                            marginBottom: '0.5rem'
+                        </label>
+
+                        {templateExpandido === template.id && itensDoTemplate[template.id] && (
+                          <div style={{
+                            backgroundColor: 'white',
+                            border: '2px solid #e5e7eb',
+                            borderTop: 'none',
+                            borderRadius: '0 0 0.5rem 0.5rem',
+                            padding: '1rem',
+                            marginTop: '-1px'
                           }}>
-                            {template.descricao || 'Sem descrição'}
+                            <h5 style={{
+                              fontSize: '0.875rem',
+                              fontWeight: '600',
+                              color: '#6b7280',
+                              marginBottom: '0.75rem'
+                            }}>
+                              Itens do checklist:
+                            </h5>
+                            <ol style={{
+                              margin: 0,
+                              paddingLeft: '1.5rem',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.5rem'
+                            }}>
+                              {itensDoTemplate[template.id].map((item: any) => (
+                                <li key={item.id} style={{
+                                  fontSize: '0.875rem',
+                                  color: '#374151',
+                                  lineHeight: '1.5'
+                                }}>
+                                  <strong>{item.titulo}</strong>
+                                  {item.descricao && (
+                                    <span style={{ 
+                                      color: '#6b7280',
+                                      display: 'block',
+                                      marginTop: '0.25rem',
+                                      fontSize: '0.8rem'
+                                    }}>
+                                      {item.descricao}
+                                    </span>
+                                  )}
+                                </li>
+                              ))}
+                            </ol>
                           </div>
-                          <div style={{ 
-                            fontSize: '0.8rem', 
-                            color: '#9ca3af'
-                          }}>
-                            {template.total_itens} {template.total_itens === 1 ? 'item' : 'itens'}
-                            {template.categoria && ` • ${template.categoria}`}
-                          </div>
-                        </div>
-                      </label>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
               </div>
             )}
 
-            {/* OPÇÃO 2: FAZER DO PRÓPRIO JEITO */}
+            {/* SEÇÃO: FAZER DO PRÓPRIO JEITO */}
             {recorrente === 'proprio' && (
               <div style={{ 
                 padding: '1.5rem', 
@@ -656,7 +757,7 @@ export default function CriarChecklistFuturoPage() {
               </div>
             )}
 
-            {/* OPÇÃO 3: USAR CHAVE */}
+            {/* SEÇÃO: CHAVE DE COMPARTILHAMENTO */}
             {recorrente === 'chave' && (
               <div style={{ 
                 padding: '1.5rem', 
@@ -677,7 +778,7 @@ export default function CriarChecklistFuturoPage() {
                   color: '#6b7280',
                   marginBottom: '1rem'
                 }}>
-                  Digite a chave que foi compartilhada com você para importar um checklist
+                  Digite a chave que foi compartilhada com você
                 </p>
                 <input
                   type="text"
@@ -708,7 +809,6 @@ export default function CriarChecklistFuturoPage() {
               gap: '1.5rem',
               marginBottom: '1.75rem'
             }}>
-              {/* Próxima execução */}
               <div>
                 <label style={{ 
                   display: 'block', 
@@ -719,39 +819,23 @@ export default function CriarChecklistFuturoPage() {
                 }}>
                   Próxima execução *
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <Calendar
-                    size={20}
-                    style={{
-                      position: 'absolute',
-                      right: '1rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: '#9ca3af',
-                      pointerEvents: 'none'
-                    }}
-                  />
-                  <input
-                    type="date"
-                    value={proximaExecucao}
-                    onChange={(e) => setProximaExecucao(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '0.875rem 1rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem',
-                      outline: 'none',
-                      backgroundColor: 'white'
-                    }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
-                  />
-                </div>
+                <input
+                  type="date"
+                  value={proximaExecucao}
+                  onChange={(e) => setProximaExecucao(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem 1rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    backgroundColor: 'white'
+                  }}
+                />
               </div>
 
-              {/* Tipo de negócio */}
               <div>
                 <label style={{ 
                   display: 'block', 
@@ -776,8 +860,6 @@ export default function CriarChecklistFuturoPage() {
                     cursor: 'pointer',
                     backgroundColor: 'white'
                   }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
                 >
                   <option value="">Selecione...</option>
                   <option value="supermercado">Supermercado</option>
@@ -789,7 +871,6 @@ export default function CriarChecklistFuturoPage() {
               </div>
             </div>
 
-            {/* Nome do checklist */}
             <div style={{ marginBottom: '1.75rem' }}>
               <label style={{ 
                 display: 'block', 
@@ -815,12 +896,9 @@ export default function CriarChecklistFuturoPage() {
                   outline: 'none',
                   backgroundColor: 'white'
                 }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
               />
             </div>
 
-            {/* Descrição */}
             <div style={{ marginBottom: '2rem' }}>
               <label style={{ 
                 display: 'block', 
@@ -829,13 +907,13 @@ export default function CriarChecklistFuturoPage() {
                 color: '#374151',
                 fontSize: '0.95rem'
               }}>
-                Descrição ou observações
+                Descrição
               </label>
               <textarea
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Adicione informações adicionais sobre este checklist"
-                rows={4}
+                placeholder="Adicione informações adicionais"
+                rows={3}
                 style={{
                   width: '100%',
                   padding: '0.875rem 1rem',
@@ -847,12 +925,28 @@ export default function CriarChecklistFuturoPage() {
                   backgroundColor: 'white',
                   fontFamily: 'inherit'
                 }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
               />
             </div>
 
-            {/* Botão Criar */}
+            {mensagemSalvamento && (
+              <div style={{
+                marginBottom: '1.5rem',
+                padding: '1rem 1.5rem',
+                backgroundColor: mensagemSalvamento.includes('❌') ? '#fee2e2' : 
+                               mensagemSalvamento.includes('✅') ? '#dcfce7' : '#dbeafe',
+                border: `2px solid ${mensagemSalvamento.includes('❌') ? '#ef4444' : 
+                                    mensagemSalvamento.includes('✅') ? '#22c55e' : '#3b82f6'}`,
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                fontWeight: '500',
+                color: mensagemSalvamento.includes('❌') ? '#991b1b' : 
+                       mensagemSalvamento.includes('✅') ? '#15803d' : '#1e40af',
+                textAlign: 'center'
+              }}>
+                {mensagemSalvamento}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -870,38 +964,10 @@ export default function CriarChecklistFuturoPage() {
                 fontSize: '1rem',
                 transition: 'all 0.2s ease'
               }}
-              onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = '#2563eb'
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = '#3b82f6'
-              }}
             >
               <Save size={18} />
-              {loading ? 'Criando...' : 'Criar Checklist'}
+              {loading ? 'Salvando...' : 'Criar Checklist'}
             </button>
-
-            {/* Texto explicativo */}
-            <div style={{
-              marginTop: '2rem',
-              padding: '1rem 1.25rem',
-              backgroundColor: '#f9fafb',
-              borderRadius: '0.5rem',
-              borderLeft: '4px solid #9ca3af'
-            }}>
-              <p style={{ 
-                color: '#6b7280', 
-                fontSize: '0.9rem',
-                margin: 0,
-                lineHeight: '1.6',
-                fontStyle: 'italic'
-              }}>
-                <strong>💡 Dica:</strong> Escolha uma das opções acima. 
-                {recorrente === 'modelo' && ' Ao copiar um template, você pode editar o nome e descrição mas os itens virão prontos.'}
-                {recorrente === 'proprio' && ' Criando do seu jeito, você tem controle total sobre todos os itens do checklist.'}
-                {recorrente === 'chave' && ' Usando uma chave, você importa um checklist que alguém compartilhou com você.'}
-              </p>
-            </div>
           </form>
         </div>
       </div>

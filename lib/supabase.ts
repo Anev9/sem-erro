@@ -15,3 +15,87 @@ export interface UserProfile {
   created_at: string
   updated_at: string
 }
+
+// ALUNO (cliente da Rosadas Tech)
+export interface Aluno {
+  id: number
+  email: string
+  nome_completo: string
+  telefone?: string
+  created_at: string
+  updated_at: string
+}
+
+// EMPRESA (supermercado do aluno)
+export interface Empresa {
+  id: string
+  aluno_id: number
+  nome_fantasia: string
+  razao_social?: string
+  cnpj?: string
+  endereco?: string
+  cidade?: string
+  estado?: string
+  telefone?: string
+  ativo: boolean
+  created_at: string
+  updated_at: string
+}
+
+// FUNCIONÁRIO (trabalha na empresa)
+export interface Funcionario {
+  id: string
+  empresa_id: string
+  email: string
+  nome_completo: string
+  cpf?: string
+  cargo?: string
+  telefone?: string
+  ativo: boolean
+  created_at: string
+  updated_at: string
+}
+
+// CHECKLIST TEMPLATE
+export interface ChecklistTemplate {
+  id: string
+  nome: string
+  descricao?: string
+  ativo: boolean
+  created_at: string
+}
+
+// CHECKLIST (atribuído a uma empresa)
+export interface Checklist {
+  id: string
+  template_id?: string
+  empresa_id?: string
+  nome: string
+  descricao?: string
+  status: 'pendente' | 'em_andamento' | 'concluido'
+  data_inicio?: string
+  data_fim?: string
+  created_at: string
+}
+
+// ITEM DO CHECKLIST
+export interface ChecklistItem {
+  id: string
+  checklist_id: string
+  titulo: string
+  descricao?: string
+  ordem: number
+  obrigatorio: boolean
+  tipo: 'checkbox' | 'texto' | 'numero' | 'foto'
+}
+
+// RESPOSTA DO CHECKLIST
+export interface ChecklistResposta {
+  id: string
+  checklist_id: string
+  item_id: string
+  funcionario_id?: string
+  resposta?: string
+  foto_url?: string
+  created_at: string
+}

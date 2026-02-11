@@ -8,18 +8,22 @@ export default function DashboardAdmin() {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+  const [userName, setUserName] = useState('')
 
   useEffect(() => {
-    const alunoData = localStorage.getItem('aluno')
-    if (!alunoData) {
+    // ✅ VERIFICAÇÃO ATUALIZADA
+    const userData = localStorage.getItem('user')
+    if (!userData) {
       router.push('/login')
       return
     }
-    const aluno = JSON.parse(alunoData)
-    if (aluno.tipo !== 'admin') {
+    const user = JSON.parse(userData)
+    if (user.role !== 'admin') {
       alert('Acesso negado!')
       router.push('/dashboard-aluno')
+      return
     }
+    setUserName(user.full_name || user.email)
   }, [router])
 
   const menuItems = [
@@ -58,6 +62,11 @@ export default function DashboardAdmin() {
       ]
     }
   ]
+
+  const handleLogout = () => {
+    localStorage.removeItem('user')
+    router.push('/login')
+  }
 
   return (
     <>
@@ -116,7 +125,7 @@ export default function DashboardAdmin() {
                     <User size={18} />
                     Perfil
                   </button>
-                  <button onClick={() => { localStorage.removeItem('aluno'); router.push('/login'); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
+                  <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
                     <LogOut size={18} />
                     Sair
                   </button>
@@ -131,6 +140,13 @@ export default function DashboardAdmin() {
         </nav>
 
         <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+          <div style={{ marginBottom: '2rem' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
+              Bem-vindo, {userName}!
+            </h1>
+            <p style={{ color: '#6b7280' }}>Painel de Administração</p>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
             
             <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>

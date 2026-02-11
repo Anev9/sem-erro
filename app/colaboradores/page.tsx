@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@supabase/supabase-js'
 import { 
   Users,
   Plus,
@@ -10,41 +11,58 @@ import {
   Trash2,
   Mail,
   Phone,
-  Calendar,
-  FileText,
   Info,
-  Filter,
   ArrowLeft
 } from 'lucide-react'
 
 export default function CadastroFuncionarios() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
-  const [showAddModal, setShowAddModal] = useState(false)
+  const [funcionarios, setFuncionarios] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // AQUI VOCÊ VAI BUSCAR OS FUNCIONÁRIOS DO SUPABASE
-  // const [funcionarios, setFuncionarios] = useState([])
-  // useEffect(() => {
-  //   async function fetchFuncionarios() {
-  //     const { data } = await supabase.from('funcionarios').select('*')
-  //     setFuncionarios(data || [])
-  //   }
-  //   fetchFuncionarios()
-  // }, [])
+  // Buscar funcionários do Supabase
+  useEffect(() => {
+    async function fetchFuncionarios() {
+      const supabase = createClient(
+        'https://cyqiagacrmrsazhvrbgb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5cWlhZ2Fjcm1yc2F6aHZyYmdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTM4OTIsImV4cCI6MjA4NDU2OTg5Mn0.RnNVs13Kw1XpfUyUbwdiUX44PXaSnIJICcTitDAZNL8'
+      )
 
-  const funcionarios: any[] = []
+      const { data, error } = await supabase
+        .from('colaboradores')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (!error && data) {
+        setFuncionarios(data)
+      }
+      setLoading(false)
+    }
+    fetchFuncionarios()
+  }, [])
 
   const filteredFuncionarios = funcionarios.filter(func =>
     func.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    func.cpf?.includes(searchTerm) ||
     func.email?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este funcionário?')) {
-      // AQUI VOCÊ VAI DELETAR DO SUPABASE
-      // const { error } = await supabase.from('funcionarios').delete().eq('id', id)
-      console.log('Deletar funcionário:', id)
+      const supabase = createClient(
+        'https://cyqiagacrmrsazhvrbgb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5cWlhZ2Fjcm1yc2F6aHZyYmdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTM4OTIsImV4cCI6MjA4NDU2OTg5Mn0.RnNVs13Kw1XpfUyUbwdiUX44PXaSnIJICcTitDAZNL8'
+      )
+      
+      const { error } = await supabase
+        .from('colaboradores')
+        .delete()
+        .eq('id', id)
+
+      if (!error) {
+        setFuncionarios(funcionarios.filter(f => f.id !== id))
+        alert('Funcionário excluído com sucesso!')
+      }
     }
   }
 
@@ -185,7 +203,7 @@ export default function CadastroFuncionarios() {
             </div>
 
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => router.push('/colaboradores/novo')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -270,7 +288,7 @@ export default function CadastroFuncionarios() {
                     color: '#1f2937',
                     margin: 0
                   }}>
-                    {funcionarios.length}
+                    {loading ? '...' : funcionarios.length}
                   </p>
                 </div>
               </div>
@@ -297,7 +315,7 @@ export default function CadastroFuncionarios() {
                 />
                 <input
                   type="text"
-                  placeholder="Pesquisar por nome, CPF ou email..."
+                  placeholder="Pesquisar por nome ou email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
@@ -372,7 +390,15 @@ export default function CadastroFuncionarios() {
             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
             overflow: 'hidden'
           }}>
-            {funcionarios.length === 0 ? (
+            {loading ? (
+              <div style={{
+                padding: '4rem 2rem',
+                textAlign: 'center',
+                color: '#6b7280'
+              }}>
+                Carregando...
+              </div>
+            ) : filteredFuncionarios.length === 0 ? (
               <div style={{
                 padding: '4rem 2rem',
                 textAlign: 'center'
@@ -395,37 +421,39 @@ export default function CadastroFuncionarios() {
                   color: '#1f2937',
                   margin: '0 0 0.5rem 0'
                 }}>
-                  Nenhum funcionário cadastrado
+                  {searchTerm ? 'Nenhum funcionário encontrado' : 'Nenhum funcionário cadastrado'}
                 </h3>
                 <p style={{
                   fontSize: '0.95rem',
                   color: '#6b7280',
                   margin: '0 0 1.5rem 0'
                 }}>
-                  Comece adicionando o primeiro funcionário da sua empresa
+                  {searchTerm ? 'Tente buscar com outro termo' : 'Comece adicionando o primeiro funcionário da sua empresa'}
                 </p>
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#8b5cf6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.95rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#7c3aed'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#8b5cf6'}
-                >
-                  <Plus size={18} />
-                  Adicionar Primeiro Funcionário
-                </button>
+                {!searchTerm && (
+                  <button
+                    onClick={() => router.push('/colaboradores/novo')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#8b5cf6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.95rem',
+                      fontWeight: '600',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#7c3aed'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#8b5cf6'}
+                  >
+                    <Plus size={18} />
+                    Adicionar Primeiro Funcionário
+                  </button>
+                )}
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
@@ -456,26 +484,6 @@ export default function CadastroFuncionarios() {
                         color: '#374151',
                         whiteSpace: 'nowrap'
                       }}>
-                        CPF
-                      </th>
-                      <th style={{
-                        padding: '1rem',
-                        textAlign: 'left',
-                        fontSize: '0.875rem',
-                        fontWeight: '600',
-                        color: '#374151',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        Nascimento
-                      </th>
-                      <th style={{
-                        padding: '1rem',
-                        textAlign: 'left',
-                        fontSize: '0.875rem',
-                        fontWeight: '600',
-                        color: '#374151',
-                        whiteSpace: 'nowrap'
-                      }}>
                         Email
                       </th>
                       <th style={{
@@ -490,6 +498,16 @@ export default function CadastroFuncionarios() {
                       </th>
                       <th style={{
                         padding: '1rem',
+                        textAlign: 'left',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        Cargo
+                      </th>
+                      <th style={{
+                        padding: '1rem',
                         textAlign: 'center',
                         fontSize: '0.875rem',
                         fontWeight: '600',
@@ -501,7 +519,7 @@ export default function CadastroFuncionarios() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredFuncionarios.map((func, index) => (
+                    {filteredFuncionarios.map((func) => (
                       <tr 
                         key={func.id}
                         className="table-row"
@@ -516,20 +534,6 @@ export default function CadastroFuncionarios() {
                           fontWeight: '500'
                         }}>
                           {func.nome}
-                        </td>
-                        <td style={{
-                          padding: '1rem',
-                          fontSize: '0.95rem',
-                          color: '#6b7280'
-                        }}>
-                          {func.cpf}
-                        </td>
-                        <td style={{
-                          padding: '1rem',
-                          fontSize: '0.95rem',
-                          color: '#6b7280'
-                        }}>
-                          {func.data_nascimento}
                         </td>
                         <td style={{
                           padding: '1rem',
@@ -560,6 +564,14 @@ export default function CadastroFuncionarios() {
                           </div>
                         </td>
                         <td style={{
+                          padding: '1rem',
+                          fontSize: '0.875rem',
+                          color: '#6b7280',
+                          textTransform: 'capitalize'
+                        }}>
+                          {func.cargo}
+                        </td>
+                        <td style={{
                           padding: '1rem'
                         }}>
                           <div style={{
@@ -569,7 +581,7 @@ export default function CadastroFuncionarios() {
                           }}>
                             <button
                               className="action-button edit-button"
-                              onClick={() => console.log('Editar', func.id)}
+                              onClick={() => router.push(`/colaboradores/editar/${func.id}`)}
                               title="Editar funcionário"
                             >
                               <Edit size={18} />

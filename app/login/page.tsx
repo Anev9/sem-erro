@@ -34,29 +34,72 @@ export default function LoginPage() {
       setLoading(true);
       
       try {
-        const { data: aluno, error } = await supabase
+        console.log('🔐 Tentando login com:', email);
+        
+        // ✅ TENTATIVA 1: Login como ADMIN (Supabase Auth)
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
+
+        // Se login Auth funcionou = ADMIN
+        if (authData.user && !authError) {
+          console.log('✅ Login ADMIN bem-sucedido!');
+          
+          // Buscar perfil admin
+          const { data: profile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', authData.user.id)
+            .single();
+
+          if (profile && !profileError) {
+            localStorage.setItem('user', JSON.stringify(profile));
+            console.log('🚀 Redirecionando para dashboard admin');
+            router.push('/dashboard-admin');
+            return;
+          }
+        }
+
+        // ✅ TENTATIVA 2: Login como ALUNO (tabela alunos)
+        console.log('🔍 Tentando login como ALUNO...');
+        
+        const { data: aluno, error: alunoError } = await supabase
           .from('alunos')
           .select('*')
           .eq('e-mail', email)
           .eq('senha', password)
           .single();
 
-        if (error || !aluno) {
-          throw new Error('E-mail ou senha incorretos');
+        if (aluno && !alunoError) {
+          console.log('✅ Login ALUNO bem-sucedido!', aluno);
+          
+          // Criar objeto de usuário compatível
+          const userData = {
+            id: aluno.id,
+            email: aluno['e-mail'],
+            full_name: aluno.clientes || aluno['e-mail'],
+            role: 'aluno',
+            programa: aluno.programa,
+            telefone: aluno.telefone,
+            created_at: aluno.created_at
+          };
+          
+          localStorage.setItem('user', JSON.stringify(userData));
+          console.log('🚀 Redirecionando para dashboard aluno');
+          router.push('/dashboard-aluno');
+          return;
         }
 
-        // SALVAR DADOS DO ALUNO NO LOCALSTORAGE
-        localStorage.setItem('aluno', JSON.stringify(aluno));
-        
-        // REDIRECIONAR BASEADO NO TIPO
-        if (aluno.tipo === 'admin') {
-          router.push('/dashboard-admin');
-        } else {
-          router.push('/dashboard-aluno');
-        }
+        // Se chegou aqui, nenhum login funcionou
+        throw new Error('E-mail ou senha incorretos');
         
       } catch (error: any) {
-        setErrors({ ...newErrors, password: error.message || 'E-mail ou senha incorretos' });
+        console.error('💥 ERRO NO LOGIN:', error);
+        setErrors({ 
+          ...newErrors, 
+          password: error.message || 'E-mail ou senha incorretos' 
+        });
         setLoading(false);
       }
     }
@@ -446,14 +489,6 @@ export default function LoginPage() {
                 Voltar para o site
               </button>
             </form>
-          </div>
-
-          <div style={{
-            textAlign: 'center',
-            marginTop: '2rem',
-            color: 'white',
-            fontSize: '0.875rem'
-          }}>
           </div>
         </div>
       </div>
