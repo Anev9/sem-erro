@@ -28,6 +28,7 @@ export default function CriarChecklistFuturoPage() {
   const [nomeChecklist, setNomeChecklist] = useState('')
   const [descricao, setDescricao] = useState('')
   const [loading, setLoading] = useState(false)
+  const [userId, setUserId] = useState('')
   
   const [templates, setTemplates] = useState<Template[]>([])
   const [templateSelecionado, setTemplateSelecionado] = useState<string>('')
@@ -43,6 +44,13 @@ export default function CriarChecklistFuturoPage() {
   const [mensagemSalvamento, setMensagemSalvamento] = useState('')
 
   useEffect(() => {
+    // Buscar dados do usuário logado
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      const user = JSON.parse(userData)
+      setUserId(user.id)
+    }
+    
     if (recorrente === 'modelo') {
       buscarTemplates()
     }
@@ -184,6 +192,7 @@ export default function CriarChecklistFuturoPage() {
         descricao: descricao || null,
         tipo_negocio: tipoNegocio,
         proxima_execucao: proximaExecucao,
+        aluno_id: userId,
         ativo: true
       })
       .select()
@@ -239,6 +248,7 @@ export default function CriarChecklistFuturoPage() {
         tipo_negocio: tipoNegocio,
         proxima_execucao: proximaExecucao,
         template_id: templateSelecionado,
+        aluno_id: userId,
         ativo: true
       })
       .select()
@@ -300,6 +310,7 @@ export default function CriarChecklistFuturoPage() {
         descricao: descricao || checklistOriginal.descricao,
         tipo_negocio: tipoNegocio || checklistOriginal.tipo_negocio,
         proxima_execucao: proximaExecucao,
+        aluno_id: userId,
         ativo: true
       })
       .select()

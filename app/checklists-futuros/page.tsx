@@ -56,6 +56,7 @@ export default function ChecklistsFuturosPage() {
           *,
           itens:checklist_futuro_itens(count)
         `)
+        .eq('aluno_id', userId)
         .order('proxima_execucao', { ascending: true })
 
       if (error) {

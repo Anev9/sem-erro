@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Calendar, TrendingUp, AlertCircle } from 'lucide-react'
+import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Calendar, TrendingUp, Building2 } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
 // Inicializar Supabase
@@ -14,10 +14,11 @@ interface Checklist {
   id: string
   nome: string
   descricao: string | null
-  tipo_negocio: string | null
   status: string
-  proxima_execucao: string | null
   created_at: string
+  empresa: {
+    nome_fantasia: string
+  } | null
 }
 
 interface PerformanceData {
@@ -36,6 +37,7 @@ export default function DashboardAluno() {
   const [performance, setPerformance] = useState<PerformanceData[]>([])
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState('')
+  const [alunoId, setAlunoId] = useState<number | null>(null)
 
   const menuItems = [
     {
@@ -72,90 +74,164 @@ export default function DashboardAluno() {
   ]
 
   useEffect(() => {
-    // ✅ VERIFICAÇÃO ATUALIZADA
     const userData = localStorage.getItem('user')
     if (!userData) {
       router.push('/login')
       return
     }
+    
     const user = JSON.parse(userData)
-    // Se for admin, redireciona para dashboard admin
+    
+    // Se for admin, redireciona
     if (user.role === 'admin') {
       router.push('/dashboard-admin')
       return
     }
+
     setUserName(user.full_name || user.email)
-    buscarDados()
+    setAlunoId(user.aluno_id)
+    
+    // Buscar dados reais se tiver aluno_id
+    if (user.aluno_id) {
+      buscarDadosReais(user.aluno_id)
+    } else {
+      setLoading(false)
+    }
   }, [router])
 
-  async function buscarDados() {
+  async function buscarDadosReais(alunoId: number) {
     try {
       setLoading(true)
 
-      // Buscar checklists dos últimos 30 dias
+      // 1️⃣ Buscar empresas do aluno
+      const { data: empresas, error: empresasError } = await supabase
+        .from('empresas')
+        .select('id, nome_fantasia')
+        .eq('aluno_id', alunoId)
+        .eq('ativo', true)
+
+      if (empresasError) {
+        console.error('❌ Erro ao buscar empresas:', empresasError)
+        setLoading(false)
+        return
+      }
+
+      if (!empresas || empresas.length === 0) {
+        console.log('⚠️ Nenhuma empresa encontrada para este aluno')
+        setLoading(false)
+        return
+      }
+
+      const empresaIds = empresas.map(e => e.id)
+      console.log('✅ Empresas encontradas:', empresas)
+
+      // 2️⃣ Buscar checklists dos últimos 30 dias
       const dataLimite = new Date()
       dataLimite.setDate(dataLimite.getDate() - 30)
 
       const { data: checklistsData, error: checklistsError } = await supabase
         .from('checklists')
-        .select('*')
+        .select(`
+          id,
+          nome,
+          descricao,
+          status,
+          created_at,
+          empresa_id,
+          empresas (
+            nome_fantasia
+          )
+        `)
+        .in('empresa_id', empresaIds)
         .gte('created_at', dataLimite.toISOString())
         .order('created_at', { ascending: false })
-        .limit(10)
 
-      if (checklistsError) throw checklistsError
-      setChecklists(checklistsData || [])
+      if (checklistsError) {
+        console.error('❌ Erro ao buscar checklists:', checklistsError)
+      }
 
-      // Buscar dados de performance por empresa/tipo
-      await buscarPerformance()
+      console.log('📋 Checklists encontrados:', checklistsData)
+
+      // Mapear dados
+      const checklistsFormatados = (checklistsData || []).map((item: any) => ({
+        id: item.id,
+        nome: item.nome,
+        descricao: item.descricao,
+        status: item.status,
+        created_at: item.created_at,
+        empresa: item.empresas ? { nome_fantasia: item.empresas.nome_fantasia } : null
+      }))
+
+      setChecklists(checklistsFormatados)
+
+      // 3️⃣ Calcular performance
+      await calcularPerformance(empresas, empresaIds)
 
     } catch (error) {
-      console.error('Erro ao buscar dados:', error)
+      console.error('❌ Erro geral:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  async function buscarPerformance() {
+  async function calcularPerformance(empresas: any[], empresaIds: string[]) {
     try {
-      // Buscar todos os checklists agrupados por tipo de negócio
-      const { data: checklistsData, error } = await supabase
+      // Buscar TODOS os checklists das empresas do aluno
+      const { data: todosChecklists, error } = await supabase
         .from('checklists')
-        .select('id, tipo_negocio, status')
+        .select('id, empresa_id, status')
+        .in('empresa_id', empresaIds)
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Erro ao buscar checklists para performance:', error)
+        return
+      }
 
-      // Agrupar dados por tipo de negócio
-      const agrupado: { [key: string]: { total: number; concluidos: number; pendentes: number } } = {}
+      console.log('📊 Total de checklists para performance:', todosChecklists?.length)
 
-      checklistsData?.forEach(checklist => {
-        const tipo = checklist.tipo_negocio || 'Sem categoria'
-        
-        if (!agrupado[tipo]) {
-          agrupado[tipo] = { total: 0, concluidos: 0, pendentes: 0 }
-        }
-        
-        agrupado[tipo].total++
-        
-        if (checklist.status === 'concluido') {
-          agrupado[tipo].concluidos++
-        } else {
-          agrupado[tipo].pendentes++
+      // Agrupar por empresa
+      const performancePorEmpresa: { [key: string]: { total: number; concluidos: number; pendentes: number } } = {}
+
+      // Inicializar todas as empresas
+      empresas.forEach(empresa => {
+        performancePorEmpresa[empresa.nome_fantasia] = {
+          total: 0,
+          concluidos: 0,
+          pendentes: 0
         }
       })
 
-      // Converter para array e calcular percentuais
-      const performanceArray: PerformanceData[] = Object.entries(agrupado).map(([empresa, dados]) => ({
-        empresa,
-        total: dados.total,
-        concluidos: dados.concluidos,
-        pendentes: dados.pendentes,
-        percentual: dados.total > 0 ? Math.round((dados.concluidos / dados.total) * 100) : 0
-      }))
+      // Contar checklists
+      todosChecklists?.forEach(checklist => {
+        const empresa = empresas.find(e => e.id === checklist.empresa_id)
+        if (empresa) {
+          const nomeEmpresa = empresa.nome_fantasia
+          performancePorEmpresa[nomeEmpresa].total++
+          
+          if (checklist.status === 'concluido') {
+            performancePorEmpresa[nomeEmpresa].concluidos++
+          } else {
+            performancePorEmpresa[nomeEmpresa].pendentes++
+          }
+        }
+      })
 
+      // Converter para array
+      const performanceArray: PerformanceData[] = Object.entries(performancePorEmpresa)
+        .filter(([_, dados]) => dados.total > 0)
+        .map(([empresa, dados]) => ({
+          empresa,
+          total: dados.total,
+          concluidos: dados.concluidos,
+          pendentes: dados.pendentes,
+          percentual: dados.total > 0 ? Math.round((dados.concluidos / dados.total) * 100) : 0
+        }))
+
+      console.log('✅ Performance calculada:', performanceArray)
       setPerformance(performanceArray)
+
     } catch (error) {
-      console.error('Erro ao buscar performance:', error)
+      console.error('❌ Erro ao calcular performance:', error)
     }
   }
 
@@ -173,6 +249,8 @@ export default function DashboardAluno() {
         return { bg: '#dcfce7', text: '#166534', label: 'Concluído' }
       case 'ativo':
         return { bg: '#dbeafe', text: '#1e40af', label: 'Ativo' }
+      case 'em_andamento':
+        return { bg: '#fef3c7', text: '#92400e', label: 'Em Andamento' }
       case 'pendente':
         return { bg: '#fef3c7', text: '#92400e', label: 'Pendente' }
       default:
@@ -262,80 +340,30 @@ export default function DashboardAluno() {
               </button>
             </div>
 
-            {/* Menu Mobile Expandido */}
+            {/* Menu Mobile */}
             {mobileMenuOpen && (
-              <div style={{ 
-                paddingBottom: '1rem',
-                borderTop: '1px solid rgba(255,255,255,0.1)',
-                marginTop: '0.5rem'
-              }}>
+              <div style={{ paddingBottom: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '0.5rem' }}>
                 {menuItems.map((item) => (
                   <div key={item.title} style={{ marginTop: '0.5rem' }}>
-                    <div style={{ 
-                      padding: '0.75rem 1rem',
-                      color: 'white',
-                      fontWeight: '600',
-                      fontSize: '0.9rem'
-                    }}>
+                    <div style={{ padding: '0.75rem 1rem', color: 'white', fontWeight: '600', fontSize: '0.9rem' }}>
                       {item.title}
                     </div>
                     {item.submenu.map((sub) => (
                       <button 
                         key={sub.label}
-                        onClick={() => {
-                          router.push(sub.href)
-                          setMobileMenuOpen(false)
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '0.625rem 2rem',
-                          color: 'rgba(255,255,255,0.8)',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem'
-                        }}
+                        onClick={() => { router.push(sub.href); setMobileMenuOpen(false); }}
+                        style={{ width: '100%', padding: '0.625rem 2rem', color: 'rgba(255,255,255,0.8)', backgroundColor: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
                       >
                         {sub.label}
                       </button>
                     ))}
                   </div>
                 ))}
-                <div style={{ 
-                  marginTop: '1rem',
-                  paddingTop: '1rem',
-                  borderTop: '1px solid rgba(255,255,255,0.1)',
-                  display: 'flex',
-                  gap: '0.5rem',
-                  padding: '0 1rem'
-                }}>
-                  <button 
-                    onClick={() => router.push('/alterar-senha')}
-                    style={{
-                      flex: 1,
-                      padding: '0.5rem',
-                      color: 'white',
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer'
-                    }}
-                  >
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '0.5rem', padding: '0 1rem' }}>
+                  <button onClick={() => router.push('/alterar-senha')} style={{ flex: 1, padding: '0.5rem', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
                     Perfil
                   </button>
-                  <button 
-                    onClick={handleLogout}
-                    style={{
-                      flex: 1,
-                      padding: '0.5rem',
-                      color: 'white',
-                      backgroundColor: '#ef4444',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer'
-                    }}
-                  >
+                  <button onClick={handleLogout} style={{ flex: 1, padding: '0.5rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
                     Sair
                   </button>
                 </div>
@@ -363,21 +391,14 @@ export default function DashboardAluno() {
               <div style={{ padding: '1.5rem', maxHeight: '500px', overflowY: 'auto' }}>
                 {loading ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>
-                    <div style={{ 
-                      width: '40px',
-                      height: '40px',
-                      border: '4px solid #f3f4f6',
-                      borderTopColor: '#8b5cf6',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite',
-                      margin: '0 auto 1rem'
-                    }} />
+                    <div style={{ width: '40px', height: '40px', border: '4px solid #f3f4f6', borderTopColor: '#8b5cf6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
                     <p>Carregando...</p>
                   </div>
                 ) : checklists.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: '#9ca3af' }}>
+                  <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>
                     <CheckSquare size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                    <p style={{ margin: 0 }}>Nenhum checklist cadastrado ainda</p>
+                    <p style={{ margin: 0, marginBottom: '0.5rem', fontWeight: '500' }}>Nenhum checklist encontrado</p>
+                    <p style={{ margin: 0, fontSize: '0.875rem' }}>Os checklists aparecerão aqui quando forem criados</p>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -386,56 +407,29 @@ export default function DashboardAluno() {
                       return (
                         <div 
                           key={checklist.id}
-                          onClick={() => router.push(`/checklist/${checklist.id}`)}
-                          style={{
-                            padding: '1rem',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '0.75rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = '#8b5cf6'
-                            e.currentTarget.style.boxShadow = '0 4px 6px rgba(139, 92, 246, 0.1)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = '#e5e7eb'
-                            e.currentTarget.style.boxShadow = 'none'
-                          }}
+                          style={{ padding: '1rem', border: '1px solid #e5e7eb', borderLeft: `4px solid ${statusInfo.text}`, borderRadius: '0.75rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(139, 92, 246, 0.1)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateX(0)'; }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                            <h3 style={{ 
-                              fontSize: '1rem',
-                              fontWeight: '600',
-                              color: '#1f2937',
-                              margin: 0
-                            }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>
                               {checklist.nome}
                             </h3>
-                            <span style={{
-                              padding: '0.25rem 0.75rem',
-                              borderRadius: '9999px',
-                              fontSize: '0.75rem',
-                              fontWeight: '600',
-                              backgroundColor: statusInfo.bg,
-                              color: statusInfo.text
-                            }}>
+                            <span style={{ padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: statusInfo.bg, color: statusInfo.text, whiteSpace: 'nowrap' }}>
                               {statusInfo.label}
                             </span>
                           </div>
                           {checklist.descricao && (
-                            <p style={{
-                              fontSize: '0.875rem',
-                              color: '#6b7280',
-                              margin: '0.5rem 0',
-                              lineHeight: '1.4'
-                            }}>
+                            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.5rem 0', lineHeight: '1.4' }}>
                               {checklist.descricao}
                             </p>
                           )}
-                          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8125rem', color: '#9ca3af', marginTop: '0.75rem' }}>
-                            {checklist.tipo_negocio && (
-                              <span>📋 {checklist.tipo_negocio}</span>
+                          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8125rem', color: '#6b7280', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                            {checklist.empresa?.nome_fantasia && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Building2 size={14} />
+                                {checklist.empresa.nome_fantasia}
+                              </span>
                             )}
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               <Calendar size={14} />
@@ -450,7 +444,7 @@ export default function DashboardAluno() {
               </div>
             </div>
 
-            {/* Card: Performance das Empresas */}
+            {/* Card: Performance por Tipo de Negócio */}
             <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
               <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', padding: '1.5rem', color: 'white' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Performance por Tipo de Negócio</h2>
@@ -458,22 +452,15 @@ export default function DashboardAluno() {
               <div style={{ padding: '1.5rem' }}>
                 {loading ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>
-                    <div style={{ 
-                      width: '40px',
-                      height: '40px',
-                      border: '4px solid #f3f4f6',
-                      borderTopColor: '#8b5cf6',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite',
-                      margin: '0 auto 1rem'
-                    }} />
+                    <div style={{ width: '40px', height: '40px', border: '4px solid #f3f4f6', borderTopColor: '#8b5cf6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
                     <p>Carregando...</p>
                   </div>
                 ) : performance.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div>
                       <FileText size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                      <p>Nenhum dado de performance disponível</p>
+                      <p style={{ margin: 0, marginBottom: '0.5rem', fontWeight: '500' }}>Nenhum dado disponível</p>
+                      <p style={{ margin: 0, fontSize: '0.875rem' }}>Os dados aparecerão quando houver checklists</p>
                     </div>
                   </div>
                 ) : (
@@ -484,37 +471,15 @@ export default function DashboardAluno() {
                           <span style={{ fontWeight: '600', color: '#1f2937', fontSize: '0.95rem' }}>
                             {item.empresa}
                           </span>
-                          <span style={{ 
-                            fontWeight: 'bold',
-                            color: item.percentual >= 80 ? '#16a34a' : item.percentual >= 50 ? '#f59e0b' : '#ef4444',
-                            fontSize: '1rem'
-                          }}>
+                          <span style={{ fontWeight: 'bold', color: item.percentual >= 70 ? '#16a34a' : item.percentual >= 50 ? '#f59e0b' : '#ef4444', fontSize: '1.25rem' }}>
                             {item.percentual}%
                           </span>
                         </div>
                         
-                        {/* Barra de progresso */}
-                        <div style={{ 
-                          width: '100%',
-                          height: '0.75rem',
-                          backgroundColor: '#f3f4f6',
-                          borderRadius: '9999px',
-                          overflow: 'hidden',
-                          marginBottom: '0.5rem'
-                        }}>
-                          <div style={{
-                            width: `${item.percentual}%`,
-                            height: '100%',
-                            background: item.percentual >= 80 
-                              ? 'linear-gradient(90deg, #16a34a, #22c55e)' 
-                              : item.percentual >= 50 
-                              ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                              : 'linear-gradient(90deg, #ef4444, #f87171)',
-                            transition: 'width 0.5s ease'
-                          }} />
+                        <div style={{ width: '100%', height: '12px', backgroundColor: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden', marginBottom: '0.75rem' }}>
+                          <div style={{ width: `${item.percentual}%`, height: '100%', background: item.percentual >= 70 ? 'linear-gradient(90deg, #16a34a, #22c55e)' : item.percentual >= 50 ? 'linear-gradient(90deg, #f59e0b, #fbbf24)' : 'linear-gradient(90deg, #ef4444, #f87171)', transition: 'width 0.5s ease' }} />
                         </div>
 
-                        {/* Stats */}
                         <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8125rem', color: '#6b7280' }}>
                           <span>Total: {item.total}</span>
                           <span style={{ color: '#16a34a' }}>✓ {item.concluidos}</span>
@@ -523,30 +488,15 @@ export default function DashboardAluno() {
                       </div>
                     ))}
 
-                    {/* Resumo total */}
-                    <div style={{
-                      marginTop: '1rem',
-                      padding: '1rem',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '0.75rem',
-                      borderLeft: '4px solid #8b5cf6'
-                    }}>
+                    <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.75rem', borderLeft: '4px solid #8b5cf6' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                         <TrendingUp size={18} style={{ color: '#8b5cf6' }} />
                         <span style={{ fontWeight: '600', color: '#1f2937' }}>Resumo Geral</span>
                       </div>
                       <div style={{ fontSize: '0.875rem', color: '#6b7280', lineHeight: '1.6' }}>
-                        <p style={{ margin: '0.25rem 0' }}>
-                          Total de categorias: {performance.length}
-                        </p>
-                        <p style={{ margin: '0.25rem 0' }}>
-                          Total de checklists: {performance.reduce((acc, item) => acc + item.total, 0)}
-                        </p>
-                        <p style={{ margin: '0.25rem 0' }}>
-                          Taxa média de conclusão: {performance.length > 0 
-                            ? Math.round(performance.reduce((acc, item) => acc + item.percentual, 0) / performance.length)
-                            : 0}%
-                        </p>
+                        <p style={{ margin: '0.25rem 0' }}>Total de categorias: {performance.length}</p>
+                        <p style={{ margin: '0.25rem 0' }}>Total de checklists: {performance.reduce((acc, item) => acc + item.total, 0)}</p>
+                        <p style={{ margin: '0.25rem 0' }}>Taxa média de conclusão: {performance.length > 0 ? Math.round(performance.reduce((acc, item) => acc + item.percentual, 0) / performance.length) : 0}%</p>
                       </div>
                     </div>
                   </div>
