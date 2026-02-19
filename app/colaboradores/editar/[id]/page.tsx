@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
 import {
   ArrowLeft,
   Users,
@@ -28,57 +27,77 @@ export default function EditarColaborador() {
   })
 
   useEffect(() => {
-    async function fetchColaborador() {
-      const supabase = createClient(
-        'https://cyqiagacrmrsazhvrbgb.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5cWlhZ2Fjcm1yc2F6aHZyYmdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTM4OTIsImV4cCI6MjA4NDU2OTg5Mn0.RnNVs13Kw1XpfUyUbwdiUX44PXaSnIJICcTitDAZNL8'
-      )
-
-      const { data, error } = await supabase
-        .from('colaboradores')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (!error && data) {
-        setFormData({
-          nome: data.nome,
-          email: data.email,
-          celular: data.celular,
-          cargo: data.cargo
-        })
-      }
-      setLoadingData(false)
-    }
-    fetchColaborador()
+    verificarAutenticacao()
   }, [id])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  function verificarAutenticacao() {
+    const userStr = localStorage.getItem('user')
+    if (!userStr) {
+      router.push('/login')
+      return
+    }
+    const user = JSON.parse(userStr)
+    if (user.role !== 'aluno') {
+      router.push('/login')
+      return
+    }
+    fetchColaborador()
+  }
+
+  async function fetchColaborador() {
+    try {
+      const userStr = localStorage.getItem('user')
+      if (!userStr) { router.push('/login'); return }
+      const user = JSON.parse(userStr)
+
+      const res = await fetch(`/api/aluno/colaboradores?aluno_id=${user.id}`)
+      if (!res.ok) throw new Error('Erro ao carregar')
+      const lista = await res.json()
+      const data = lista.find((c: any) => c.id === id)
+
+      if (!data) {
+        alert('Colaborador não encontrado ou acesso negado.')
+        router.push('/colaboradores')
+        return
+      }
+
+      setFormData({
+        nome: data.nome,
+        email: data.email,
+        celular: data.celular || '',
+        cargo: data.cargo
+      })
+    } catch (error) {
+      console.error('Erro ao carregar colaborador:', error)
+      alert('Erro ao carregar dados do colaborador')
+    } finally {
+      setLoadingData(false)
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const supabase = createClient(
-        'https://cyqiagacrmrsazhvrbgb.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5cWlhZ2Fjcm1yc2F6aHZyYmdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5OTM4OTIsImV4cCI6MjA4NDU2OTg5Mn0.RnNVs13Kw1XpfUyUbwdiUX44PXaSnIJICcTitDAZNL8'
-      )
-
-      const { error } = await supabase
-        .from('colaboradores')
-        .update({
+      const res = await fetch('/api/aluno/colaboradores', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
           nome: formData.nome,
           email: formData.email,
-          celular: formData.celular,
+          celular: formData.celular || null,
           cargo: formData.cargo
         })
-        .eq('id', id)
-
-      if (error) throw error
+      })
+      if (!res.ok) throw new Error('Erro ao atualizar')
 
       alert('✅ Colaborador atualizado com sucesso!')
       router.push('/colaboradores')
 
     } catch (error: any) {
+      console.error('Erro ao atualizar:', error)
       alert('Erro: ' + error.message)
     } finally {
       setLoading(false)
@@ -126,8 +145,8 @@ export default function EditarColaborador() {
         }
 
         .form-input:focus {
-          border-color: #8b5cf6;
-          box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+          border-color: #f97316;
+          box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
         }
 
         .form-label {
@@ -142,7 +161,7 @@ export default function EditarColaborador() {
       <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
         {/* Header */}
         <div style={{
-          background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+          background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
           padding: '2rem',
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
         }}>
@@ -166,11 +185,8 @@ export default function EditarColaborador() {
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
                 fontSize: '0.95rem',
-                fontWeight: '500',
-                transition: 'all 0.2s ease'
+                fontWeight: '500'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'}
             >
               <ArrowLeft size={18} />
               Voltar
@@ -197,8 +213,7 @@ export default function EditarColaborador() {
                   fontSize: '2rem',
                   fontWeight: 'bold',
                   color: 'white',
-                  margin: 0,
-                  letterSpacing: '0.02em'
+                  margin: 0
                 }}>
                   Editar Colaborador
                 </h1>
@@ -279,7 +294,7 @@ export default function EditarColaborador() {
 
                 {/* Celular */}
                 <div>
-                  <label className="form-label">Celular *</label>
+                  <label className="form-label">Celular</label>
                   <div style={{ position: 'relative' }}>
                     <Phone size={20} style={{
                       position: 'absolute',
@@ -290,7 +305,6 @@ export default function EditarColaborador() {
                     }}/>
                     <input
                       type="tel"
-                      required
                       className="form-input"
                       value={formData.celular}
                       onChange={(e) => setFormData({...formData, celular: formatPhone(e.target.value)})}
@@ -318,15 +332,15 @@ export default function EditarColaborador() {
                       onChange={(e) => setFormData({...formData, cargo: e.target.value})}
                     >
                       <option value="">Selecione um cargo</option>
-                      <option value="gerente">Gerente</option>
-                      <option value="supervisor">Supervisor</option>
-                      <option value="operador">Operador</option>
-                      <option value="assistente">Assistente</option>
-                      <option value="conferente">Conferente</option>
-                      <option value="repositor">Repositor</option>
-                      <option value="caixa">Caixa</option>
-                      <option value="açougueiro">Açougueiro</option>
-                      <option value="padeiro">Padeiro</option>
+                      <option value="Gerente">Gerente</option>
+                      <option value="Supervisor">Supervisor</option>
+                      <option value="Operador">Operador</option>
+                      <option value="Assistente">Assistente</option>
+                      <option value="Conferente">Conferente</option>
+                      <option value="Repositor">Repositor</option>
+                      <option value="Caixa">Caixa</option>
+                      <option value="Açougueiro">Açougueiro</option>
+                      <option value="Padeiro">Padeiro</option>
                     </select>
                   </div>
                 </div>
@@ -350,11 +364,8 @@ export default function EditarColaborador() {
                     borderRadius: '0.75rem',
                     cursor: 'pointer',
                     fontSize: '0.95rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s ease'
+                    fontWeight: '600'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                 >
                   Cancelar
                 </button>
@@ -366,17 +377,14 @@ export default function EditarColaborador() {
                     alignItems: 'center',
                     gap: '0.5rem',
                     padding: '0.875rem 2rem',
-                    backgroundColor: loading ? '#9ca3af' : '#8b5cf6',
+                    backgroundColor: loading ? '#9ca3af' : '#f97316',
                     color: 'white',
                     border: 'none',
                     borderRadius: '0.75rem',
                     cursor: loading ? 'not-allowed' : 'pointer',
                     fontSize: '0.95rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s ease'
+                    fontWeight: '600'
                   }}
-                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#7c3aed')}
-                  onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = '#8b5cf6')}
                 >
                   <Save size={18} />
                   {loading ? 'Salvando...' : 'Salvar Alterações'}

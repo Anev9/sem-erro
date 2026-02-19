@@ -3,12 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Calendar, TrendingUp, Building2 } from 'lucide-react'
-import { createClient } from '@supabase/supabase-js'
-
-// Inicializar Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 interface Checklist {
   id: string
@@ -103,57 +97,23 @@ export default function DashboardAluno() {
     try {
       setLoading(true)
 
-      // 1️⃣ Buscar empresas do aluno
-      const { data: empresas, error: empresasError } = await supabase
-        .from('empresas')
-        .select('id, nome_fantasia')
-        .eq('aluno_id', alunoId)
-        .eq('ativo', true)
-
-      if (empresasError) {
-        console.error('❌ Erro ao buscar empresas:', empresasError)
+      // Busca via API server-side (usa service role para bypassar RLS do aluno)
+      const response = await fetch(`/api/aluno/dashboard?aluno_id=${alunoId}`)
+      if (!response.ok) {
+        console.error('❌ Erro ao buscar dados do dashboard')
         setLoading(false)
         return
       }
+
+      const { empresas, checklists: checklistsData, todosChecklists } = await response.json()
 
       if (!empresas || empresas.length === 0) {
-        console.log('⚠️ Nenhuma empresa encontrada para este aluno')
         setLoading(false)
         return
       }
 
-      const empresaIds = empresas.map(e => e.id)
-      console.log('✅ Empresas encontradas:', empresas)
-
-      // 2️⃣ Buscar checklists dos últimos 30 dias
-      const dataLimite = new Date()
-      dataLimite.setDate(dataLimite.getDate() - 30)
-
-      const { data: checklistsData, error: checklistsError } = await supabase
-        .from('checklists')
-        .select(`
-          id,
-          nome,
-          descricao,
-          status,
-          created_at,
-          empresa_id,
-          empresas (
-            nome_fantasia
-          )
-        `)
-        .in('empresa_id', empresaIds)
-        .gte('created_at', dataLimite.toISOString())
-        .order('created_at', { ascending: false })
-
-      if (checklistsError) {
-        console.error('❌ Erro ao buscar checklists:', checklistsError)
-      }
-
-      console.log('📋 Checklists encontrados:', checklistsData)
-
-      // Mapear dados
-      const checklistsFormatados = (checklistsData || []).map((item: any) => ({
+      // Mapear checklists
+      const checklistsFormatados = checklistsData.map((item: any) => ({
         id: item.id,
         nome: item.nome,
         descricao: item.descricao,
@@ -161,62 +121,24 @@ export default function DashboardAluno() {
         created_at: item.created_at,
         empresa: item.empresas ? { nome_fantasia: item.empresas.nome_fantasia } : null
       }))
-
       setChecklists(checklistsFormatados)
 
-      // 3️⃣ Calcular performance
-      await calcularPerformance(empresas, empresaIds)
-
-    } catch (error) {
-      console.error('❌ Erro geral:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function calcularPerformance(empresas: any[], empresaIds: string[]) {
-    try {
-      // Buscar TODOS os checklists das empresas do aluno
-      const { data: todosChecklists, error } = await supabase
-        .from('checklists')
-        .select('id, empresa_id, status')
-        .in('empresa_id', empresaIds)
-
-      if (error) {
-        console.error('❌ Erro ao buscar checklists para performance:', error)
-        return
-      }
-
-      console.log('📊 Total de checklists para performance:', todosChecklists?.length)
-
-      // Agrupar por empresa
+      // Calcular performance
       const performancePorEmpresa: { [key: string]: { total: number; concluidos: number; pendentes: number } } = {}
-
-      // Inicializar todas as empresas
-      empresas.forEach(empresa => {
-        performancePorEmpresa[empresa.nome_fantasia] = {
-          total: 0,
-          concluidos: 0,
-          pendentes: 0
-        }
+      empresas.forEach((empresa: any) => {
+        performancePorEmpresa[empresa.nome_fantasia] = { total: 0, concluidos: 0, pendentes: 0 }
       })
-
-      // Contar checklists
-      todosChecklists?.forEach(checklist => {
-        const empresa = empresas.find(e => e.id === checklist.empresa_id)
+      todosChecklists.forEach((checklist: any) => {
+        const empresa = empresas.find((e: any) => e.id === checklist.empresa_id)
         if (empresa) {
-          const nomeEmpresa = empresa.nome_fantasia
-          performancePorEmpresa[nomeEmpresa].total++
-          
+          performancePorEmpresa[empresa.nome_fantasia].total++
           if (checklist.status === 'concluido') {
-            performancePorEmpresa[nomeEmpresa].concluidos++
+            performancePorEmpresa[empresa.nome_fantasia].concluidos++
           } else {
-            performancePorEmpresa[nomeEmpresa].pendentes++
+            performancePorEmpresa[empresa.nome_fantasia].pendentes++
           }
         }
       })
-
-      // Converter para array
       const performanceArray: PerformanceData[] = Object.entries(performancePorEmpresa)
         .filter(([_, dados]) => dados.total > 0)
         .map(([empresa, dados]) => ({
@@ -226,12 +148,12 @@ export default function DashboardAluno() {
           pendentes: dados.pendentes,
           percentual: dados.total > 0 ? Math.round((dados.concluidos / dados.total) * 100) : 0
         }))
-
-      console.log('✅ Performance calculada:', performanceArray)
       setPerformance(performanceArray)
 
     } catch (error) {
-      console.error('❌ Erro ao calcular performance:', error)
+      console.error('❌ Erro geral:', error)
+    } finally {
+      setLoading(false)
     }
   }
 

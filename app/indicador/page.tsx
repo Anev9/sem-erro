@@ -323,17 +323,18 @@ export default function DashboardIndicadores() {
             }} />
 
             {/* Pontos do gráfico */}
-            <svg style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
               {/* Linha conectando os pontos */}
               <polyline
                 points={dadosGrafico.map((d, i) => {
                   const x = (i / (dadosGrafico.length - 1)) * 95;
                   const y = 100 - ((d.realizado / 60) * 85);
-                  return `${x}%,${y}%`;
+                  return `${x},${y}`;
                 }).join(' ')}
                 fill="none"
                 stroke="#2196F3"
                 strokeWidth="3"
+                vectorEffect="non-scaling-stroke"
                 style={{ filter: 'drop-shadow(0 2px 4px rgba(33,150,243,0.3))' }}
               />
 
@@ -344,11 +345,12 @@ export default function DashboardIndicadores() {
                 return (
                   <circle
                     key={index}
-                    cx={`${x}%`}
-                    cy={`${y}%`}
-                    r="5"
+                    cx={x}
+                    cy={y}
+                    r="2"
                     fill="#2196F3"
-                    style={{ 
+                    vectorEffect="non-scaling-stroke"
+                    style={{
                       filter: 'drop-shadow(0 2px 4px rgba(33,150,243,0.5))',
                       cursor: 'pointer'
                     }}

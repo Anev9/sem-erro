@@ -19,8 +19,11 @@ export default function DashboardAdmin() {
     }
     const user = JSON.parse(userData)
     if (user.role !== 'admin') {
-      alert('Acesso negado!')
-      router.push('/dashboard-aluno')
+      if (user.role === 'colaborador') {
+        window.location.href = '/dashboard-funcionario'
+      } else {
+        window.location.href = '/dashboard-aluno'
+      }
       return
     }
     setUserName(user.full_name || user.email)

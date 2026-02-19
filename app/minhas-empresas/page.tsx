@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase, type Empresa } from '@/lib/supabase'
+interface Empresa {
+  id: string
+  nome_fantasia: string
+  razao_social?: string
+  cnpj?: string
+  endereco?: string
+  cidade?: string
+  estado?: string
+  telefone?: string
+  ativo: boolean
+}
 import { 
   Building2,
   Plus,
@@ -22,6 +32,7 @@ export default function MinhasEmpresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [clienteId, setClienteId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     nome_fantasia: '',
     razao_social: '',
@@ -40,22 +51,31 @@ export default function MinhasEmpresas() {
   ]
 
   useEffect(() => {
-    carregarEmpresas()
+    verificarAutenticacao()
   }, [])
 
-  async function carregarEmpresas() {
+  async function verificarAutenticacao() {
+    const userStr = localStorage.getItem('user')
+    if (!userStr) { router.push('/login'); return }
+    const user = JSON.parse(userStr)
+    if (user.role !== 'aluno') { router.push('/login'); return }
+    const id = String(user.id)
+    setClienteId(id)
+    await carregarEmpresas(id)
+  }
+
+  async function carregarEmpresas(alunoId?: string) {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('empresas')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
+      const id = alunoId || clienteId
+      if (!id) return
+      const res = await fetch(`/api/aluno/empresas?aluno_id=${id}`)
+      if (!res.ok) throw new Error('Erro ao carregar')
+      const data = await res.json()
       setEmpresas(data || [])
     } catch (error) {
       console.error('Erro ao carregar empresas:', error)
-      alert('Erro ao carregar empresas')
+      alert('Erro ao carregar empresas: ' + (error as Error).message)
     } finally {
       setLoading(false)
     }
@@ -67,24 +87,20 @@ export default function MinhasEmpresas() {
       return
     }
 
+    if (!clienteId) {
+      alert('Erro: Cliente não identificado. Recarregue a página.')
+      return
+    }
+
     try {
       setLoading(true)
 
-      // PEGAR ALUNO DO LOCALSTORAGE
-      const alunoData = localStorage.getItem('aluno')
-      if (!alunoData) {
-        alert('Você precisa estar logado')
-        router.push('/login')
-        return
-      }
-
-      const aluno = JSON.parse(alunoData)
-
       if (editingId) {
-        // ATUALIZAR
-        const { error } = await supabase
-          .from('empresas')
-          .update({
+        const res = await fetch('/api/aluno/empresas', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingId,
             nome_fantasia: formData.nome_fantasia,
             razao_social: formData.razao_social,
             cnpj: formData.cnpj,
@@ -94,15 +110,16 @@ export default function MinhasEmpresas() {
             telefone: formData.telefone,
             ativo: formData.ativo
           })
-          .eq('id', editingId)
-
-        if (error) throw error
+        })
+        if (!res.ok) throw new Error('Erro ao atualizar')
         alert('Empresa atualizada com sucesso!')
+
       } else {
-        // CRIAR
-        const { error } = await supabase
-          .from('empresas')
-          .insert([{
+        const res = await fetch('/api/aluno/empresas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            aluno_id: clienteId,
             nome_fantasia: formData.nome_fantasia,
             razao_social: formData.razao_social,
             cnpj: formData.cnpj,
@@ -110,20 +127,20 @@ export default function MinhasEmpresas() {
             cidade: formData.cidade,
             estado: formData.estado,
             telefone: formData.telefone,
-            ativo: formData.ativo,
-            aluno_id: aluno.id
-          }])
-
-        if (error) throw error
+            ativo: formData.ativo
+          })
+        })
+        if (!res.ok) throw new Error('Erro ao cadastrar')
         alert('Empresa cadastrada com sucesso!')
       }
 
       setShowAddModal(false)
       resetForm()
-      carregarEmpresas()
+      await carregarEmpresas()
+
     } catch (error: any) {
       console.error('Erro ao salvar empresa:', error)
-      alert('Erro: ' + error.message)
+      alert('Erro ao salvar empresa: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -146,13 +163,13 @@ export default function MinhasEmpresas() {
 
   async function toggleAtivo(id: string, ativoAtual: boolean) {
     try {
-      const { error } = await supabase
-        .from('empresas')
-        .update({ ativo: !ativoAtual })
-        .eq('id', id)
-
-      if (error) throw error
-      carregarEmpresas()
+      const res = await fetch('/api/aluno/empresas', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ativo: !ativoAtual })
+      })
+      if (!res.ok) throw new Error('Erro ao atualizar')
+      await carregarEmpresas()
     } catch (error) {
       console.error('Erro ao atualizar status:', error)
       alert('Erro ao atualizar status')
@@ -160,22 +177,18 @@ export default function MinhasEmpresas() {
   }
 
   async function deletarEmpresa(id: string, nome: string) {
-    if (!confirm(`Tem certeza que deseja excluir a empresa "${nome}"?`)) {
+    if (!confirm(`Tem certeza que deseja excluir a empresa "${nome}"?\n\nOs colaboradores vinculados a ela serão desativados.`)) {
       return
     }
 
     try {
-      const { error } = await supabase
-        .from('empresas')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
+      const res = await fetch(`/api/aluno/empresas?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Erro ao excluir')
       alert('Empresa excluída com sucesso!')
-      carregarEmpresas()
+      await carregarEmpresas()
     } catch (error) {
-      console.error('Erro ao deletar empresa:', error)
-      alert('Erro ao deletar empresa')
+      console.error('Erro ao excluir empresa:', error)
+      alert('Erro ao excluir empresa')
     }
   }
 
@@ -191,6 +204,28 @@ export default function MinhasEmpresas() {
       ativo: true
     })
     setEditingId(null)
+  }
+
+  const formatCNPJ = (value: string) => {
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length <= 14) {
+      return numbers
+        .replace(/(\d{2})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2')
+    }
+    return value
+  }
+
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2')
+    }
+    return value
   }
 
   const filteredEmpresas = empresas.filter(emp =>
@@ -227,7 +262,8 @@ export default function MinhasEmpresas() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button
-              onClick={() => router.push('/dashboard-admin')}
+              onClick={() => router.push('/dashboard-aluno')}
+              type="button"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -406,7 +442,7 @@ export default function MinhasEmpresas() {
               Sobre o cadastro de empresas
             </h3>
             <p style={{ fontSize: '0.875rem', color: '#1e40af', margin: 0 }}>
-              Cadastre as empresas do seu grupo para atribuir checklists e acompanhar o desempenho.
+              Cadastre as empresas do seu grupo para atribuir checklists e acompanhar o desempenho de seus colaboradores.
             </p>
           </div>
         </div>
@@ -420,7 +456,7 @@ export default function MinhasEmpresas() {
         }}>
           {loading && empresas.length === 0 ? (
             <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-              <p>Carregando...</p>
+              <p>Carregando empresas...</p>
             </div>
           ) : filteredEmpresas.length === 0 ? (
             <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
@@ -577,263 +613,353 @@ export default function MinhasEmpresas() {
       {showAddModal && (
         <div style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          inset: 0,
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
-          padding: '1rem'
-        }} onClick={() => setShowAddModal(false)}>
+          padding: '1rem',
+          zIndex: 50
+        }}>
           <div style={{
             backgroundColor: 'white',
             borderRadius: '1rem',
-            maxWidth: '800px',
+            maxWidth: '600px',
             width: '100%',
             maxHeight: '90vh',
             overflow: 'auto',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
-          }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: '2rem', borderBottom: '1px solid #e5e7eb' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  backgroundColor: '#ede9fe',
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Building2 size={20} style={{ color: '#8b5cf6' }} />
+                </div>
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  margin: 0
+                }}>
                   {editingId ? 'Editar Empresa' : 'Nova Empresa'}
                 </h2>
-                <button
-                  onClick={() => {
-                    setShowAddModal(false)
-                    resetForm()
-                  }}
-                  style={{
-                    padding: '0.5rem',
-                    backgroundColor: '#f3f4f6',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <X size={20} style={{ color: '#6b7280' }} />
-                </button>
               </div>
+              <button
+                onClick={() => {
+                  setShowAddModal(false)
+                  resetForm()
+                }}
+                style={{
+                  padding: '0.5rem',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  borderRadius: '0.375rem'
+                }}
+              >
+                <X size={20} />
+              </button>
             </div>
 
-            <div style={{ padding: '2rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                    Nome Fantasia *
+            {/* Modal Body */}
+            <div style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'grid', gap: '1.25rem' }}>
+                {/* Nome Fantasia */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Nome Fantasia <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.nome_fantasia}
-                    onChange={(e) => setFormData({...formData, nome_fantasia: e.target.value})}
-                    placeholder="Ex: Supermercado São José"
+                    onChange={(e) => setFormData({ ...formData, nome_fantasia: e.target.value })}
+                    placeholder="Digite o nome fantasia"
                     style={{
                       width: '100%',
-                      padding: '0.875rem 1rem',
+                      padding: '0.75rem',
                       border: '2px solid #e5e7eb',
-                      borderRadius: '0.75rem',
+                      borderRadius: '0.5rem',
                       fontSize: '0.95rem',
                       outline: 'none'
                     }}
                   />
                 </div>
 
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
+                {/* Razão Social */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
                     Razão Social
                   </label>
                   <input
                     type="text"
                     value={formData.razao_social}
-                    onChange={(e) => setFormData({...formData, razao_social: e.target.value})}
-                    placeholder="Ex: Supermercado São José Ltda"
+                    onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })}
+                    placeholder="Digite a razão social"
                     style={{
                       width: '100%',
-                      padding: '0.875rem 1rem',
+                      padding: '0.75rem',
                       border: '2px solid #e5e7eb',
-                      borderRadius: '0.75rem',
+                      borderRadius: '0.5rem',
                       fontSize: '0.95rem',
                       outline: 'none'
                     }}
                   />
                 </div>
 
+                {/* CNPJ */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                    CNPJ *
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    CNPJ <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.cnpj}
-                    onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })}
                     placeholder="00.000.000/0000-00"
+                    maxLength={18}
                     style={{
                       width: '100%',
-                      padding: '0.875rem 1rem',
+                      padding: '0.75rem',
                       border: '2px solid #e5e7eb',
-                      borderRadius: '0.75rem',
+                      borderRadius: '0.5rem',
                       fontSize: '0.95rem',
                       outline: 'none'
                     }}
                   />
                 </div>
 
+                {/* Endereço */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                    Telefone
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.telefone}
-                    onChange={(e) => setFormData({...formData, telefone: e.target.value})}
-                    placeholder="(00) 00000-0000"
-                    style={{
-                      width: '100%',
-                      padding: '0.875rem 1rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '0.75rem',
-                      fontSize: '0.95rem',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
                     Endereço
                   </label>
                   <input
                     type="text"
                     value={formData.endereco}
-                    onChange={(e) => setFormData({...formData, endereco: e.target.value})}
-                    placeholder="Rua, número, bairro"
+                    onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                    placeholder="Rua, número, complemento"
                     style={{
                       width: '100%',
-                      padding: '0.875rem 1rem',
+                      padding: '0.75rem',
                       border: '2px solid #e5e7eb',
-                      borderRadius: '0.75rem',
+                      borderRadius: '0.5rem',
                       fontSize: '0.95rem',
                       outline: 'none'
                     }}
                   />
                 </div>
 
+                {/* Cidade e Estado */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      Cidade
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cidade}
+                      onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                      placeholder="Digite a cidade"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.95rem',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>
+                      Estado
+                    </label>
+                    <select
+                      value={formData.estado}
+                      onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.95rem',
+                        outline: 'none',
+                        backgroundColor: 'white'
+                      }}
+                    >
+                      <option value="">UF</option>
+                      {estados.map(uf => (
+                        <option key={uf} value={uf}>{uf}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Telefone */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                    Cidade
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Telefone
                   </label>
                   <input
                     type="text"
-                    value={formData.cidade}
-                    onChange={(e) => setFormData({...formData, cidade: e.target.value})}
-                    placeholder="Ex: Rio de Janeiro"
+                    value={formData.telefone}
+                    onChange={(e) => setFormData({ ...formData, telefone: formatPhone(e.target.value) })}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
                     style={{
                       width: '100%',
-                      padding: '0.875rem 1rem',
+                      padding: '0.75rem',
                       border: '2px solid #e5e7eb',
-                      borderRadius: '0.75rem',
+                      borderRadius: '0.5rem',
                       fontSize: '0.95rem',
                       outline: 'none'
                     }}
                   />
                 </div>
 
+                {/* Status */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                    Estado
-                  </label>
-                  <select
-                    value={formData.estado}
-                    onChange={(e) => setFormData({...formData, estado: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '0.875rem 1rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '0.75rem',
-                      fontSize: '0.95rem',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="">Selecione...</option>
-                    {estados.map(estado => (
-                      <option key={estado} value={estado}>{estado}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ gridColumn: 'span 2' }}>
                   <label style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.875rem 1rem',
-                    backgroundColor: '#f9fafb',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '0.75rem',
+                    gap: '0.5rem',
                     cursor: 'pointer'
                   }}>
                     <input
                       type="checkbox"
                       checked={formData.ativo}
-                      onChange={(e) => setFormData({...formData, ativo: e.target.checked})}
-                      style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                      onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+                      style={{
+                        width: '1.25rem',
+                        height: '1.25rem',
+                        cursor: 'pointer'
+                      }}
                     />
-                    <span style={{ fontSize: '0.95rem', fontWeight: '500', color: '#374151' }}>
+                    <span style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151'
+                    }}>
                       Empresa ativa
                     </span>
                   </label>
                 </div>
               </div>
+            </div>
 
-              <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => {
-                    setShowAddModal(false)
-                    resetForm()
-                  }}
-                  style={{
-                    padding: '0.875rem 1.75rem',
-                    backgroundColor: '#f3f4f6',
-                    color: '#374151',
-                    border: 'none',
-                    borderRadius: '0.75rem',
-                    cursor: 'pointer',
-                    fontSize: '0.95rem',
-                    fontWeight: '600'
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  style={{
-                    padding: '0.875rem 1.75rem',
-                    backgroundColor: loading ? '#9ca3af' : '#8b5cf6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.75rem',
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    fontSize: '0.95rem',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <CheckCircle size={18} />
-                  {loading ? 'Salvando...' : editingId ? 'Atualizar' : 'Cadastrar'}
-                </button>
-              </div>
+            {/* Modal Footer */}
+            <div style={{
+              padding: '1.5rem',
+              borderTop: '1px solid #e5e7eb',
+              display: 'flex',
+              gap: '1rem',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  setShowAddModal(false)
+                  resetForm()
+                }}
+                disabled={loading}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  opacity: loading ? 0.6 : 1
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  opacity: loading ? 0.6 : 1
+                }}
+              >
+                {loading ? (
+                  <>Salvando...</>
+                ) : (
+                  <>
+                    <CheckCircle size={18} />
+                    {editingId ? 'Atualizar' : 'Cadastrar'}
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

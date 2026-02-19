@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(findstr:*)",
+      "Bash(dir \"c:\\\\Deisiane\\\\Projetos\\\\SemErro\\\\sem-erro\\\\app\" /b)"
+    ]
+  }
+}

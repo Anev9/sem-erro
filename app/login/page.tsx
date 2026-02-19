@@ -34,19 +34,14 @@ export default function LoginPage() {
       setLoading(true);
       
       try {
-        console.log('🔐 Tentando login com:', email);
-        
-        // ✅ TENTATIVA 1: Login como ADMIN (Supabase Auth)
+        // TENTATIVA 1: Login com Supabase Auth (ADMIN ou COLABORADOR)
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email: email,
           password: password,
         });
 
-        // Se login Auth funcionou = ADMIN
         if (authData.user && !authError) {
-          console.log('✅ Login ADMIN bem-sucedido!');
-          
-          // Buscar perfil admin
+          // Verificar se é ADMIN
           const { data: profile, error: profileError } = await supabase
             .from('user_profiles')
             .select('*')
@@ -54,40 +49,60 @@ export default function LoginPage() {
             .single();
 
           if (profile && !profileError) {
-            localStorage.setItem('user', JSON.stringify(profile));
-            console.log('🚀 Redirecionando para dashboard admin');
-            router.push('/dashboard-admin');
+            const adminData = {
+              ...profile,
+              role: 'admin',
+              email: profile.email || authData.user.email,
+              full_name: profile.full_name || profile.name || authData.user.email,
+            }
+            localStorage.setItem('user', JSON.stringify(adminData));
+            window.location.href = '/dashboard-admin';
+            return;
+          }
+
+          // Verificar se é COLABORADOR
+          const { data: colaborador, error: colaboradorError } = await supabase
+            .from('colaboradores')
+            .select(`
+              *,
+              empresas (
+                nome_fantasia
+              )
+            `)
+            .eq('auth_id', authData.user.id)
+            .eq('ativo', true)
+            .single();
+
+          if (colaborador && !colaboradorError) {
+            const userData = {
+              id: colaborador.id,
+              auth_id: colaborador.auth_id,
+              email: colaborador.email,
+              nome: colaborador.nome,
+              role: 'colaborador',
+              empresa_id: colaborador.empresa_id,
+              empresa_nome: colaborador.empresas?.nome_fantasia,
+              cargo: colaborador.cargo,
+              created_at: colaborador.created_at
+            };
+
+            localStorage.setItem('user', JSON.stringify(userData));
+            window.location.href = '/dashboard-funcionario';
             return;
           }
         }
 
-        // ✅ TENTATIVA 2: Login como ALUNO (tabela alunos)
-        console.log('🔍 Tentando login como ALUNO...');
-        
-        const { data: aluno, error: alunoError } = await supabase
-          .from('alunos')
-          .select('*')
-          .eq('e-mail', email)
-          .eq('senha', password)
-          .single();
+        // TENTATIVA 2: Login como ALUNO (via API server-side)
+        const response = await fetch('/api/auth/login-aluno', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
 
-        if (aluno && !alunoError) {
-          console.log('✅ Login ALUNO bem-sucedido!', aluno);
-          
-          // Criar objeto de usuário compatível
-          const userData = {
-            id: aluno.id,
-            email: aluno['e-mail'],
-            full_name: aluno.clientes || aluno['e-mail'],
-            role: 'aluno',
-            programa: aluno.programa,
-            telefone: aluno.telefone,
-            created_at: aluno.created_at
-          };
-          
+        if (response.ok) {
+          const userData = await response.json();
           localStorage.setItem('user', JSON.stringify(userData));
-          console.log('🚀 Redirecionando para dashboard aluno');
-          router.push('/dashboard-aluno');
+          window.location.href = '/dashboard-aluno';
           return;
         }
 
@@ -204,10 +219,10 @@ export default function LoginPage() {
                 marginBottom: '0.5rem',
                 letterSpacing: '-0.02em'
               }}>
-                Área do Cliente
+                Login SEM ERRO
               </h1>
               <p style={{ color: '#6b7280', fontSize: '1rem' }}>
-                Acesse sua conta SEM ERRO
+                Clientes e Colaboradores
               </p>
             </div>
 

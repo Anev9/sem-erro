@@ -1,63 +1,88 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft, Mail } from 'lucide-react'
 
 export default function AlterarSenha() {
   const router = useRouter()
-  const [senhaAtual, setSenhaAtual] = useState('')
+  // 'loading' enquanto verifica sessão, 'change' se logado, 'forgot' se não logado
+  const [mode, setMode] = useState<'loading' | 'change' | 'forgot'>('loading')
+  const [email, setEmail] = useState('')
   const [novaSenha, setNovaSenha] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')
-  const [showSenhaAtual, setShowSenhaAtual] = useState(false)
   const [showNovaSenha, setShowNovaSenha] = useState(false)
   const [showConfirmarSenha, setShowConfirmarSenha] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  const validarSenha = () => {
-    if (!senhaAtual) {
-      setMessage({ type: 'error', text: 'Digite sua senha atual' })
-      return false
-    }
-    if (novaSenha.length < 6) {
-      setMessage({ type: 'error', text: 'A nova senha deve ter no mínimo 6 caracteres' })
-      return false
-    }
-    if (novaSenha !== confirmarSenha) {
-      setMessage({ type: 'error', text: 'As senhas não coincidem' })
-      return false
-    }
-    if (senhaAtual === novaSenha) {
-      setMessage({ type: 'error', text: 'A nova senha deve ser diferente da senha atual' })
-      return false
-    }
-    return true
-  }
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setMode(user ? 'change' : 'forgot')
+    })
+  }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Fluxo "Esqueci minha senha" — envia e-mail de recuperação
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage(null)
 
-    if (!validarSenha()) return
+    if (!email) {
+      setMessage({ type: 'error', text: 'Digite seu e-mail' })
+      return
+    }
 
     setLoading(true)
-
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      setMessage({ type: 'success', text: 'Senha alterada com sucesso!' })
-      setSenhaAtual('')
-      setNovaSenha('')
-      setConfirmarSenha('')
-      
-      setTimeout(() => {
-        router.push('/login')
-      }, 2000)
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/alterar-senha`
+      })
+      if (error) throw error
+      setMessage({ type: 'success', text: 'E-mail de recuperação enviado! Verifique sua caixa de entrada e clique no link.' })
+      setEmail('')
     } catch (error: any) {
-      setMessage({ type: 'error', text: 'Erro ao alterar senha. Tente novamente.' })
+      setMessage({ type: 'error', text: 'Erro ao enviar e-mail. Verifique o endereço informado.' })
     } finally {
       setLoading(false)
     }
+  }
+
+  // Fluxo "Alterar senha" — usuário já logado
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMessage(null)
+
+    if (novaSenha.length < 6) {
+      setMessage({ type: 'error', text: 'A nova senha deve ter no mínimo 6 caracteres' })
+      return
+    }
+    if (novaSenha !== confirmarSenha) {
+      setMessage({ type: 'error', text: 'As senhas não coincidem' })
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ password: novaSenha })
+      if (error) throw error
+      setMessage({ type: 'success', text: 'Senha alterada com sucesso! Redirecionando...' })
+      setNovaSenha('')
+      setConfirmarSenha('')
+      setTimeout(() => router.push('/login'), 2000)
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Erro ao alterar senha. Tente novamente.' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (mode === 'loading') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)' }}>
+        <p style={{ color: 'white', fontSize: '1.1rem' }}>Carregando...</p>
+      </div>
+    )
   }
 
   return (
@@ -139,17 +164,19 @@ export default function AlterarSenha() {
                 <Lock style={{ width: '2.5rem', height: '2.5rem', color: 'white' }} />
               </div>
               
-              <h1 style={{ 
-                fontSize: '2rem', 
-                fontWeight: 'bold', 
-                color: '#1f2937', 
+              <h1 style={{
+                fontSize: '2rem',
+                fontWeight: 'bold',
+                color: '#1f2937',
                 marginBottom: '0.5rem',
                 letterSpacing: '-0.02em'
               }}>
-                Alterar Senha
+                {mode === 'forgot' ? 'Esqueci minha senha' : 'Alterar Senha'}
               </h1>
               <p style={{ color: '#6b7280', fontSize: '1rem' }}>
-                Defina uma nova senha para sua conta
+                {mode === 'forgot'
+                  ? 'Informe seu e-mail para receber o link de recuperação'
+                  : 'Defina uma nova senha para sua conta'}
               </p>
             </div>
 
@@ -173,78 +200,48 @@ export default function AlterarSenha() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit}>
-              {/* Senha Atual */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ 
-                  display: 'block', 
-                  fontSize: '0.875rem', 
-                  fontWeight: '500', 
-                  color: '#374151', 
-                  marginBottom: '0.5rem' 
-                }}>
-                  Senha Atual
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Lock style={{
-                    position: 'absolute',
-                    left: '1rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    color: '#9ca3af',
-                    pointerEvents: 'none'
-                  }} />
-                  <input
-                    type={showSenhaAtual ? 'text' : 'password'}
-                    value={senhaAtual}
-                    onChange={(e) => setSenhaAtual(e.target.value)}
-                    placeholder="Digite sua senha atual"
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '0.875rem 3rem 0.875rem 3rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '0.75rem',
-                      fontSize: '1rem',
-                      transition: 'all 0.3s ease',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#f97316'
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)'
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = '#e5e7eb'
-                      e.currentTarget.style.boxShadow = 'none'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSenhaAtual(!showSenhaAtual)}
-                    style={{
-                      position: 'absolute',
-                      right: '1rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: '#9ca3af',
-                      padding: '0.25rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      transition: 'color 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#f97316'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                  >
-                    {showSenhaAtual ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
+            {/* MODO: Esqueci minha senha */}
+            {mode === 'forgot' && (
+              <form onSubmit={handleForgotPassword}>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
+                    Seu e-mail
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', width: '1.25rem', height: '1.25rem', color: '#9ca3af', pointerEvents: 'none' }} />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Digite seu e-mail de cadastro"
+                      required
+                      style={{ width: '100%', padding: '0.875rem 1rem 0.875rem 3rem', border: '2px solid #e5e7eb', borderRadius: '0.75rem', fontSize: '1rem', outline: 'none' }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = '#f97316'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)' }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none' }}
+                    />
+                  </div>
                 </div>
-              </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{ width: '100%', background: 'linear-gradient(to right, #f97316, #ea580c)', color: 'white', padding: '1rem', border: 'none', borderRadius: '0.75rem', fontSize: '1.125rem', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1, marginBottom: '1rem' }}
+                >
+                  {loading ? 'Enviando...' : 'Enviar link de recuperação'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push('/login')}
+                  style={{ width: '100%', padding: '0.875rem', backgroundColor: 'transparent', border: '2px solid #e5e7eb', borderRadius: '0.75rem', cursor: 'pointer', color: '#6b7280', fontSize: '1rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                >
+                  <ArrowLeft size={16} />
+                  Voltar para o login
+                </button>
+              </form>
+            )}
 
+            {/* MODO: Alterar senha (usuário logado) */}
+            {mode === 'change' && (
+            <form onSubmit={handleChangePassword}>
               {/* Nova Senha */}
               <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ 
@@ -423,11 +420,11 @@ export default function AlterarSenha() {
                   }}>
                     Senhas devem coincidir
                   </li>
-                  <li style={{ 
-                    color: senhaAtual && novaSenha && senhaAtual !== novaSenha ? '#16a34a' : '#1e40af',
-                    fontWeight: senhaAtual && novaSenha && senhaAtual !== novaSenha ? '500' : 'normal'
+                  <li style={{
+                    color: novaSenha && confirmarSenha && novaSenha === confirmarSenha ? '#16a34a' : '#1e40af',
+                    fontWeight: novaSenha && confirmarSenha && novaSenha === confirmarSenha ? '500' : 'normal'
                   }}>
-                    Diferente da senha atual
+                    Confirmação deve ser igual à nova senha
                   </li>
                 </ul>
               </div>
@@ -500,6 +497,7 @@ export default function AlterarSenha() {
                 Voltar
               </button>
             </form>
+            )}
           </div>
         </div>
       </div>

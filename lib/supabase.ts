@@ -5,7 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-export type UserRole = 'admin' | 'aluno'
+export type UserRole = 'admin' | 'aluno' | 'colaborador'
 
 export interface UserProfile {
   id: string
@@ -20,8 +20,15 @@ export interface UserProfile {
 export interface Aluno {
   id: number
   email: string
-  nome_completo: string
+  nome_fantasia: string
+  razao_social?: string
+  cnpj?: string
+  endereco?: string
+  cidade?: string
+  estado?: string
   telefone?: string
+  celular?: string
+  ativo: boolean
   created_at: string
   updated_at: string
 }
@@ -42,15 +49,16 @@ export interface Empresa {
   updated_at: string
 }
 
-// FUNCIONÁRIO (trabalha na empresa)
-export interface Funcionario {
+// COLABORADOR (trabalha na empresa)
+export interface Colaborador {
   id: string
+  auth_id: string
   empresa_id: string
   email: string
-  nome_completo: string
-  cpf?: string
-  cargo?: string
+  nome: string
+  celular?: string
   telefone?: string
+  cargo: string
   ativo: boolean
   created_at: string
   updated_at: string
@@ -65,37 +73,64 @@ export interface ChecklistTemplate {
   created_at: string
 }
 
-// CHECKLIST (atribuído a uma empresa)
-export interface Checklist {
+// CHECKLIST FUTURO (atribuído a uma empresa e colaborador)
+export interface ChecklistFuturo {
   id: string
   template_id?: string
-  empresa_id?: string
-  nome: string
+  empresa_id: string
+  colaborador_id?: string
+  titulo: string
   descricao?: string
   status: 'pendente' | 'em_andamento' | 'concluido'
-  data_inicio?: string
-  data_fim?: string
+  data_inicio: string
+  data_fim: string
+  ativo: boolean
   created_at: string
+  updated_at: string
 }
 
-// ITEM DO CHECKLIST
-export interface ChecklistItem {
+// ITEM DO CHECKLIST FUTURO
+export interface ChecklistFuturoItem {
   id: string
-  checklist_id: string
+  checklist_futuro_id: string
   titulo: string
   descricao?: string
   ordem: number
   obrigatorio: boolean
   tipo: 'checkbox' | 'texto' | 'numero' | 'foto'
+  created_at: string
+}
+
+// AÇÃO CORRETIVA
+export interface AcaoCorretiva {
+  id: string
+  empresa_id: string
+  checklist_id?: string
+  item_id?: string
+  titulo: string
+  descricao?: string
+  responsavel?: string
+  prazo?: string
+  status: 'aguardando' | 'em_andamento' | 'concluida' | 'atrasada'
+  prioridade: 'baixa' | 'media' | 'alta'
+  categoria?: string
+  orcamento?: number
+  valor_pago?: number
+  observacoes?: string
+  urgente: boolean
+  created_at: string
+  updated_at: string
 }
 
 // RESPOSTA DO CHECKLIST
 export interface ChecklistResposta {
   id: string
-  checklist_id: string
+  checklist_futuro_id: string
   item_id: string
-  funcionario_id?: string
+  colaborador_id: string
   resposta?: string
   foto_url?: string
+  respondido_por: string
+  respondido_em: string
   created_at: string
 }
