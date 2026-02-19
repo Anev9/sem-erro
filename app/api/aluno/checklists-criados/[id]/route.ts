@@ -10,15 +10,14 @@ function db() {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const checklistId = params.id
+  const { id: checklistId } = await params
   const { searchParams } = new URL(request.url)
   const alunoId = searchParams.get('aluno_id')
 
   if (!alunoId) return NextResponse.json({ error: 'aluno_id obrigatório' }, { status: 400 })
 
-  // Verificar que o checklist pertence ao aluno
   const { data: empresas } = await db()
     .from('empresas')
     .select('id')
