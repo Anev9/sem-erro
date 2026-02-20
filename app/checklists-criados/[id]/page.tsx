@@ -37,6 +37,7 @@ interface Resposta {
   item_id: string
   resposta: 'sim' | 'nao' | 'na' | null
   observacao?: string
+  foto_url?: string
 }
 
 interface AcaoVinculada {
@@ -59,6 +60,7 @@ export default function DetalhesChecklistPage() {
   const [respostas, setRespostas] = useState<Record<string, Resposta>>({})
   const [acoes, setAcoes] = useState<AcaoVinculada[]>([])
   const [loading, setLoading] = useState(true)
+  const [fotoExpandida, setFotoExpandida] = useState<string | null>(null)
 
   useEffect(() => {
     verificarAutenticacao()
@@ -93,7 +95,8 @@ export default function DetalhesChecklistPage() {
         mapaRespostas[r.item_id] = {
           item_id: r.item_id,
           resposta: r.resposta,
-          observacao: r.observacao || ''
+          observacao: r.observacao || '',
+          foto_url: r.foto_url || undefined
         }
       })
       setRespostas(mapaRespostas)
@@ -240,6 +243,16 @@ export default function DetalhesChecklistPage() {
               Itens do Checklist
             </h2>
 
+            {/* Lightbox */}
+            {fotoExpandida && (
+              <div
+                onClick={() => setFotoExpandida(null)}
+                style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', cursor: 'zoom-out' }}
+              >
+                <img src={fotoExpandida} alt="Foto ampliada" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '0.75rem', objectFit: 'contain' }} />
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
               {itens.map((item, index) => {
                 const r = respostas[item.id]
@@ -269,6 +282,22 @@ export default function DetalhesChecklistPage() {
                           <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.375rem 0 0', fontStyle: 'italic', paddingLeft: '1rem', borderLeft: '2px solid #cbd5e1' }}>
                             {r.observacao}
                           </p>
+                        )}
+
+                        {/* Foto do funcionário */}
+                        {r?.foto_url && (
+                          <button
+                            onClick={() => setFotoExpandida(r.foto_url!)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', background: 'none', border: 'none', cursor: 'zoom-in', padding: 0 }}
+                            title="Ver foto"
+                          >
+                            <img
+                              src={r.foto_url}
+                              alt="Foto do funcionário"
+                              style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #cbd5e1' }}
+                            />
+                            <span style={{ fontSize: '0.75rem', color: '#667eea', fontWeight: '500' }}>Ver foto</span>
+                          </button>
                         )}
 
                         {/* Ação vinculada a este item */}
