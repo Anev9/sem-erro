@@ -145,8 +145,8 @@ export default function EditarColaborador() {
         }
 
         .form-input:focus {
-          border-color: #f97316;
-          box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+          border-color: #2196F3;
+          box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
         }
 
         .form-label {
@@ -161,7 +161,7 @@ export default function EditarColaborador() {
       <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
         {/* Header */}
         <div style={{
-          background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+          background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
           padding: '2rem',
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
         }}>
@@ -377,7 +377,7 @@ export default function EditarColaborador() {
                     alignItems: 'center',
                     gap: '0.5rem',
                     padding: '0.875rem 2rem',
-                    backgroundColor: loading ? '#9ca3af' : '#f97316',
+                    background: loading ? '#9ca3af' : 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '0.75rem',
