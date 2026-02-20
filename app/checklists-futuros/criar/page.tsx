@@ -43,18 +43,38 @@ export default function CriarChecklistFuturoPage() {
   const [chaveCompartilhamento, setChaveCompartilhamento] = useState('')
   const [mensagemSalvamento, setMensagemSalvamento] = useState('')
 
+  const [empresas, setEmpresas] = useState<{id: string, nome_fantasia: string}[]>([])
+  const [colaboradores, setColaboradores] = useState<{id: string, nome: string}[]>([])
+  const [empresaId, setEmpresaId] = useState('')
+  const [colaboradorId, setColaboradorId] = useState('')
+
   useEffect(() => {
-    // Buscar dados do usuário logado
     const userData = localStorage.getItem('user')
     if (userData) {
       const user = JSON.parse(userData)
       setUserId(user.id)
+      carregarEmpresas(user.id)
     }
-    
     if (recorrente === 'modelo') {
       buscarTemplates()
     }
   }, [recorrente])
+
+  async function carregarEmpresas(alunoId: string) {
+    const res = await fetch(`/api/aluno/empresas?aluno_id=${alunoId}`)
+    if (res.ok) setEmpresas(await res.json())
+  }
+
+  async function handleEmpresaChange(empId: string) {
+    setEmpresaId(empId)
+    setColaboradorId('')
+    if (!empId || !userId) { setColaboradores([]); return }
+    const res = await fetch(`/api/aluno/colaboradores?aluno_id=${userId}`)
+    if (res.ok) {
+      const todos = await res.json()
+      setColaboradores(todos.filter((c: any) => c.empresa_id === empId))
+    }
+  }
 
   async function buscarTemplates() {
     setLoadingTemplates(true)
@@ -193,6 +213,8 @@ export default function CriarChecklistFuturoPage() {
         tipo_negocio: tipoNegocio,
         proxima_execucao: proximaExecucao,
         aluno_id: userId,
+        empresa_id: empresaId || null,
+        colaborador_id: colaboradorId || null,
         ativo: true
       })
       .select()
@@ -249,6 +271,8 @@ export default function CriarChecklistFuturoPage() {
         proxima_execucao: proximaExecucao,
         template_id: templateSelecionado,
         aluno_id: userId,
+        empresa_id: empresaId || null,
+        colaborador_id: colaboradorId || null,
         ativo: true
       })
       .select()
@@ -311,6 +335,8 @@ export default function CriarChecklistFuturoPage() {
         tipo_negocio: tipoNegocio || checklistOriginal.tipo_negocio,
         proxima_execucao: proximaExecucao,
         aluno_id: userId,
+        empresa_id: empresaId || null,
+        colaborador_id: colaboradorId || null,
         ativo: true
       })
       .select()
@@ -882,11 +908,71 @@ export default function CriarChecklistFuturoPage() {
               </div>
             </div>
 
+            {/* Empresa e Colaborador */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '1.5rem',
+              marginBottom: '1.75rem'
+            }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151', fontSize: '0.95rem' }}>
+                  Empresa
+                </label>
+                <select
+                  value={empresaId}
+                  onChange={(e) => handleEmpresaChange(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem 1rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  <option value="">Selecione a empresa...</option>
+                  {empresas.map(e => (
+                    <option key={e.id} value={e.id}>{e.nome_fantasia}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151', fontSize: '0.95rem' }}>
+                  Colaborador responsável
+                </label>
+                <select
+                  value={colaboradorId}
+                  onChange={(e) => setColaboradorId(e.target.value)}
+                  disabled={!empresaId}
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem 1rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    cursor: empresaId ? 'pointer' : 'not-allowed',
+                    backgroundColor: empresaId ? 'white' : '#f3f4f6',
+                    opacity: empresaId ? 1 : 0.7
+                  }}
+                >
+                  <option value="">Selecione o colaborador...</option>
+                  {colaboradores.map(c => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div style={{ marginBottom: '1.75rem' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '0.5rem', 
-                fontWeight: '500', 
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: '500',
                 color: '#374151',
                 fontSize: '0.95rem'
               }}>
