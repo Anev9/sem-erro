@@ -14,14 +14,16 @@ import {
   Building2,
   Calendar,
   MessageSquare,
-  Send
+  Send,
+  Camera,
+  X
 } from 'lucide-react'
 
 interface Checklist {
   id: string
-  titulo: string
+  nome: string
   descricao?: string
-  data_fim: string
+  proxima_execucao?: string
   empresa_id: string
   colaborador_id: string
   empresas?: { nome_fantasia: string }
@@ -55,6 +57,9 @@ export default function ResponderChecklistPage() {
   const [loading, setLoading] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [concluido, setConcluido] = useState(false)
+  const [fotos, setFotos] = useState<Record<string, string>>({})       // itemId → dataURL preview
+  const [fotoUrls, setFotoUrls] = useState<Record<string, string>>({}) // itemId → URL pública
+  const [uploadandoFoto, setUploadandoFoto] = useState(false)
 
   useEffect(() => {
     carregarDados()
@@ -120,6 +125,8 @@ export default function ResponderChecklistPage() {
 
       // Montar mapa de respostas existentes
       const mapaInicial: MapaRespostas = {}
+      const mapaFotoUrls: Record<string, string> = {}
+
       listaItens.forEach((item) => {
         const respostaExistente = (respostasData || []).find(
           (r: any) => r.item_id === item.id
@@ -129,7 +136,15 @@ export default function ResponderChecklistPage() {
           resposta: respostaExistente?.resposta ?? null,
           observacao: respostaExistente?.observacao ?? ''
         }
+        if (respostaExistente?.foto_url) {
+          mapaFotoUrls[item.id] = respostaExistente.foto_url
+        }
       })
+
+      if (Object.keys(mapaFotoUrls).length > 0) {
+        setFotoUrls(mapaFotoUrls)
+        setFotos(mapaFotoUrls) // usar mesma URL como preview para fotos já salvas
+      }
 
       setRespostas(mapaInicial)
 
@@ -155,11 +170,13 @@ export default function ResponderChecklistPage() {
     }
   }
 
-  async function salvarResposta(itemId: string, resposta: 'sim' | 'nao' | 'na', observacao: string) {
+  async function salvarResposta(itemId: string, resposta: 'sim' | 'nao' | 'na', observacao: string, foto_url?: string) {
     if (!colaboradorId) return
     setSalvando(true)
 
     try {
+      const fotoSalvar = foto_url ?? fotoUrls[itemId] ?? null
+
       // Verificar se já existe
       const { data: existente } = await supabase
         .from('checklist_respostas')
@@ -172,7 +189,7 @@ export default function ResponderChecklistPage() {
       if (existente) {
         await supabase
           .from('checklist_respostas')
-          .update({ resposta, observacao })
+          .update({ resposta, observacao, ...(fotoSalvar && { foto_url: fotoSalvar }) })
           .eq('id', existente.id)
       } else {
         await supabase
@@ -182,7 +199,8 @@ export default function ResponderChecklistPage() {
             colaborador_id: colaboradorId,
             item_id: itemId,
             resposta,
-            observacao
+            observacao,
+            ...(fotoSalvar && { foto_url: fotoSalvar })
           })
       }
     } catch (error) {
@@ -190,6 +208,58 @@ export default function ResponderChecklistPage() {
     } finally {
       setSalvando(false)
     }
+  }
+
+  async function handleFotoCaptura(e: React.ChangeEvent<HTMLInputElement>) {
+    const item = itens[itemAtual]
+    if (!item || !e.target.files?.[0]) return
+
+    const file = e.target.files[0]
+    setUploadandoFoto(true)
+
+    try {
+      // Preview local imediato
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        setFotos(prev => ({ ...prev, [item.id]: ev.target?.result as string }))
+      }
+      reader.readAsDataURL(file)
+
+      // Upload para Supabase Storage
+      const ext = file.name.split('.').pop() || 'jpg'
+      const path = `checklists/${checklistId}/${item.id}/${Date.now()}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('checklist-fotos')
+        .upload(path, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('checklist-fotos')
+        .getPublicUrl(path)
+
+      setFotoUrls(prev => ({ ...prev, [item.id]: publicUrl }))
+
+      // Se já tem resposta, salvar com foto_url
+      const respostaAtualItem = respostas[item.id]
+      if (respostaAtualItem?.resposta) {
+        await salvarResposta(item.id, respostaAtualItem.resposta, respostaAtualItem.observacao, publicUrl)
+      }
+    } catch (error) {
+      console.error('Erro ao enviar foto:', error)
+      alert('Erro ao enviar foto. Tente novamente.')
+    } finally {
+      setUploadandoFoto(false)
+      e.target.value = ''
+    }
+  }
+
+  function removerFoto() {
+    const item = itens[itemAtual]
+    if (!item) return
+    setFotos(prev => { const n = { ...prev }; delete n[item.id]; return n })
+    setFotoUrls(prev => { const n = { ...prev }; delete n[item.id]; return n })
   }
 
   function selecionarResposta(valor: 'sim' | 'nao' | 'na') {
@@ -300,7 +370,7 @@ export default function ResponderChecklistPage() {
               Checklist Concluído!
             </h1>
             <p style={{ fontSize: '1rem', color: '#6b7280', marginBottom: '2rem' }}>
-              {checklist.titulo}
+              {checklist.nome}
             </p>
 
             {/* Resumo */}
@@ -379,7 +449,7 @@ export default function ResponderChecklistPage() {
           </button>
 
           <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'white', margin: '0 0 0.25rem' }}>
-            {checklist.titulo}
+            {checklist.nome}
           </h1>
 
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
@@ -389,10 +459,12 @@ export default function ResponderChecklistPage() {
                 {checklist.empresas.nome_fantasia}
               </span>
             )}
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>
-              <Calendar size={14} />
-              Até {new Date(checklist.data_fim).toLocaleDateString('pt-BR')}
-            </span>
+            {checklist.proxima_execucao && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>
+                <Calendar size={14} />
+                {new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}
+              </span>
+            )}
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>
               <ClipboardList size={14} />
               {totalRespondidos}/{itens.length} respondidas
@@ -524,6 +596,65 @@ export default function ResponderChecklistPage() {
                   <Send size={16} />
                 </button>
               </div>
+            </div>
+
+            {/* Foto */}
+            <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.25rem', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', marginBottom: '1.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: '#374151', marginBottom: '0.75rem' }}>
+                <Camera size={16} style={{ color: '#6b7280' }} />
+                Foto (opcional)
+              </label>
+
+              {fotos[itemAtualDados.id] ? (
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <img
+                    src={fotos[itemAtualDados.id]}
+                    alt="Foto capturada"
+                    style={{ width: '100%', maxHeight: '240px', objectFit: 'cover', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
+                  />
+                  <button
+                    onClick={removerFoto}
+                    style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', width: '2rem', height: '2rem', backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <X size={14} />
+                  </button>
+                  <label
+                    htmlFor={`foto-input-${itemAtualDados.id}`}
+                    style={{ display: 'block', marginTop: '0.5rem', textAlign: 'center', fontSize: '0.8rem', color: '#3b82f6', cursor: 'pointer', fontWeight: '500' }}
+                  >
+                    Trocar foto
+                  </label>
+                </div>
+              ) : (
+                <label
+                  htmlFor={`foto-input-${itemAtualDados.id}`}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    gap: '0.5rem', padding: '1.5rem', border: '2px dashed #d1d5db', borderRadius: '0.75rem',
+                    cursor: uploadandoFoto ? 'wait' : 'pointer', backgroundColor: '#f9fafb', color: '#6b7280'
+                  }}
+                >
+                  {uploadandoFoto ? (
+                    <p style={{ margin: 0, fontSize: '0.9rem' }}>Enviando foto...</p>
+                  ) : (
+                    <>
+                      <Camera size={32} style={{ color: '#9ca3af' }} />
+                      <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>Tirar foto ou escolher da galeria</span>
+                      <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Toque para abrir a câmera</span>
+                    </>
+                  )}
+                </label>
+              )}
+
+              <input
+                id={`foto-input-${itemAtualDados.id}`}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFotoCaptura}
+                disabled={uploadandoFoto}
+                style={{ display: 'none' }}
+              />
             </div>
 
             {/* Navegação */}
