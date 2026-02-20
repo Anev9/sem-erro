@@ -31,10 +31,9 @@ interface Colaborador {
 
 interface Checklist {
   id: string
-  titulo: string
+  nome: string
   descricao?: string
-  data_inicio: string
-  data_fim: string
+  proxima_execucao?: string
   empresa_id: string
   created_at: string
   empresas?: Empresa
@@ -106,7 +105,7 @@ export default function DashboardColaborador() {
         `)
         .eq('colaborador_id', colaboradorId)
         .eq('ativo', true)
-        .order('data_inicio', { ascending: false })
+        .order('proxima_execucao', { ascending: false })
 
       if (checklistsError) throw checklistsError
 
@@ -134,16 +133,6 @@ export default function DashboardColaborador() {
             } else if (respostasCount > 0) {
               status = 'em_andamento'
             }
-          }
-
-          // Verificar se está dentro do período
-          const hoje = new Date()
-          const dataInicio = new Date(checklist.data_inicio)
-          const dataFim = new Date(checklist.data_fim)
-          
-          if (hoje < dataInicio || hoje > dataFim) {
-            // Fora do período
-            return null
           }
 
           return {
@@ -458,7 +447,7 @@ export default function DashboardColaborador() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0, flex: 1 }}>
-                          {checklist.titulo}
+                          {checklist.nome}
                         </h3>
                         <span style={{
                           padding: '0.375rem 0.75rem',
@@ -479,7 +468,7 @@ export default function DashboardColaborador() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <Calendar size={14} />
-                          Válido até {new Date(checklist.data_fim).toLocaleDateString('pt-BR')}
+                          {checklist.proxima_execucao ? `Execução: ${new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}` : ''}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <ClipboardList size={14} />
@@ -535,7 +524,7 @@ export default function DashboardColaborador() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0, flex: 1 }}>
-                          {checklist.titulo}
+                          {checklist.nome}
                         </h3>
                         <span style={{
                           padding: '0.375rem 0.75rem',
@@ -630,7 +619,7 @@ export default function DashboardColaborador() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0, flex: 1 }}>
-                          {checklist.titulo}
+                          {checklist.nome}
                         </h3>
                         <span style={{
                           padding: '0.375rem 0.75rem',
