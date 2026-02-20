@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-interface Empresa { id: string; nome_fantasia: string }
+interface Empresa { id: string; nome_fantasia: string; ativo?: boolean }
 interface Checklist { id: string; titulo: string }
 interface Item { id: string; titulo: string; ordem: number }
 
