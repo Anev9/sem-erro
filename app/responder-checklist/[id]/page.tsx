@@ -60,6 +60,7 @@ export default function ResponderChecklistPage() {
   const [fotos, setFotos] = useState<Record<string, string>>({})       // itemId → dataURL preview
   const [fotoUrls, setFotoUrls] = useState<Record<string, string>>({}) // itemId → URL pública
   const [uploadandoFoto, setUploadandoFoto] = useState(false)
+  const [fotoExpandida, setFotoExpandida] = useState<string | null>(null)
 
   useEffect(() => {
     carregarDados()
@@ -390,19 +391,46 @@ export default function ResponderChecklistPage() {
               </div>
             </div>
 
+            {/* Lightbox */}
+            {fotoExpandida && (
+              <div
+                onClick={() => setFotoExpandida(null)}
+                style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', cursor: 'zoom-out' }}
+              >
+                <img src={fotoExpandida} alt="Foto ampliada" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '0.75rem', objectFit: 'contain' }} />
+              </div>
+            )}
+
             {/* Itens respondidos */}
-            <div style={{ textAlign: 'left', marginBottom: '2rem', maxHeight: '300px', overflowY: 'auto' }}>
+            <div style={{ textAlign: 'left', marginBottom: '2rem', maxHeight: '420px', overflowY: 'auto' }}>
               {itens.map((item, index) => {
                 const r = respostas[item.id]
                 const cor = r?.resposta === 'sim' ? '#16a34a' : r?.resposta === 'nao' ? '#dc2626' : '#6b7280'
                 const bg = r?.resposta === 'sim' ? '#f0fdf4' : r?.resposta === 'nao' ? '#fef2f2' : '#f9fafb'
                 const label = r?.resposta === 'sim' ? 'Sim' : r?.resposta === 'nao' ? 'Não' : 'N/A'
+                const fotoUrl = fotoUrls[item.id]
 
                 return (
-                  <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', backgroundColor: bg, borderRadius: '0.5rem', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#9ca3af', minWidth: '1.5rem' }}>{index + 1}.</span>
-                    <span style={{ flex: 1, fontSize: '0.9rem', color: '#374151' }}>{item.titulo}</span>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '600', color: cor, minWidth: '2.5rem', textAlign: 'right' }}>{label}</span>
+                  <div key={item.id} style={{ backgroundColor: bg, borderRadius: '0.5rem', marginBottom: '0.5rem', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#9ca3af', minWidth: '1.5rem' }}>{index + 1}.</span>
+                      <span style={{ flex: 1, fontSize: '0.9rem', color: '#374151' }}>{item.titulo}</span>
+                      {fotoUrl && (
+                        <button
+                          onClick={() => setFotoExpandida(fotoUrl)}
+                          style={{ padding: '0.25rem', background: 'none', border: 'none', cursor: 'zoom-in', flexShrink: 0 }}
+                          title="Ver foto"
+                        >
+                          <img src={fotoUrl} alt="foto" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '0.375rem', border: '2px solid #d1d5db' }} />
+                        </button>
+                      )}
+                      <span style={{ fontSize: '0.8rem', fontWeight: '600', color: cor, minWidth: '2.5rem', textAlign: 'right' }}>{label}</span>
+                    </div>
+                    {r?.observacao && (
+                      <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0.75rem 0.5rem 2.5rem', fontStyle: 'italic' }}>
+                        "{r.observacao}"
+                      </p>
+                    )}
                   </div>
                 )
               })}
