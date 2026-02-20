@@ -225,20 +225,21 @@ export default function ResponderChecklistPage() {
       }
       reader.readAsDataURL(file)
 
-      // Upload para Supabase Storage
+      // Upload via API route (usa service role, sem problemas de permissão)
       const ext = file.name.split('.').pop() || 'jpg'
       const path = `checklists/${checklistId}/${item.id}/${Date.now()}.${ext}`
 
-      const { error: uploadError } = await supabase.storage
-        .from('checklist-fotos')
-        .upload(path, file, { upsert: true })
+      const form = new FormData()
+      form.append('file', file)
+      form.append('path', path)
 
-      if (uploadError) throw uploadError
+      const res = await fetch('/api/upload-foto', { method: 'POST', body: form })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Erro no upload')
+      }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('checklist-fotos')
-        .getPublicUrl(path)
-
+      const { publicUrl } = await res.json()
       setFotoUrls(prev => ({ ...prev, [item.id]: publicUrl }))
 
       // Se já tem resposta, salvar com foto_url
