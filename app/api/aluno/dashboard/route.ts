@@ -44,11 +44,19 @@ export async function GET(request: NextRequest) {
       .gte('created_at', dataLimite.toISOString())
       .order('created_at', { ascending: false })
 
+    if (checklistsError) {
+      return NextResponse.json({ error: checklistsError.message }, { status: 500 })
+    }
+
     // 3. Buscar todos os checklists para performance
     const { data: todosChecklists, error: todosError } = await supabase
       .from('checklists')
       .select('id, empresa_id, status')
       .in('empresa_id', empresaIds)
+
+    if (todosError) {
+      return NextResponse.json({ error: todosError.message }, { status: 500 })
+    }
 
     return NextResponse.json({
       empresas,

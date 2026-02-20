@@ -83,78 +83,40 @@ export default function ColaboradoresPage() {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .card { transition: all 0.2s ease; }
-        .card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); }
+        .card-colab { transition: box-shadow 0.2s ease; }
+        .card-colab:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
       `}</style>
 
       <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-        {/* Header */}
-        <div style={{
-          background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-          padding: '2rem',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-        }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
+
+          {/* Top bar */}
           <div style={{
-            maxWidth: '1400px',
-            margin: '0 auto',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap'
+            marginBottom: '2rem',
+            flexWrap: 'wrap',
+            gap: '1rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <button
-                onClick={() => router.push('/dashboard-aluno')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.625rem 1.25rem',
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  fontSize: '0.95rem',
-                  fontWeight: '500'
-                }}
-              >
-                <ArrowLeft size={18} />
-                Voltar
-              </button>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{
-                  width: '3.5rem',
-                  height: '3.5rem',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  borderRadius: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <Users size={32} style={{ color: 'white' }} />
-                </div>
-                <div>
-                  <h1 style={{
-                    fontSize: '2rem',
-                    fontWeight: 'bold',
-                    color: 'white',
-                    margin: 0
-                  }}>
-                    Colaboradores
-                  </h1>
-                  <p style={{
-                    fontSize: '0.95rem',
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    margin: '0.25rem 0 0 0'
-                  }}>
-                    {colaboradores.length} colaborador{colaboradores.length !== 1 ? 'es' : ''} cadastrado{colaboradores.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <button
+              onClick={() => router.push('/dashboard-aluno')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                color: '#374151',
+                fontSize: '0.95rem'
+              }}
+            >
+              <ArrowLeft size={18} />
+              Voltar
+            </button>
 
             <button
               onClick={() => router.push('/colaboradores/novo')}
@@ -162,177 +124,162 @@ export default function ColaboradoresPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                padding: '0.875rem 1.5rem',
-                backgroundColor: 'white',
-                color: '#f97316',
+                padding: '0.75rem 1.5rem',
+                background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
+                color: 'white',
                 border: 'none',
-                borderRadius: '0.75rem',
+                borderRadius: '0.5rem',
                 cursor: 'pointer',
                 fontSize: '0.95rem',
-                fontWeight: '600',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                fontWeight: '600'
               }}
             >
               <UserPlus size={20} />
               Novo Colaborador
             </button>
           </div>
-        </div>
 
-        {/* Content */}
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-              <p style={{ color: '#6b7280', fontSize: '1.1rem' }}>Carregando colaboradores...</p>
-            </div>
-          ) : colaboradores.length === 0 ? (
-            <div className="fade-in" style={{
-              backgroundColor: 'white',
-              borderRadius: '1rem',
-              padding: '4rem 2rem',
-              textAlign: 'center',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
-            }}>
-              <Users size={64} style={{ color: '#9ca3af', margin: '0 auto 1.5rem' }} />
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                Nenhum colaborador cadastrado
-              </h3>
-              <p style={{ color: '#6b7280', marginBottom: '2rem', fontSize: '1rem' }}>
-                Comece adicionando colaboradores às suas empresas
+          {/* Main card */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '1rem',
+            padding: '2rem',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                <Users size={28} style={{ color: '#2196F3' }} />
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
+                  Colaboradores
+                </h1>
+              </div>
+              <p style={{ color: '#6b7280', margin: 0, fontSize: '0.95rem' }}>
+                {colaboradores.length} colaborador{colaboradores.length !== 1 ? 'es' : ''} cadastrado{colaboradores.length !== 1 ? 's' : ''}
               </p>
-              <button
-                onClick={() => router.push('/colaboradores/novo')}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '1rem 2rem',
-                  backgroundColor: '#f97316',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.75rem',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                  fontWeight: '600'
-                }}
-              >
-                <UserPlus size={20} />
-                Cadastrar Primeiro Colaborador
-              </button>
             </div>
-          ) : (
-            <div className="fade-in" style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-              gap: '1.5rem'
-            }}>
-              {colaboradores.map(colab => (
-                <div
-                  key={colab.id}
-                  className="card"
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '4rem 0' }}>
+                <p style={{ color: '#6b7280', fontSize: '1.1rem' }}>Carregando colaboradores...</p>
+              </div>
+            ) : colaboradores.length === 0 ? (
+              <div className="fade-in" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+                <Users size={64} style={{ color: '#9ca3af', margin: '0 auto 1.5rem' }} />
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
+                  Nenhum colaborador cadastrado
+                </h3>
+                <p style={{ color: '#6b7280', marginBottom: '2rem', fontSize: '1rem' }}>
+                  Comece adicionando colaboradores às suas empresas
+                </p>
+                <button
+                  onClick={() => router.push('/colaboradores/novo')}
                   style={{
-                    backgroundColor: 'white',
-                    borderRadius: '1rem',
-                    padding: '1.5rem',
-                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.875rem 2rem',
+                    background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    fontWeight: '600'
                   }}
                 >
-                  <div style={{ marginBottom: '1rem' }}>
-                    <h3 style={{
-                      fontSize: '1.25rem',
-                      fontWeight: '600',
-                      color: '#1f2937',
-                      margin: '0 0 0.5rem 0'
-                    }}>
-                      {colab.nome}
-                    </h3>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      fontSize: '0.875rem',
-                      color: '#6b7280',
-                      marginBottom: '0.25rem'
-                    }}>
-                      <Mail size={14} />
-                      {colab.email}
+                  <UserPlus size={20} />
+                  Cadastrar Primeiro Colaborador
+                </button>
+              </div>
+            ) : (
+              <div className="fade-in" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+                gap: '1rem'
+              }}>
+                {colaboradores.map(colab => (
+                  <div
+                    key={colab.id}
+                    className="card-colab"
+                    style={{
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '0.75rem',
+                      padding: '1.25rem',
+                      border: '1px solid #e5e7eb'
+                    }}
+                  >
+                    <div style={{ marginBottom: '1rem' }}>
+                      <h3 style={{
+                        fontSize: '1.1rem',
+                        fontWeight: '600',
+                        color: '#1f2937',
+                        margin: '0 0 0.5rem 0'
+                      }}>
+                        {colab.nome}
+                      </h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                        <Mail size={14} />
+                        {colab.email}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                        <Briefcase size={14} />
+                        {colab.cargo}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                        <Building2 size={14} />
+                        {colab.empresas?.nome_fantasia || 'Sem empresa'}
+                      </div>
                     </div>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      fontSize: '0.875rem',
-                      color: '#6b7280',
-                      marginBottom: '0.25rem'
-                    }}>
-                      <Briefcase size={14} />
-                      {colab.cargo}
-                    </div>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      fontSize: '0.875rem',
-                      color: '#6b7280'
-                    }}>
-                      <Building2 size={14} />
-                      {colab.empresas?.nome_fantasia || 'Sem empresa'}
-                    </div>
-                  </div>
 
-                  <div style={{
-                    display: 'flex',
-                    gap: '0.75rem',
-                    paddingTop: '1rem',
-                    borderTop: '1px solid #e5e7eb'
-                  }}>
-                    <button
-                      onClick={() => router.push(`/colaboradores/editar/${colab.id}`)}
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#f97316',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.5rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '600'
-                      }}
-                    >
-                      <Edit size={16} />
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(colab.id, colab.nome)}
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.5rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '600'
-                      }}
-                    >
-                      <Trash2 size={16} />
-                      Excluir
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                      <button
+                        onClick={() => router.push(`/colaboradores/editar/${colab.id}`)}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          padding: '0.625rem',
+                          backgroundColor: 'white',
+                          color: '#2196F3',
+                          border: '1.5px solid #2196F3',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '600'
+                        }}
+                      >
+                        <Edit size={16} />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(colab.id, colab.nome)}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          padding: '0.625rem',
+                          backgroundColor: 'white',
+                          color: '#ef4444',
+                          border: '1.5px solid #ef4444',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '600'
+                        }}
+                      >
+                        <Trash2 size={16} />
+                        Excluir
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>

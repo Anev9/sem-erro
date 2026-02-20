@@ -71,7 +71,7 @@ export default function UploadQuestionarios() {
       setUploadSuccess(true)
       
       setTimeout(() => {
-        router.push('/dashboard-admin')
+        router.push('/dashboard-aluno')
       }, 2000)
       
     } catch (err) {

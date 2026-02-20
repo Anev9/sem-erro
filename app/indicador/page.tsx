@@ -1,497 +1,266 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, BarChart2, Building2 } from 'lucide-react'
 
-interface DadoDia {
-  dia: number;
-  realizado: number;
-  meta: number;
+interface EmpresaStats {
+  nome: string
+  total: number
+  conformes: number
+  naoConformes: number
+  taxa: number
 }
 
-interface Empresa {
-  id: number;
-  nome: string;
-  taxa: number;
-  tendencia: 'estavel' | 'subindo';
-  variacao: string;
+interface DadoDia {
+  dia: string
+  total: number
+  conformes: number
 }
 
 export default function DashboardIndicadores() {
-  const router = useRouter();
-  const [periodo, setPeriodo] = useState('30');
-  const [empresa, setEmpresa] = useState('todas');
-  const [tipoGrafico, setTipoGrafico] = useState('linha');
-  const [mostrarLegendas, setMostrarLegendas] = useState(true);
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [empresas, setEmpresas] = useState<EmpresaStats[]>([])
+  const [dadosDiarios, setDadosDiarios] = useState<DadoDia[]>([])
+  const [totalRespostas, setTotalRespostas] = useState(0)
+  const [taxaGeral, setTaxaGeral] = useState(0)
+  const [periodo, setPeriodo] = useState('30')
+  const [alunoId, setAlunoId] = useState('')
 
-  // Dados do gráfico (30 dias)
-  const dadosGrafico: DadoDia[] = Array.from({ length: 30 }, (_, i) => ({
-    dia: i + 1,
-    realizado: Math.floor(Math.random() * 15) + 40, // Entre 40 e 55
-    meta: 50
-  }));
+  useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (!userData) { router.push('/login'); return }
+    const user = JSON.parse(userData)
+    if (user.role !== 'aluno') { router.push('/login'); return }
+    const id = user.id || user.aluno_id
+    setAlunoId(id)
+    carregarDados(id, periodo)
+  }, [router])
 
-  const totalChecklists = dadosGrafico.reduce((acc, d) => acc + d.realizado, 0);
-  const mediaChecklists = Math.round(totalChecklists / dadosGrafico.length);
-  const melhorDia = Math.max(...dadosGrafico.map(d => d.realizado));
-  const piorDia = Math.min(...dadosGrafico.map(d => d.realizado));
+  useEffect(() => {
+    if (alunoId) carregarDados(alunoId, periodo)
+  }, [periodo])
 
-  const empresas: Empresa[] = [
-    { id: 1, nome: 'Loja Matriz', taxa: 95.0, tendencia: 'estavel', variacao: '' },
-    { id: 2, nome: 'Loja Centro', taxa: 92.0, tendencia: 'subindo', variacao: '+5.2%' },
-    { id: 3, nome: 'Loja Oeste', taxa: 91.0, tendencia: 'subindo', variacao: '+6.1%' },
-    { id: 4, nome: 'Loja Shopping', taxa: 87.0, tendencia: 'subindo', variacao: '+2.9%' }
-  ];
+  async function carregarDados(id: string, dias: string) {
+    try {
+      setLoading(true)
+      const dataInicio = new Date()
+      dataInicio.setDate(dataInicio.getDate() - parseInt(dias))
 
-  const mediaEmpresas = (empresas.reduce((acc, e) => acc + e.taxa, 0) / empresas.length).toFixed(1);
+      const res = await fetch(`/api/aluno/respostas?aluno_id=${id}&data_inicio=${dataInicio.toISOString().split('T')[0]}`)
+      if (!res.ok) throw new Error('Erro ao carregar')
+      const { respostas } = await res.json()
 
-  const exportar = () => {
-    alert('Exportando relatório...');
-  };
+      if (!respostas || respostas.length === 0) {
+        setEmpresas([])
+        setDadosDiarios([])
+        setTotalRespostas(0)
+        setTaxaGeral(0)
+        setLoading(false)
+        return
+      }
+
+      // Agrupar por empresa
+      const mapaEmpresas: Record<string, EmpresaStats> = {}
+      // Agrupar por dia (formato: "dd/mm/aaaa hh:mm")
+      const mapaDias: Record<string, { total: number; conformes: number }> = {}
+      let totalConformes = 0
+
+      for (const r of respostas) {
+        const emp = r.empresa || 'Desconhecida'
+        if (!mapaEmpresas[emp]) {
+          mapaEmpresas[emp] = { nome: emp, total: 0, conformes: 0, naoConformes: 0, taxa: 0 }
+        }
+        mapaEmpresas[emp].total++
+        if (r.resultado === 'conforme') { mapaEmpresas[emp].conformes++; totalConformes++ }
+        else if (r.resultado === 'nao_conforme') mapaEmpresas[emp].naoConformes++
+
+        const dia = r.data?.split(' ')[0] || ''
+        if (dia) {
+          if (!mapaDias[dia]) mapaDias[dia] = { total: 0, conformes: 0 }
+          mapaDias[dia].total++
+          if (r.resultado === 'conforme') mapaDias[dia].conformes++
+        }
+      }
+
+      const listaEmpresas = Object.values(mapaEmpresas).map(e => {
+        const validas = e.conformes + e.naoConformes
+        e.taxa = validas > 0 ? Math.round((e.conformes / validas) * 100) : 0
+        return e
+      }).sort((a, b) => b.taxa - a.taxa)
+
+      const listaDias = Object.entries(mapaDias)
+        .map(([dia, v]) => ({ dia, ...v }))
+        .sort((a, b) => {
+          const [da, ma, ya] = a.dia.split('/').map(Number)
+          const [db, mb, yb] = b.dia.split('/').map(Number)
+          return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime()
+        })
+
+      const taxaG = respostas.length > 0 ? Math.round((totalConformes / respostas.length) * 100) : 0
+
+      setEmpresas(listaEmpresas)
+      setDadosDiarios(listaDias)
+      setTotalRespostas(respostas.length)
+      setTaxaGeral(taxaG)
+    } catch (error) {
+      console.error('Erro:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const maxDia = dadosDiarios.length > 0 ? Math.max(...dadosDiarios.map(d => d.total)) : 1
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f7fa', padding: '2rem' }}>
-      <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
-        
-        {/* Botão Voltar */}
+    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+
         <button
           onClick={() => router.back()}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            background: 'white',
-            border: '2px solid #e0e0e0',
-            borderRadius: '0.75rem',
-            padding: '0.75rem 1.25rem',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#5E6AD2',
-            cursor: 'pointer',
-            marginBottom: '1.5rem',
-            transition: 'all 0.2s',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#f5f5f5';
-            e.currentTarget.style.borderColor = '#5E6AD2';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'white';
-            e.currentTarget.style.borderColor = '#e0e0e0';
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            padding: '0.5rem 1rem', backgroundColor: 'white', border: '1px solid #e5e7eb',
+            borderRadius: '0.5rem', cursor: 'pointer', color: '#374151',
+            fontSize: '0.95rem', marginBottom: '2rem'
           }}
         >
-          <span style={{ fontSize: '1.25rem' }}>←</span>
-          <span>Voltar</span>
+          <ArrowLeft size={18} />
+          Voltar
         </button>
 
-        {/* Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-            <div style={{ padding: '0.75rem', background: 'linear-gradient(135deg, #5E6AD2 0%, #4C52B2 100%)', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(94,106,210,0.3)' }}>
-              <span style={{ fontSize: '1.5rem' }}>📊</span>
-            </div>
-            <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#1a1a1a', margin: 0 }}>
-              Dashboard de Indicadores
-            </h1>
-          </div>
-          <p style={{ color: '#666', fontSize: '1rem', margin: 0 }}>
-            Acompanhamento de checklists e performance das empresas
-          </p>
-        </div>
+        <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
 
-        {/* Filtros e Ações */}
-        <div style={{ 
-          background: 'white', 
-          borderRadius: '1rem', 
-          padding: '1.5rem', 
-          marginBottom: '2rem', 
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Período */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '1rem' }}>⏱️</span>
-              <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#333' }}>Período:</label>
-              <select
-                value={periodo}
-                onChange={(e) => setPeriodo(e.target.value)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  border: '2px solid #e0e0e0',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  background: 'white'
-                }}
-              >
-                <option value="7">7 dias</option>
-                <option value="15">15 dias</option>
-                <option value="30">30 dias</option>
-                <option value="60">60 dias</option>
-                <option value="90">90 dias</option>
-              </select>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                <BarChart2 size={28} style={{ color: '#f97316' }} />
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>Indicadores</h1>
+              </div>
+              <p style={{ color: '#6b7280', margin: 0, fontSize: '0.95rem' }}>
+                Performance das empresas e atividade no período
+              </p>
             </div>
-
-            {/* Empresa */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '1rem' }}>🏢</span>
-              <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#333' }}>Empresa:</label>
-              <select
-                value={empresa}
-                onChange={(e) => setEmpresa(e.target.value)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  border: '2px solid #e0e0e0',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  background: 'white'
-                }}
-              >
-                <option value="todas">Todas as empresas</option>
-                {empresas.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.nome}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Tipo de Gráfico */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '1rem' }}>📈</span>
-              <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#333' }}>Tipo:</label>
-              <select
-                value={tipoGrafico}
-                onChange={(e) => setTipoGrafico(e.target.value)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  border: '2px solid #e0e0e0',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  background: 'white'
-                }}
-              >
-                <option value="linha">Gráfico de Linha</option>
-                <option value="barra">Gráfico de Barras</option>
-                <option value="area">Gráfico de Área</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Botões */}
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
-              onClick={() => setMostrarLegendas(!mostrarLegendas)}
+            <select
+              value={periodo}
+              onChange={(e) => setPeriodo(e.target.value)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.625rem 1.25rem',
-                background: 'white',
-                border: '2px solid #e0e0e0',
-                borderRadius: '0.75rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#666',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f5f5f5';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'white';
+                padding: '0.5rem 1rem', border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', cursor: 'pointer'
               }}
             >
-              <span style={{ fontSize: '1rem' }}>👁️</span>
-              Legendas
-            </button>
-
-            <button
-              onClick={exportar}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.625rem 1.25rem',
-                background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
-                border: 'none',
-                borderRadius: '0.75rem',
-                fontSize: '0.875rem',
-                fontWeight: '700',
-                color: 'white',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(33,150,243,0.4)',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(33,150,243,0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(33,150,243,0.4)';
-              }}
-            >
-              <span style={{ fontSize: '1rem' }}>📥</span>
-              Exportar
-            </button>
-          </div>
-        </div>
-
-        {/* Cards de Resumo */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-          gap: '1rem', 
-          marginBottom: '2rem' 
-        }}>
-          <div style={{ background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(33,150,243,0.3)' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔄</div>
-            <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Total</p>
-            <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{totalChecklists}</p>
-            <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>Checklists em {periodo} dias</p>
+              <option value="7">Últimos 7 dias</option>
+              <option value="15">Últimos 15 dias</option>
+              <option value="30">Últimos 30 dias</option>
+              <option value="60">Últimos 60 dias</option>
+            </select>
           </div>
 
-          <div style={{ background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(76,175,80,0.3)' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📊</div>
-            <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Média</p>
-            <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{mediaChecklists}</p>
-            <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>Checklists por dia</p>
-          </div>
-
-          <div style={{ background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(156,39,176,0.3)' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📈</div>
-            <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Melhor</p>
-            <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{melhorDia}</p>
-            <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>Melhor dia</p>
-          </div>
-
-          <div style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(255,152,0,0.3)' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⭐</div>
-            <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Performance</p>
-            <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{mediaEmpresas}%</p>
-            <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>Média das empresas</p>
-          </div>
-        </div>
-
-        {/* Gráfico */}
-        <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>📅</span>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#333', margin: 0 }}>
-                Checklists dos Últimos {periodo} Dias
-              </h3>
+          {loading ? (
+            <p style={{ textAlign: 'center', color: '#6b7280', padding: '3rem 0' }}>Carregando dados...</p>
+          ) : totalRespostas === 0 ? (
+            <div style={{ textAlign: 'center', padding: '4rem 0' }}>
+              <BarChart2 size={56} style={{ color: '#9ca3af', margin: '0 auto 1rem' }} />
+              <p style={{ color: '#6b7280', fontSize: '1rem' }}>
+                Nenhum dado disponível no período selecionado.<br />
+                Os dados aparecem conforme os checklists são respondidos.
+              </p>
             </div>
-            
-            {mostrarLegendas && (
-              <div style={{ display: 'flex', gap: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#2196F3' }} />
-                  <span style={{ fontSize: '0.875rem', color: '#666' }}>Realizado</span>
+          ) : (
+            <>
+              {/* Resumo */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                <div style={{ backgroundColor: '#fff7ed', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #fed7aa' }}>
+                  <p style={{ fontSize: '0.8rem', color: '#9a3412', margin: '0 0 0.5rem', fontWeight: '600' }}>Total de Respostas</p>
+                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#f97316', margin: 0 }}>{totalRespostas}</p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: '12px', height: '2px', background: '#ef5350', borderRadius: '1px' }} />
-                  <span style={{ fontSize: '0.875rem', color: '#666' }}>Meta</span>
+                <div style={{ backgroundColor: '#f0fdf4', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bbf7d0' }}>
+                  <p style={{ fontSize: '0.8rem', color: '#166534', margin: '0 0 0.5rem', fontWeight: '600' }}>Taxa de Conformidade</p>
+                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#16a34a', margin: 0 }}>{taxaGeral}%</p>
+                </div>
+                <div style={{ backgroundColor: '#eff6ff', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bfdbfe' }}>
+                  <p style={{ fontSize: '0.8rem', color: '#1e40af', margin: '0 0 0.5rem', fontWeight: '600' }}>Empresas</p>
+                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#3b82f6', margin: 0 }}>{empresas.length}</p>
+                </div>
+                <div style={{ backgroundColor: '#fefce8', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #fde68a' }}>
+                  <p style={{ fontSize: '0.8rem', color: '#92400e', margin: '0 0 0.5rem', fontWeight: '600' }}>Dias com atividade</p>
+                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#d97706', margin: 0 }}>{dadosDiarios.length}</p>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Área do Gráfico */}
-          <div style={{ position: 'relative', height: '350px', borderLeft: '2px solid #e0e0e0', borderBottom: '2px solid #e0e0e0', paddingLeft: '1rem', paddingBottom: '2rem' }}>
-            {/* Linha da Meta */}
-            <div style={{ 
-              position: 'absolute', 
-              top: `${100 - (50 / 60) * 100}%`,
-              left: 0, 
-              right: 0, 
-              height: '2px', 
-              background: '#ef5350',
-              opacity: 0.5,
-              borderTop: '2px dashed #ef5350'
-            }} />
-
-            {/* Pontos do gráfico */}
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
-              {/* Linha conectando os pontos */}
-              <polyline
-                points={dadosGrafico.map((d, i) => {
-                  const x = (i / (dadosGrafico.length - 1)) * 95;
-                  const y = 100 - ((d.realizado / 60) * 85);
-                  return `${x},${y}`;
-                }).join(' ')}
-                fill="none"
-                stroke="#2196F3"
-                strokeWidth="3"
-                vectorEffect="non-scaling-stroke"
-                style={{ filter: 'drop-shadow(0 2px 4px rgba(33,150,243,0.3))' }}
-              />
-
-              {/* Pontos */}
-              {dadosGrafico.map((dado, index) => {
-                const x = (index / (dadosGrafico.length - 1)) * 95;
-                const y = 100 - ((dado.realizado / 60) * 85);
-                return (
-                  <circle
-                    key={index}
-                    cx={x}
-                    cy={y}
-                    r="2"
-                    fill="#2196F3"
-                    vectorEffect="non-scaling-stroke"
-                    style={{
-                      filter: 'drop-shadow(0 2px 4px rgba(33,150,243,0.5))',
-                      cursor: 'pointer'
-                    }}
-                  />
-                );
-              })}
-            </svg>
-
-            {/* Labels do eixo X */}
-            <div style={{ position: 'absolute', bottom: '-2rem', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', paddingRight: '5%' }}>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>Dia 1</span>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>Dia 6</span>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>Dia 11</span>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>Dia 16</span>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>Dia 21</span>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>Dia 26</span>
-            </div>
-
-            {/* Labels do eixo Y */}
-            <div style={{ position: 'absolute', left: '-3rem', top: 0, bottom: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>60</span>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>45</span>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>34</span>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>22</span>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>11</span>
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>0</span>
-            </div>
-          </div>
-
-          {/* Estatísticas do Gráfico */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            gap: '3rem', 
-            marginTop: '2rem',
-            paddingTop: '1.5rem',
-            borderTop: '2px solid #f0f0f0'
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '0.875rem', color: '#666', margin: '0 0 0.5rem 0' }}>Melhor Dia</p>
-              <p style={{ fontSize: '2rem', fontWeight: '900', color: '#4CAF50', margin: 0 }}>{melhorDia}</p>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '0.875rem', color: '#666', margin: '0 0 0.5rem 0' }}>Média</p>
-              <p style={{ fontSize: '2rem', fontWeight: '900', color: '#2196F3', margin: 0 }}>{mediaChecklists}</p>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '0.875rem', color: '#666', margin: '0 0 0.5rem 0' }}>Pior Dia</p>
-              <p style={{ fontSize: '2rem', fontWeight: '900', color: '#FF9800', margin: 0 }}>{piorDia}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Performance das Empresas */}
-        <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>🏆</span>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#333', margin: 0 }}>
-                Performance das Empresas
-              </h3>
-            </div>
-            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Taxa de Sucesso</span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {empresas.map((empresa, index) => {
-              const corBarra = empresa.taxa >= 90 ? '#4CAF50' : empresa.taxa >= 85 ? '#2196F3' : '#FF9800';
-              const corTexto = empresa.taxa >= 90 ? '#2E7D32' : empresa.taxa >= 85 ? '#1565C0' : '#E65100';
-              
-              return (
-                <div key={empresa.id}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
-                    {/* Ranking */}
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      background: index === 0 ? 'linear-gradient(135deg, #FFD700, #FFA500)' : 
-                                  index === 1 ? 'linear-gradient(135deg, #C0C0C0, #A8A8A8)' :
-                                  index === 2 ? 'linear-gradient(135deg, #CD7F32, #B8860B)' :
-                                  '#e0e0e0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1rem',
-                      fontWeight: '900',
-                      color: 'white',
-                      flexShrink: 0,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                    }}>
-                      {index + 1}
-                    </div>
-
-                    {/* Nome e Tendência */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                        <span style={{ fontSize: '1rem', fontWeight: '700', color: '#333' }}>
-                          {empresa.nome}
-                        </span>
-                        <span style={{ fontSize: '0.75rem', color: empresa.tendencia === 'estavel' ? '#666' : '#4CAF50', fontWeight: '600' }}>
-                          {empresa.tendencia === 'estavel' ? '↔ Estável' : `↑ ${empresa.variacao}`}
-                        </span>
-                      </div>
-                      
-                      {/* Barra de Progresso */}
-                      <div style={{ width: '100%', height: '18px', background: '#f0f0f0', borderRadius: '9px', overflow: 'hidden', position: 'relative' }}>
-                        <div style={{
-                          width: `${empresa.taxa}%`,
-                          height: '100%',
-                          background: corBarra,
-                          borderRadius: '9px',
-                          transition: 'width 1s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          paddingLeft: '0.75rem'
-                        }}>
-                          <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: '700' }}>
-                            {empresa.taxa >= 30 ? `${empresa.taxa}%` : ''}
-                          </span>
+              {/* Gráfico de barras diário */}
+              {dadosDiarios.length > 0 && (
+                <div style={{ marginBottom: '2rem' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937', marginBottom: '1rem' }}>
+                    Atividade por Dia
+                  </h2>
+                  <div style={{ backgroundColor: '#f9fafb', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '160px', overflowX: 'auto', paddingBottom: '2rem' }}>
+                      {dadosDiarios.map((d, i) => (
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 auto', minWidth: '32px' }}>
+                          <span style={{ fontSize: '0.65rem', color: '#9ca3af', marginBottom: '4px' }}>{d.total}</span>
+                          <div
+                            title={`${d.dia}: ${d.total} respostas (${d.conformes} conformes)`}
+                            style={{
+                              width: '28px',
+                              height: `${Math.max((d.total / maxDia) * 120, 4)}px`,
+                              backgroundColor: '#f97316',
+                              borderRadius: '3px 3px 0 0',
+                              opacity: 0.85,
+                              cursor: 'pointer',
+                              transition: 'opacity 0.2s'
+                            }}
+                          />
+                          <p style={{
+                            fontSize: '0.6rem', color: '#9ca3af', margin: '4px 0 0',
+                            whiteSpace: 'nowrap', transform: 'rotate(-45deg)',
+                            transformOrigin: 'top left', width: '40px'
+                          }}>
+                            {d.dia.substring(0, 5)}
+                          </p>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Taxa */}
-                    <div style={{ 
-                      fontSize: '1.75rem', 
-                      fontWeight: '900', 
-                      color: corTexto,
-                      minWidth: '100px',
-                      textAlign: 'right'
-                    }}>
-                      {empresa.taxa}%
+                      ))}
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              )}
+
+              {/* Performance por empresa */}
+              {empresas.length > 0 && (
+                <div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937', marginBottom: '1rem' }}>
+                    Performance por Empresa
+                  </h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {empresas.map((e, i) => {
+                      const cor = e.taxa >= 90 ? '#16a34a' : e.taxa >= 75 ? '#3b82f6' : '#f97316'
+                      const medalha = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}º`
+                      return (
+                        <div key={e.nome} style={{ backgroundColor: '#f9fafb', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #e5e7eb' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '1.25rem' }}>{medalha}</span>
+                            <div style={{ flex: 1 }}>
+                              <span style={{ fontWeight: '700', color: '#1f2937' }}>{e.nome}</span>
+                              <span style={{ fontSize: '0.8rem', color: '#6b7280', marginLeft: '0.75rem' }}>
+                                {e.conformes} conformes · {e.naoConformes} não conformes · {e.total} total
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '1.75rem', fontWeight: '900', color: cor }}>{e.taxa}%</span>
+                          </div>
+                          <div style={{ width: '100%', height: '8px', backgroundColor: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden' }}>
+                            <div style={{ width: `${e.taxa}%`, height: '100%', backgroundColor: cor, borderRadius: '9999px', transition: 'width 0.8s ease' }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
-  );
+  )
 }

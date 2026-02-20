@@ -573,7 +573,7 @@ export default function DashboardColaborador() {
                           overflow: 'hidden'
                         }}>
                           <div style={{
-                            width: `${(checklist.respostas_count / checklist.total_perguntas) * 100}%`,
+                            width: `${(checklist.respostas_count / (checklist.total_perguntas || 1)) * 100}%`,
                             height: '100%',
                             backgroundColor: '#3b82f6',
                             borderRadius: '9999px',

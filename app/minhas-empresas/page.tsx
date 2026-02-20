@@ -95,42 +95,39 @@ export default function MinhasEmpresas() {
     try {
       setLoading(true)
 
+      const payload = {
+        nome_fantasia: formData.nome_fantasia,
+        razao_social: formData.razao_social || null,
+        cnpj: formData.cnpj,
+        endereco: formData.endereco || null,
+        cidade: formData.cidade || null,
+        estado: formData.estado || null,
+        telefone: formData.telefone || null,
+        ativo: formData.ativo
+      }
+
       if (editingId) {
         const res = await fetch('/api/aluno/empresas', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: editingId,
-            nome_fantasia: formData.nome_fantasia,
-            razao_social: formData.razao_social,
-            cnpj: formData.cnpj,
-            endereco: formData.endereco,
-            cidade: formData.cidade,
-            estado: formData.estado,
-            telefone: formData.telefone,
-            ativo: formData.ativo
-          })
+          body: JSON.stringify({ id: editingId, ...payload })
         })
-        if (!res.ok) throw new Error('Erro ao atualizar')
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || 'Erro ao atualizar')
+        }
         alert('Empresa atualizada com sucesso!')
 
       } else {
         const res = await fetch('/api/aluno/empresas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            aluno_id: clienteId,
-            nome_fantasia: formData.nome_fantasia,
-            razao_social: formData.razao_social,
-            cnpj: formData.cnpj,
-            endereco: formData.endereco,
-            cidade: formData.cidade,
-            estado: formData.estado,
-            telefone: formData.telefone,
-            ativo: formData.ativo
-          })
+          body: JSON.stringify({ aluno_id: clienteId, ...payload })
         })
-        if (!res.ok) throw new Error('Erro ao cadastrar')
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || 'Erro ao cadastrar')
+        }
         alert('Empresa cadastrada com sucesso!')
       }
 
