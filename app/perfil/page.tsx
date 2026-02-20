@@ -170,7 +170,7 @@ export default function PerfilPage() {
 
         {/* Dados fixos (somente leitura) */}
         <div className="fade-in" style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.75rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: '600', color: '#6b7280', margin: '0 0 1.25rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.8rem' }}>
+          <h2 style={{ fontSize: '0.8rem', fontWeight: '600', color: '#6b7280', margin: '0 0 1.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Informações da conta
           </h2>
 
