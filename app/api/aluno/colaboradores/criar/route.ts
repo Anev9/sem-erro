@@ -16,6 +16,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = db()
 
+    // Verificar se email já existe na tabela colaboradores
+    const { data: existingColab } = await supabase
+      .from('colaboradores')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle()
+
+    if (existingColab) {
+      return NextResponse.json({ error: 'Já existe um colaborador cadastrado com este email' }, { status: 400 })
+    }
+
     // Criar usuário no Supabase Auth usando service role (sem precisar de confirmação de email)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
@@ -24,15 +35,46 @@ export async function POST(request: NextRequest) {
       user_metadata: { nome, role: 'colaborador' }
     })
 
-    if (authError || !authData.user) {
-      return NextResponse.json({ error: authError?.message || 'Erro ao criar conta' }, { status: 400 })
+    let authUserId: string
+    let authCriado = false
+
+    if (authError) {
+      // Se o email já existe no Auth (cadastro anterior com falha de rollback ou outro papel)
+      const jaRegistrado =
+        authError.message.includes('already been registered') ||
+        authError.message.includes('already registered')
+
+      if (!jaRegistrado) {
+        return NextResponse.json({ error: authError.message || 'Erro ao criar conta' }, { status: 400 })
+      }
+
+      // Buscar o auth_id do usuário existente pelo email
+      const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+      const existingAuthUser = listData?.users?.find((u) => u.email === email)
+
+      if (!existingAuthUser) {
+        return NextResponse.json({ error: 'Email já registrado. Tente outro email.' }, { status: 400 })
+      }
+
+      // Atualizar a senha do usuário existente para a nova senha informada
+      await supabase.auth.admin.updateUserById(existingAuthUser.id, {
+        password: senha,
+        user_metadata: { nome, role: 'colaborador' }
+      })
+
+      authUserId = existingAuthUser.id
+    } else if (!authData.user) {
+      return NextResponse.json({ error: 'Erro ao criar conta' }, { status: 400 })
+    } else {
+      authUserId = authData.user.id
+      authCriado = true
     }
 
     // Inserir na tabela colaboradores
     const { error: colabError } = await supabase
       .from('colaboradores')
       .insert({
-        auth_id: authData.user.id,
+        auth_id: authUserId,
         empresa_id,
         nome,
         email,
@@ -42,8 +84,10 @@ export async function POST(request: NextRequest) {
       })
 
     if (colabError) {
-      // Rollback: remover usuário criado no Auth
-      await supabase.auth.admin.deleteUser(authData.user.id)
+      // Rollback: remover usuário criado no Auth (somente se foi criado agora)
+      if (authCriado) {
+        await supabase.auth.admin.deleteUser(authUserId)
+      }
       return NextResponse.json({ error: colabError.message }, { status: 500 })
     }
 
