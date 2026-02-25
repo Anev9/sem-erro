@@ -16,15 +16,16 @@ export async function POST(request: NextRequest) {
 
     const supabase = db()
 
-    // Verificar se email já existe na tabela colaboradores
+    // Verificar se o colaborador já está cadastrado nesta empresa específica
     const { data: existingColab } = await supabase
       .from('colaboradores')
       .select('id')
       .eq('email', email)
+      .eq('empresa_id', empresa_id)
       .maybeSingle()
 
     if (existingColab) {
-      return NextResponse.json({ error: 'Já existe um colaborador cadastrado com este email' }, { status: 400 })
+      return NextResponse.json({ error: 'Este colaborador já está cadastrado nesta empresa' }, { status: 400 })
     }
 
     // Criar usuário no Supabase Auth usando service role (sem precisar de confirmação de email)
