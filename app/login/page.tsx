@@ -90,6 +90,9 @@ export default function LoginPage() {
             window.location.href = '/dashboard-funcionario';
             return;
           }
+
+          // Auth do Supabase funcionou mas usuário não tem perfil cadastrado
+          throw new Error('Usuário autenticado mas sem perfil. Contate o administrador.');
         }
 
         // TENTATIVA 2: Login como ALUNO (via API server-side)
