@@ -105,7 +105,12 @@ export default function LoginPage() {
         if (response.ok) {
           const userData = await response.json();
           localStorage.setItem('user', JSON.stringify(userData));
-          window.location.href = '/dashboard-aluno';
+          // Redireciona baseado no tipo do usuário na tabela alunos
+          if (userData.tipo === 'admin') {
+            window.location.href = '/dashboard-admin';
+          } else {
+            window.location.href = '/dashboard-aluno';
+          }
           return;
         }
 
