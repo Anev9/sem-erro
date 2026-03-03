@@ -43,6 +43,9 @@ export default function CriarChecklistFuturoPage() {
   const [chaveCompartilhamento, setChaveCompartilhamento] = useState('')
   const [mensagemSalvamento, setMensagemSalvamento] = useState('')
 
+  const [recorrencia, setRecorrencia] = useState<'nenhuma' | 'diaria' | 'semanal' | 'mensal'>('nenhuma')
+  const [diasTolerancia, setDiasTolerancia] = useState(0)
+
   const [empresas, setEmpresas] = useState<{id: string, nome_fantasia: string}[]>([])
   const [colaboradores, setColaboradores] = useState<{id: string, nome: string}[]>([])
   const [empresaId, setEmpresaId] = useState('')
@@ -87,17 +90,11 @@ export default function CriarChecklistFuturoPage() {
 
       if (errorTemplates) throw errorTemplates
 
-      const templatesUnicosPorId = templatesData?.reduce((acc: Template[], current) => {
+      const templatesUnicos = templatesData?.reduce((acc: Template[], current) => {
         const existe = acc.find(item => item.id === current.id)
         if (!existe) acc.push(current)
         return acc
       }, []) || []
-
-      const templatesUnicos = templatesUnicosPorId.reduce((acc: Template[], current) => {
-        const existe = acc.find(item => item.nome === current.nome)
-        if (!existe) acc.push(current)
-        return acc
-      }, [])
 
       const templatesComContagem = await Promise.all(
         templatesUnicos.map(async (template) => {
@@ -212,6 +209,8 @@ export default function CriarChecklistFuturoPage() {
         descricao: descricao || null,
         tipo_negocio: tipoNegocio,
         proxima_execucao: proximaExecucao,
+        recorrencia,
+        dias_tolerancia: diasTolerancia,
         aluno_id: userId,
         empresa_id: empresaId || null,
         colaborador_id: colaboradorId || null,
@@ -269,6 +268,8 @@ export default function CriarChecklistFuturoPage() {
         descricao: descricao || null,
         tipo_negocio: tipoNegocio,
         proxima_execucao: proximaExecucao,
+        recorrencia,
+        dias_tolerancia: diasTolerancia,
         template_id: templateSelecionado,
         aluno_id: userId,
         empresa_id: empresaId || null,
@@ -334,6 +335,8 @@ export default function CriarChecklistFuturoPage() {
         descricao: descricao || checklistOriginal.descricao,
         tipo_negocio: tipoNegocio || checklistOriginal.tipo_negocio,
         proxima_execucao: proximaExecucao,
+        recorrencia,
+        dias_tolerancia: diasTolerancia,
         aluno_id: userId,
         empresa_id: empresaId || null,
         colaborador_id: colaboradorId || null,
@@ -840,17 +843,17 @@ export default function CriarChecklistFuturoPage() {
             )}
 
             {/* CAMPOS COMUNS */}
-            <div style={{ 
-              display: 'grid', 
+            <div style={{
+              display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
               gap: '1.5rem',
               marginBottom: '1.75rem'
             }}>
               <div>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '0.5rem', 
-                  fontWeight: '500', 
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '500',
                   color: '#374151',
                   fontSize: '0.95rem'
                 }}>
@@ -874,10 +877,73 @@ export default function CriarChecklistFuturoPage() {
               </div>
 
               <div>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '0.5rem', 
-                  fontWeight: '500', 
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  fontSize: '0.95rem'
+                }}>
+                  Recorrência
+                </label>
+                <select
+                  value={recorrencia}
+                  onChange={(e) => setRecorrencia(e.target.value as 'nenhuma' | 'diaria' | 'semanal' | 'mensal')}
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem 1rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  <option value="nenhuma">Sem recorrência</option>
+                  <option value="diaria">🔄 Diária</option>
+                  <option value="semanal">🔄 Semanal</option>
+                  <option value="mensal">🔄 Mensal</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  fontSize: '0.95rem'
+                }}>
+                  Dias de tolerância
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={30}
+                  value={diasTolerancia}
+                  onChange={(e) => setDiasTolerancia(Math.max(0, parseInt(e.target.value) || 0))}
+                  placeholder="0"
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem 1rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    backgroundColor: 'white'
+                  }}
+                />
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.375rem' }}>
+                  Dias antes e depois que o funcionário pode realizar
+                </p>
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '500',
                   color: '#374151',
                   fontSize: '0.95rem'
                 }}>

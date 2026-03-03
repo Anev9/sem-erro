@@ -38,6 +38,7 @@ export default function ListaAcoes() {
   });
   const [ordenacao, setOrdenacao] = useState<'loja' | 'data'>('data');
   const [empresas, setEmpresas] = useState<{ id: string; nome_fantasia: string }[]>([]);
+  const [alunoId, setAlunoId] = useState<string | null>(null);
 
   useEffect(() => {
     verificarAutenticacao();
@@ -54,6 +55,7 @@ export default function ListaAcoes() {
       router.push('/login');
       return;
     }
+    setAlunoId(user.id);
     await carregarDados(user.id);
   }
 
@@ -75,7 +77,7 @@ export default function ListaAcoes() {
   async function excluirAcao(id: string) {
     if (!confirm('Tem certeza que deseja excluir esta ação?')) return;
 
-    const response = await fetch(`/api/aluno/acoes?id=${id}`, { method: 'DELETE' });
+    const response = await fetch(`/api/aluno/acoes?id=${id}&aluno_id=${alunoId}`, { method: 'DELETE' });
     if (!response.ok) {
       alert('Erro ao excluir ação.');
       return;
@@ -88,8 +90,12 @@ export default function ListaAcoes() {
       if (!mostrarFinalizadas && acao.status === 'concluida') return false;
       if (filtros.empresa !== 'todas' && acao.empresa_id !== filtros.empresa) return false;
       if (filtros.status !== 'todas' && acao.status !== filtros.status) return false;
-      if (filtros.dataInicio && acao.created_at < filtros.dataInicio) return false;
-      if (filtros.dataFim && acao.created_at > filtros.dataFim + 'T23:59:59') return false;
+      if (filtros.dataInicio && new Date(acao.created_at) < new Date(filtros.dataInicio)) return false;
+      if (filtros.dataFim) {
+        const fim = new Date(filtros.dataFim);
+        fim.setHours(23, 59, 59, 999);
+        if (new Date(acao.created_at) > fim) return false;
+      }
       return true;
     })
     .sort((a, b) => {

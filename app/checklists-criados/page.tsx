@@ -68,8 +68,12 @@ export default function ChecklistsCriados() {
       if (empresa && c.empresas.nome_fantasia !== empresa.nome_fantasia) return false
     }
     if (filtros.status && c.status !== filtros.status) return false
-    if (filtros.dataInicio && c.created_at < filtros.dataInicio) return false
-    if (filtros.dataFim && c.created_at > filtros.dataFim + 'T23:59:59') return false
+    if (filtros.dataInicio && new Date(c.created_at) < new Date(filtros.dataInicio)) return false
+    if (filtros.dataFim) {
+      const fim = new Date(filtros.dataFim)
+      fim.setHours(23, 59, 59, 999)
+      if (new Date(c.created_at) > fim) return false
+    }
     return true
   })
 

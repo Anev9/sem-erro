@@ -105,7 +105,7 @@ export default function DashboardAluno() {
         return
       }
 
-      const { empresas, checklists: checklistsData, todosChecklists } = await response.json()
+      const { empresas, checklists: checklistsData = [], todosChecklists = [] } = await response.json()
 
       if (!empresas || empresas.length === 0) {
         setLoading(false)

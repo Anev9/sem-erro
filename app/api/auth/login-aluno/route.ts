@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const { data: aluno, error } = await supabase
       .from('alunos')
       .select('*')
-      .eq('e-mail', email)
+      .eq('email', email)
       .single()
 
     if (!aluno || error) {
@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       id: aluno.id,
       aluno_id: aluno.id,
-      email: aluno['e-mail'],
-      full_name: aluno.nome_fantasia || aluno['e-mail'],
+      email: aluno.email,
+      full_name: aluno.nome_fantasia || aluno.email,
       role: 'aluno',
       created_at: aluno.created_at
     })

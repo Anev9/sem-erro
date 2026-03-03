@@ -110,7 +110,7 @@ export default function MinhasEmpresas() {
         const res = await fetch('/api/aluno/empresas', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingId, ...payload })
+          body: JSON.stringify({ id: editingId, aluno_id: clienteId, ...payload })
         })
         if (!res.ok) {
           const err = await res.json()
@@ -163,7 +163,7 @@ export default function MinhasEmpresas() {
       const res = await fetch('/api/aluno/empresas', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, ativo: !ativoAtual })
+        body: JSON.stringify({ id, aluno_id: clienteId, ativo: !ativoAtual })
       })
       if (!res.ok) throw new Error('Erro ao atualizar')
       await carregarEmpresas()
@@ -179,7 +179,7 @@ export default function MinhasEmpresas() {
     }
 
     try {
-      const res = await fetch(`/api/aluno/empresas?id=${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/aluno/empresas?id=${id}&aluno_id=${clienteId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Erro ao excluir')
       alert('Empresa excluída com sucesso!')
       await carregarEmpresas()

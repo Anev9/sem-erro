@@ -36,20 +36,31 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(data)
 }
 
-// PUT body: { id, ...campos }  → atualiza empresa
+// PUT body: { id, aluno_id, ...campos }  → atualiza empresa
 export async function PUT(request: NextRequest) {
-  const { id, ...campos } = await request.json()
-  if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
+  const { id, aluno_id, ...campos } = await request.json()
+  if (!id || !aluno_id) return NextResponse.json({ error: 'id e aluno_id obrigatórios' }, { status: 400 })
+
+  // Verificar se a empresa pertence ao aluno
+  const { data: empresa } = await db().from('empresas').select('id').eq('id', id).eq('aluno_id', aluno_id).single()
+  if (!empresa) return NextResponse.json({ error: 'Sem permissão para atualizar esta empresa' }, { status: 403 })
+
   const { error } = await db().from('empresas').update(campos).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }
 
-// DELETE ?id=X  → exclui empresa
+// DELETE ?id=X&aluno_id=X  → exclui empresa
 export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
+  const aluno_id = searchParams.get('aluno_id')
+  if (!id || !aluno_id) return NextResponse.json({ error: 'id e aluno_id obrigatórios' }, { status: 400 })
+
+  // Verificar se a empresa pertence ao aluno
+  const { data: empresa } = await db().from('empresas').select('id').eq('id', id).eq('aluno_id', aluno_id).single()
+  if (!empresa) return NextResponse.json({ error: 'Sem permissão para excluir esta empresa' }, { status: 403 })
+
   const { error } = await db().from('empresas').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })

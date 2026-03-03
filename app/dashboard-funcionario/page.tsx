@@ -37,9 +37,11 @@ interface Checklist {
   empresa_id: string
   created_at: string
   empresas?: Empresa
-  status: 'pendente' | 'em_andamento' | 'concluido'
+  status: 'pendente' | 'em_andamento' | 'concluido' | 'atrasado'
   total_perguntas: number
   respostas_count: number
+  recorrencia?: string | null
+  dias_tolerancia?: number | null
 }
 
 export default function DashboardColaborador() {
@@ -112,34 +114,57 @@ export default function DashboardColaborador() {
       // Para cada checklist, buscar total de perguntas e respostas
       const checklistsComStatus = await Promise.all(
         (checklistsData || []).map(async (checklist) => {
-          // Buscar total de perguntas
-          const { count: totalPerguntas } = await supabase
-            .from('checklist_futuro_itens')
-            .select('*', { count: 'exact', head: true })
-            .eq('checklist_futuro_id', checklist.id)
+          try {
+            // Buscar total de perguntas
+            const { count: totalPerguntas, error: erroItens } = await supabase
+              .from('checklist_futuro_itens')
+              .select('*', { count: 'exact', head: true })
+              .eq('checklist_futuro_id', checklist.id)
 
-          // Buscar respostas do colaborador
-          const { count: respostasCount } = await supabase
-            .from('checklist_respostas')
-            .select('*', { count: 'exact', head: true })
-            .eq('checklist_futuro_id', checklist.id)
-            .eq('colaborador_id', colaboradorId)
+            if (erroItens) throw erroItens
 
-          // Determinar status
-          let status: 'pendente' | 'em_andamento' | 'concluido' = 'pendente'
-          if (respostasCount && totalPerguntas) {
-            if (respostasCount >= totalPerguntas) {
-              status = 'concluido'
-            } else if (respostasCount > 0) {
-              status = 'em_andamento'
+            // Buscar respostas do colaborador
+            const { count: respostasCount, error: erroRespostas } = await supabase
+              .from('checklist_respostas')
+              .select('*', { count: 'exact', head: true })
+              .eq('checklist_futuro_id', checklist.id)
+              .eq('colaborador_id', colaboradorId)
+
+            if (erroRespostas) throw erroRespostas
+
+            // Determinar status
+            let status: 'pendente' | 'em_andamento' | 'concluido' | 'atrasado' = 'pendente'
+            if (respostasCount && totalPerguntas) {
+              if (respostasCount >= totalPerguntas) {
+                status = 'concluido'
+              } else if (respostasCount > 0) {
+                status = 'em_andamento'
+              }
             }
-          }
 
-          return {
-            ...checklist,
-            status,
-            total_perguntas: totalPerguntas || 0,
-            respostas_count: respostasCount || 0
+            // Verificar se está atrasado (data limite = proxima_execucao + dias_tolerancia)
+            if (status !== 'concluido' && checklist.proxima_execucao) {
+              const dataLimite = new Date(checklist.proxima_execucao)
+              dataLimite.setDate(dataLimite.getDate() + (checklist.dias_tolerancia || 0))
+              dataLimite.setHours(23, 59, 59, 999)
+              if (new Date() > dataLimite) {
+                status = 'atrasado'
+              }
+            }
+
+            return {
+              ...checklist,
+              status,
+              total_perguntas: totalPerguntas || 0,
+              respostas_count: respostasCount || 0
+            }
+          } catch {
+            return {
+              ...checklist,
+              status: 'pendente' as const,
+              total_perguntas: 0,
+              respostas_count: 0
+            }
           }
         })
       )
@@ -171,6 +196,25 @@ export default function DashboardColaborador() {
   const checklistsPendentes = checklists.filter(c => c.status === 'pendente')
   const checklistsEmAndamento = checklists.filter(c => c.status === 'em_andamento')
   const checklistsConcluidos = checklists.filter(c => c.status === 'concluido')
+  const checklistsAtrasados = checklists.filter(c => c.status === 'atrasado')
+
+  const labelRecorrencia: Record<string, string> = {
+    diaria: '🔄 Diária',
+    semanal: '🔄 Semanal',
+    mensal: '🔄 Mensal'
+  }
+
+  function calcularJanela(dataStr: string, dias: number) {
+    const data = new Date(dataStr)
+    const inicio = new Date(data)
+    inicio.setDate(inicio.getDate() - dias)
+    const fim = new Date(data)
+    fim.setDate(fim.getDate() + dias)
+    return {
+      inicio: inicio.toLocaleDateString('pt-BR'),
+      fim: fim.toLocaleDateString('pt-BR')
+    }
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
@@ -470,6 +514,18 @@ export default function DashboardColaborador() {
                           <Calendar size={14} />
                           {checklist.proxima_execucao ? `Execução: ${new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}` : ''}
                         </div>
+                        {(checklist.dias_tolerancia ?? 0) > 0 && checklist.proxima_execucao && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            🕐 {(() => { const j = calcularJanela(checklist.proxima_execucao, checklist.dias_tolerancia!); return `Disponível: ${j.inicio} – ${j.fim}` })()}
+                          </div>
+                        )}
+                        {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ padding: '0.15rem 0.5rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '9999px', fontWeight: '600', fontSize: '0.75rem', border: '1px solid #bfdbfe' }}>
+                              {labelRecorrencia[checklist.recorrencia] || checklist.recorrencia}
+                            </span>
+                          </div>
+                        )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <ClipboardList size={14} />
                           {checklist.total_perguntas} perguntas
@@ -570,6 +626,20 @@ export default function DashboardColaborador() {
                           }} />
                         </div>
                       </div>
+                      {(checklist.recorrencia && checklist.recorrencia !== 'nenhuma') || (checklist.dias_tolerancia ?? 0) > 0 ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                          {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
+                            <span style={{ padding: '0.15rem 0.5rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '9999px', fontWeight: '600', border: '1px solid #bfdbfe' }}>
+                              {labelRecorrencia[checklist.recorrencia] || checklist.recorrencia}
+                            </span>
+                          )}
+                          {(checklist.dias_tolerancia ?? 0) > 0 && checklist.proxima_execucao && (
+                            <span>
+                              🕐 {(() => { const j = calcularJanela(checklist.proxima_execucao, checklist.dias_tolerancia!); return `${j.inicio} – ${j.fim}` })()}
+                            </span>
+                          )}
+                        </div>
+                      ) : null}
                       <div style={{
                         marginTop: '1rem',
                         padding: '0.75rem',
@@ -581,6 +651,88 @@ export default function DashboardColaborador() {
                         fontSize: '0.95rem'
                       }}>
                         Continuar →
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Atrasados */}
+            {checklistsAtrasados.length > 0 && (
+              <div className="fade-in">
+                <h2 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                  margin: '0 0 1rem 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <AlertCircle size={20} style={{ color: '#ef4444' }} />
+                  Atrasados ({checklistsAtrasados.length})
+                </h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                  {checklistsAtrasados.map(checklist => (
+                    <div
+                      key={checklist.id}
+                      className="card"
+                      onClick={() => responderChecklist(checklist.id)}
+                      style={{
+                        backgroundColor: 'white',
+                        borderRadius: '1rem',
+                        padding: '1.5rem',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+                        border: '2px solid #fecaca'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0, flex: 1 }}>
+                          {checklist.nome}
+                        </h3>
+                        <span style={{
+                          padding: '0.375rem 0.75rem',
+                          borderRadius: '9999px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          backgroundColor: '#fee2e2',
+                          color: '#991b1b'
+                        }}>
+                          Atrasado
+                        </span>
+                      </div>
+                      {checklist.descricao && (
+                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
+                          {checklist.descricao}
+                        </p>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Calendar size={14} />
+                          {checklist.proxima_execucao ? `Execução: ${new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}` : ''}
+                        </div>
+                        {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
+                          <span style={{ padding: '0.15rem 0.5rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '9999px', fontWeight: '600', fontSize: '0.75rem', border: '1px solid #bfdbfe', alignSelf: 'flex-start' }}>
+                            {labelRecorrencia[checklist.recorrencia] || checklist.recorrencia}
+                          </span>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <ClipboardList size={14} />
+                          {checklist.total_perguntas} perguntas
+                        </div>
+                      </div>
+                      <div style={{
+                        marginTop: '1rem',
+                        padding: '0.75rem',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        borderRadius: '0.5rem',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        fontSize: '0.95rem'
+                      }}>
+                        Responder Agora →
                       </div>
                     </div>
                   ))}

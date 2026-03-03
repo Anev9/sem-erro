@@ -125,7 +125,7 @@ export default function DetalhesChecklistPage() {
   const naAplicavel = itens.filter(i => respostas[i.id]?.resposta === 'na').length
   const semResposta = itens.filter(i => !respostas[i.id]?.resposta).length
   const respondidos = totalItens - semResposta
-  const percentual = totalItens > 0 ? Math.round((conformes / (totalItens - naAplicavel || 1)) * 100) : 0
+  const percentual = totalItens > 0 ? Math.round((conformes / Math.max(1, totalItens - naAplicavel)) * 100) : 0
 
   const getStatusChecklist = (status: string) => {
     const s = { pendente: { bg: '#FFF3E0', text: '#E65100', border: '#FFB74D', label: 'Pendente' }, em_andamento: { bg: '#E3F2FD', text: '#1565C0', border: '#64B5F6', label: 'Em Andamento' }, concluido: { bg: '#E8F5E9', text: '#2E7D32', border: '#81C784', label: 'Concluído' } }

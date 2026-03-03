@@ -17,6 +17,8 @@ type ChecklistFuturo = {
   empresa_id: string | null
   total_itens?: number
   itens_respondidos?: number
+  recorrencia?: string | null
+  dias_tolerancia?: number | null
 }
 
 export default function ChecklistsFuturosPage() {
@@ -131,6 +133,24 @@ export default function ChecklistsFuturosPage() {
       month: '2-digit',
       year: 'numeric'
     })
+  }
+
+  function calcularJanela(dataStr: string, dias: number) {
+    const data = new Date(dataStr)
+    const inicio = new Date(data)
+    inicio.setDate(inicio.getDate() - dias)
+    const fim = new Date(data)
+    fim.setDate(fim.getDate() + dias)
+    return {
+      inicio: inicio.toLocaleDateString('pt-BR'),
+      fim: fim.toLocaleDateString('pt-BR')
+    }
+  }
+
+  const labelRecorrencia: Record<string, string> = {
+    diaria: '🔄 Diária',
+    semanal: '🔄 Semanal',
+    mensal: '🔄 Mensal'
   }
 
   function obterCorStatus(status: string) {
@@ -363,12 +383,33 @@ export default function ChecklistsFuturosPage() {
                       {checklist.departamento && (
                         <div>🏢 {checklist.departamento}</div>
                       )}
+                      {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
+                        <span style={{
+                          padding: '0.2rem 0.6rem',
+                          backgroundColor: '#eff6ff',
+                          color: '#1d4ed8',
+                          borderRadius: '9999px',
+                          fontWeight: '600',
+                          fontSize: '0.8rem',
+                          border: '1px solid #bfdbfe'
+                        }}>
+                          {labelRecorrencia[checklist.recorrencia] || checklist.recorrencia}
+                        </span>
+                      )}
+                      {(checklist.dias_tolerancia ?? 0) > 0 && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6b7280' }}>
+                          🕐 Janela: {(() => {
+                            const j = calcularJanela(checklist.proxima_execucao, checklist.dias_tolerancia!)
+                            return `${j.inicio} – ${j.fim}`
+                          })()}
+                        </span>
+                      )}
                     </div>
 
                     {/* Botões */}
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                       <button
-                        onClick={() => router.push(`/responder-checklist/${checklist.id}`)}
+                        onClick={() => router.push(`/checklists-futuros/${checklist.id}`)}
                         style={{
                           padding: '0.625rem 1.25rem',
                           backgroundColor: '#3b82f6',

@@ -68,7 +68,7 @@ export default function ColaboradoresPage() {
     const res = await fetch('/api/aluno/colaboradores', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ativo: false })
+      body: JSON.stringify({ id, ativo: false, aluno_id: alunoId })
     })
     if (!res.ok) { alert('Erro ao excluir colaborador'); return }
     alert('Colaborador excluído com sucesso!')

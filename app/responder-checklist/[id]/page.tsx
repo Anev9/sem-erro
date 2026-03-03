@@ -103,6 +103,13 @@ export default function ResponderChecklistPage() {
         return
       }
 
+      // Verificar se o checklist pertence ao colaborador logado
+      if (checklistData.colaborador_id !== colab.id) {
+        alert('Você não tem permissão para acessar este checklist.')
+        router.push('/dashboard-funcionario')
+        return
+      }
+
       setChecklist(checklistData)
 
       // Buscar itens
@@ -188,12 +195,13 @@ export default function ResponderChecklistPage() {
         .single()
 
       if (existente) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('checklist_respostas')
           .update({ resposta, observacao, ...(fotoSalvar && { foto_url: fotoSalvar }) })
           .eq('id', existente.id)
+        if (updateError) throw updateError
       } else {
-        await supabase
+        const { error: insertError } = await supabase
           .from('checklist_respostas')
           .insert({
             checklist_futuro_id: checklistId,
@@ -203,6 +211,7 @@ export default function ResponderChecklistPage() {
             observacao,
             ...(fotoSalvar && { foto_url: fotoSalvar })
           })
+        if (insertError) throw insertError
       }
     } catch (error) {
       console.error('Erro ao salvar resposta:', error)

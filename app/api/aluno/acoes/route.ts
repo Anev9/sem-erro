@@ -69,12 +69,35 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    const alunoId = searchParams.get('aluno_id')
 
-    if (!id) {
-      return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
+    if (!id || !alunoId) {
+      return NextResponse.json({ error: 'id e aluno_id obrigatórios' }, { status: 400 })
     }
 
     const supabase = getServiceClient()
+
+    // Verificar se a ação pertence a uma empresa do aluno
+    const { data: acao } = await supabase
+      .from('acoes_corretivas')
+      .select('empresa_id')
+      .eq('id', id)
+      .single()
+
+    if (!acao) {
+      return NextResponse.json({ error: 'Ação não encontrada' }, { status: 404 })
+    }
+
+    const { data: empresa } = await supabase
+      .from('empresas')
+      .select('id')
+      .eq('id', acao.empresa_id)
+      .eq('aluno_id', alunoId)
+      .single()
+
+    if (!empresa) {
+      return NextResponse.json({ error: 'Sem permissão para excluir esta ação' }, { status: 403 })
+    }
 
     const { error } = await supabase
       .from('acoes_corretivas')
