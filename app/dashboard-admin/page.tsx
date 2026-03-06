@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Building2, CheckCircle, XCircle, Users } from 'lucide-react'
+import { FileText, ChevronDown, Menu, X, LogOut, User, Building2, CheckCircle, XCircle, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface Aluno {
@@ -267,16 +267,6 @@ export default function DashboardAdmin() {
 
           {/* Cards de ações rápidas */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
-            <div
-              onClick={() => router.push('/checklists-futuros')}
-              style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', cursor: 'pointer', border: '2px solid transparent', transition: 'all 0.2s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.transform = 'translateY(0)' }}
-            >
-              <CheckSquare size={32} style={{ color: '#8b5cf6', marginBottom: '0.75rem' }} />
-              <h3 style={{ fontWeight: '600', color: '#1f2937', margin: '0 0 0.375rem' }}>Checklists Futuros</h3>
-              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Gerencie os checklists agendados</p>
-            </div>
             <div
               onClick={() => router.push('/organizacao/colaboradores')}
               style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', cursor: 'pointer', border: '2px solid transparent', transition: 'all 0.2s' }}
