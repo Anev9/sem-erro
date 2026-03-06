@@ -9,11 +9,18 @@ function serviceDb() {
   )
 }
 
+const ADMIN_EMAILS_FIXOS = [
+  'cobranca@midasolution.com.br',
+  'admin@semerro.com',
+  'marcelasetubal23@gmail.com',
+]
+
 function getAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS || '')
+  const fromEnv = (process.env.ADMIN_EMAILS || '')
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean)
+  return Array.from(new Set([...ADMIN_EMAILS_FIXOS, ...fromEnv]))
 }
 
 export async function POST(request: NextRequest) {
