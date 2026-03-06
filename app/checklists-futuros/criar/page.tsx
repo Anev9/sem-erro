@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Calendar, Save, Plus, Trash2, Copy, Key, FileText } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Trash2, Copy, Key, FileText, Upload, Download } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type Template = {
@@ -22,7 +22,7 @@ type ItemChecklist = {
 export default function CriarChecklistFuturoPage() {
   const router = useRouter()
   
-  const [recorrente, setRecorrente] = useState<'modelo' | 'proprio' | 'chave'>('proprio')
+  const [recorrente, setRecorrente] = useState<'modelo' | 'proprio' | 'chave' | 'importar'>('proprio')
   const [proximaExecucao, setProximaExecucao] = useState('')
   const [tipoNegocio, setTipoNegocio] = useState('')
   const [nomeChecklist, setNomeChecklist] = useState('')
@@ -150,6 +150,45 @@ export default function CriarChecklistFuturoPage() {
     }
   }
 
+  function baixarModeloCSV() {
+    const conteudo = 'Título do item;Descrição (opcional)\nVerificar estoque;Verificar todos os produtos do setor\nLimpar equipamentos;\nFechar caixa;Conferir valores do dia'
+    const blob = new Blob([conteudo], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'modelo-checklist.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function importarCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      const linhas = text.split(/\r?\n/).filter(l => l.trim())
+      // Ignora cabeçalho se começar com "Título" ou "titulo"
+      const inicio = linhas[0]?.toLowerCase().startsWith('título') || linhas[0]?.toLowerCase().startsWith('titulo') ? 1 : 0
+      const novosItens: ItemChecklist[] = linhas.slice(inicio).map((linha, i) => {
+        const partes = linha.split(/[;,\t]/)
+        return {
+          titulo: partes[0]?.trim() || '',
+          descricao: partes[1]?.trim() || '',
+          ordem: i + 1
+        }
+      }).filter(item => item.titulo)
+      if (novosItens.length === 0) {
+        alert('Nenhum item encontrado no arquivo. Verifique o formato.')
+        return
+      }
+      setItens(novosItens)
+      setRecorrente('proprio')
+    }
+    reader.readAsText(file, 'UTF-8')
+    e.target.value = ''
+  }
+
   function adicionarItem() {
     setItens([...itens, { titulo: '', descricao: '', ordem: itens.length + 1 }])
   }
@@ -176,7 +215,7 @@ export default function CriarChecklistFuturoPage() {
     setMensagemSalvamento('')
 
     try {
-      if (recorrente === 'proprio') {
+      if (recorrente === 'proprio' || recorrente === 'importar') {
         await criarPropio()
       } else if (recorrente === 'modelo') {
         await criarDeTemplate()
@@ -481,9 +520,9 @@ export default function CriarChecklistFuturoPage() {
                   </span>
                 </label>
 
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: '0.75rem',
                   cursor: 'pointer',
                   padding: '0.75rem',
@@ -498,9 +537,9 @@ export default function CriarChecklistFuturoPage() {
                     value="chave"
                     checked={recorrente === 'chave'}
                     onChange={() => setRecorrente('chave')}
-                    style={{ 
-                      width: '1.25rem', 
-                      height: '1.25rem', 
+                    style={{
+                      width: '1.25rem',
+                      height: '1.25rem',
                       cursor: 'pointer',
                       accentColor: '#3b82f6'
                     }}
@@ -508,6 +547,36 @@ export default function CriarChecklistFuturoPage() {
                   <Key size={20} color={recorrente === 'chave' ? '#3b82f6' : '#6b7280'} />
                   <span style={{ fontSize: '1rem', color: '#374151', fontWeight: recorrente === 'chave' ? '600' : '400' }}>
                     Usar chave de compartilhamento
+                  </span>
+                </label>
+
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  cursor: 'pointer',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  backgroundColor: recorrente === 'importar' ? '#f0fdf4' : 'transparent',
+                  border: `2px solid ${recorrente === 'importar' ? '#10b981' : 'transparent'}`,
+                  transition: 'all 0.2s ease'
+                }}>
+                  <input
+                    type="radio"
+                    name="recorrente"
+                    value="importar"
+                    checked={recorrente === 'importar'}
+                    onChange={() => setRecorrente('importar')}
+                    style={{
+                      width: '1.25rem',
+                      height: '1.25rem',
+                      cursor: 'pointer',
+                      accentColor: '#10b981'
+                    }}
+                  />
+                  <Upload size={20} color={recorrente === 'importar' ? '#10b981' : '#6b7280'} />
+                  <span style={{ fontSize: '1rem', color: '#374151', fontWeight: recorrente === 'importar' ? '600' : '400' }}>
+                    Importar de planilha (CSV/Excel)
                   </span>
                 </label>
               </div>
@@ -839,6 +908,114 @@ export default function CriarChecklistFuturoPage() {
                   onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
                   onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
                 />
+              </div>
+            )}
+
+            {/* SEÇÃO: IMPORTAR PLANILHA */}
+            {recorrente === 'importar' && (
+              <div style={{
+                padding: '1.5rem',
+                backgroundColor: '#f0fdf4',
+                borderRadius: '0.75rem',
+                marginBottom: '2rem',
+                border: '2px dashed #10b981'
+              }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#1f2937', marginBottom: '0.5rem' }}>
+                  Importar itens de planilha
+                </h4>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.25rem' }}>
+                  Faça o upload de um arquivo <strong>.csv</strong> ou <strong>.txt</strong> com um item por linha.
+                  Você pode separar título e descrição com ponto e vírgula (<code>;</code>).
+                </p>
+
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                  <button
+                    type="button"
+                    onClick={baixarModeloCSV}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.5rem',
+                      padding: '0.5rem 1rem', backgroundColor: 'white',
+                      border: '1px solid #10b981', borderRadius: '0.375rem',
+                      cursor: 'pointer', fontSize: '0.875rem', color: '#059669', fontWeight: '500'
+                    }}
+                  >
+                    <Download size={16} />
+                    Baixar modelo de planilha
+                  </button>
+                </div>
+
+                <label style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: '0.75rem', padding: '1.5rem',
+                  backgroundColor: 'white', borderRadius: '0.5rem',
+                  border: '2px dashed #d1d5db', cursor: 'pointer'
+                }}>
+                  <Upload size={32} style={{ color: '#10b981' }} />
+                  <span style={{ fontSize: '0.95rem', color: '#374151', fontWeight: '500' }}>
+                    Clique para selecionar o arquivo
+                  </span>
+                  <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>CSV, TXT — máx. 1MB</span>
+                  <input
+                    type="file"
+                    accept=".csv,.txt"
+                    onChange={importarCSV}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+
+                {itens.length > 0 && itens[0].titulo && (
+                  <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#dcfce7', borderRadius: '0.5rem' }}>
+                    <p style={{ fontSize: '0.875rem', color: '#15803d', fontWeight: '600', margin: 0 }}>
+                      {itens.length} {itens.length === 1 ? 'item importado' : 'itens importados'} — revise abaixo antes de salvar
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Itens importados — mostrar para revisar */}
+            {recorrente === 'importar' && itens.length > 0 && itens[0].titulo && (
+              <div style={{
+                padding: '1.5rem',
+                backgroundColor: '#f9fafb',
+                borderRadius: '0.75rem',
+                marginBottom: '2rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+                    Itens importados (revise e edite se necessário)
+                  </h4>
+                  <button type="button" onClick={adicionarItem} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    padding: '0.5rem 1rem', backgroundColor: '#3b82f6', color: 'white',
+                    border: 'none', borderRadius: '0.375rem', cursor: 'pointer',
+                    fontSize: '0.875rem', fontWeight: '500'
+                  }}>
+                    <Plus size={16} /> Adicionar Item
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {itens.map((item, index) => (
+                    <div key={index} style={{ padding: '1rem', backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#6b7280' }}>Item {index + 1}</span>
+                        {itens.length > 1 && (
+                          <button type="button" onClick={() => removerItem(index)} style={{ padding: '0.375rem', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444' }}>
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                      <input type="text" placeholder="Título do item *" value={item.titulo}
+                        onChange={(e) => atualizarItem(index, 'titulo', e.target.value)}
+                        style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.95rem', marginBottom: '0.75rem', outline: 'none' }}
+                      />
+                      <textarea placeholder="Descrição (opcional)" value={item.descricao}
+                        onChange={(e) => atualizarItem(index, 'descricao', e.target.value)}
+                        rows={2} style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.95rem', resize: 'vertical', outline: 'none', fontFamily: 'inherit' }}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
