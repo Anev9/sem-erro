@@ -12,6 +12,7 @@ const PLANOS = {
     descricao: 'Ideal para 1 Loja',
     beneficios: ['Todos os recursos incluídos', 'Suporte prioritário', 'Treinamento completo'],
     cor: '#f97316',
+    popular: false,
   },
   growth: {
     nome: 'Plano Growth',
@@ -29,6 +30,7 @@ const PLANOS = {
     descricao: '6 a 9 Lojas',
     beneficios: ['Todos os recursos incluídos', 'Suporte VIP 24/7', 'Treinamento personalizado'],
     cor: '#f97316',
+    popular: false,
   },
   enterprise: {
     nome: 'Plano Enterprise',
@@ -37,6 +39,7 @@ const PLANOS = {
     descricao: '10+ Lojas',
     beneficios: ['Todos os recursos incluídos', 'Suporte VIP 24/7', 'Consultor dedicado'],
     cor: '#f97316',
+    popular: false,
   },
 }
 
