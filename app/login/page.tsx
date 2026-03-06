@@ -32,97 +32,67 @@ export default function LoginPage() {
     
     if (!newErrors.email && !newErrors.password) {
       setLoading(true);
-      
+
       try {
-        // TENTATIVA 1: Login com Supabase Auth (ADMIN ou COLABORADOR)
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: email,
-          password: password,
-        });
-
-        if (authData.user && !authError) {
-          // Verificar se é ADMIN
-          const { data: profile, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', authData.user.id)
-            .single();
-
-          if (profile && !profileError) {
-            const adminData = {
-              ...profile,
-              role: 'admin',
-              email: profile.email || authData.user.email,
-              full_name: profile.full_name || profile.name || authData.user.email,
-            }
-            localStorage.setItem('user', JSON.stringify(adminData));
-            window.location.href = '/dashboard-admin';
-            return;
-          }
-
-          // Verificar se é COLABORADOR
-          const { data: colaborador, error: colaboradorError } = await supabase
-            .from('colaboradores')
-            .select(`
-              *,
-              empresas (
-                nome_fantasia
-              )
-            `)
-            .eq('auth_id', authData.user.id)
-            .eq('ativo', true)
-            .single();
-
-          if (colaborador && !colaboradorError) {
-            const userData = {
-              id: colaborador.id,
-              auth_id: colaborador.auth_id,
-              email: colaborador.email,
-              nome: colaborador.nome,
-              role: 'colaborador',
-              empresa_id: colaborador.empresa_id,
-              empresa_nome: colaborador.empresas?.nome_fantasia,
-              cargo: colaborador.cargo,
-              created_at: colaborador.created_at
-            };
-
-            localStorage.setItem('user', JSON.stringify(userData));
-            window.location.href = '/dashboard-funcionario';
-            return;
-          }
-
-          // Auth do Supabase funcionou mas usuário não tem perfil cadastrado
-          throw new Error('Usuário autenticado mas sem perfil. Contate o administrador.');
-        }
-
-        // TENTATIVA 2: Login como ALUNO (via API server-side)
-        const response = await fetch('/api/auth/login-aluno', {
+        // TENTATIVA 1: Login como ADMIN
+        const adminRes = await fetch('/api/auth/login-admin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email, password }),
         });
+        const adminData = await adminRes.json();
 
-        if (response.ok) {
-          const userData = await response.json();
-          localStorage.setItem('user', JSON.stringify(userData));
-          // Redireciona baseado no tipo do usuário na tabela alunos
-          if (userData.tipo === 'admin') {
-            window.location.href = '/dashboard-admin';
-          } else {
-            window.location.href = '/dashboard-aluno';
-          }
+        if (adminRes.ok && adminData.isAdmin) {
+          const profile = adminData.profile || { email, full_name: 'Administrador', role: 'admin' };
+          localStorage.setItem('user', JSON.stringify(profile));
+          window.location.href = '/dashboard-admin';
           return;
         }
 
-        // Se chegou aqui, nenhum login funcionou
-        throw new Error('E-mail ou senha incorretos');
-        
-      } catch (error: any) {
-        console.error('💥 ERRO NO LOGIN:', error);
-        setErrors({ 
-          ...newErrors, 
-          password: error.message || 'E-mail ou senha incorretos' 
+        if (!adminRes.ok) {
+          throw new Error(adminData.error || 'E-mail ou senha incorretos');
+        }
+
+        // Não é admin — tentar como colaborador via Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
         });
+
+        if (authData.user && !authError) {
+          const checkRes = await fetch('/api/auth/check-admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: authData.user.id, email: authData.user.email }),
+          });
+          const checkData = await checkRes.json();
+
+          if (checkData.isColaborador && checkData.profile) {
+            localStorage.setItem('user', JSON.stringify(checkData.profile));
+            window.location.href = '/dashboard-funcionario';
+            return;
+          }
+        }
+
+        // TENTATIVA 2: Login como ALUNO
+        const alunoRes = await fetch('/api/auth/login-aluno', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (alunoRes.ok) {
+          const userData = await alunoRes.json();
+          localStorage.setItem('user', JSON.stringify(userData));
+          window.location.href = '/dashboard-aluno';
+          return;
+        }
+
+        throw new Error('E-mail ou senha incorretos');
+
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : 'E-mail ou senha incorretos';
+        setErrors({ ...newErrors, password: msg });
         setLoading(false);
       }
     }

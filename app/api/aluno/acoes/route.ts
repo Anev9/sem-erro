@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ empresas: [], acoes: [] })
     }
 
-    const empresaIds = empresas.map((e: any) => e.id)
+    const empresaIds = empresas.map((e: { id: string }) => e.id)
 
     // Buscar ações
     const { data: acoes, error: acoesError } = await supabase
@@ -56,6 +56,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+
+    if (!body.empresa_id || !body.titulo) {
+      return NextResponse.json({ error: 'empresa_id e titulo são obrigatórios' }, { status: 400 })
+    }
+
     const supabase = getServiceClient()
     const { data, error } = await supabase.from('acoes_corretivas').insert([body]).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

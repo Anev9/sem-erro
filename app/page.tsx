@@ -153,7 +153,7 @@ export default function SemErroLanding() {
                 letterSpacing: '0.05em'
               }}>SEM ERRO</h1>
             </div>
-            <button 
+            <button
               onClick={() => router.push('/login')}
               style={{
               border: '2px solid white',
@@ -599,8 +599,8 @@ export default function SemErroLanding() {
                     <span>Treinamento completo</span>
                   </li>
                 </ul>
-                <button 
-                onClick={() => router.push('/login')}
+                <button
+                onClick={() => router.push('/contratar?plano=starter')}
                 style={{
                   width: '100%',
                   backgroundColor: '#f97316',
@@ -676,8 +676,8 @@ export default function SemErroLanding() {
                     <span style={{ fontWeight: 'bold', color: '#f97316' }}>Economia de 50%</span>
                   </li>
                 </ul>
-                <button 
-                onClick={() => router.push('/login')}
+                <button
+                onClick={() => router.push('/contratar?plano=growth')}
                 style={{
                   width: '100%',
                   backgroundColor: '#f97316',
@@ -732,8 +732,8 @@ export default function SemErroLanding() {
                     <span>Treinamento personalizado</span>
                   </li>
                 </ul>
-                <button 
-                onClick={() => router.push('/login')}
+                <button
+                onClick={() => router.push('/contratar?plano=scale')}
                 style={{
                   width: '100%',
                   backgroundColor: '#f97316',
@@ -788,7 +788,7 @@ export default function SemErroLanding() {
                   </li>
                 </ul>
                 <button 
-                onClick={() => router.push('/login')}
+                onClick={() => router.push('/contratar?plano=enterprise')}
                 style={{
                   width: '100%',
                   backgroundColor: '#f97316',

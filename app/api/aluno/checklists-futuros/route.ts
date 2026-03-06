@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       .select('id')
       .eq('aluno_id', alunoId)
 
-    const empresaIds = (empresas || []).map((e: any) => e.id)
+    const empresaIds = (empresas || []).map((e: { id: string }) => e.id)
     if (empresaIds.length === 0) return NextResponse.json([])
 
     const { data, error } = await db()

@@ -2,13 +2,47 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User } from 'lucide-react'
+import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Building2, CheckCircle, XCircle, Users } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+
+interface Aluno {
+  id: number
+  clientes: string
+  'e-mail': string
+  programa: string
+  ativo: boolean
+}
 
 export default function DashboardAdmin() {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [userName, setUserName] = useState('')
+  const [alunos, setAlunos] = useState<Aluno[]>([])
+  const [loadingAlunos, setLoadingAlunos] = useState(true)
+  const [toggling, setToggling] = useState<number | null>(null)
+
+  async function carregarAlunos() {
+    const { data } = await supabase
+      .from('alunos')
+      .select('*')
+      .order('clientes')
+    setAlunos(data || [])
+    setLoadingAlunos(false)
+  }
+
+  async function toggleAtivo(aluno: Aluno) {
+    setToggling(aluno.id)
+    const novoStatus = !aluno.ativo
+    const { error } = await supabase
+      .from('alunos')
+      .update({ ativo: novoStatus })
+      .eq('id', aluno.id)
+    if (!error) {
+      setAlunos((prev) => prev.map((a) => (a.id === aluno.id ? { ...a, ativo: novoStatus } : a)))
+    }
+    setToggling(null)
+  }
 
   useEffect(() => {
     // ✅ VERIFICAÇÃO ATUALIZADA
@@ -27,34 +61,18 @@ export default function DashboardAdmin() {
       return
     }
     setUserName(user.full_name || user.email)
+    carregarAlunos()
   }, [router])
 
   const menuItems = [
-    {
-      title: 'Ações',
-      submenu: [{ label: 'Ações', href: '/acoes' }]
-    },
-    {
-      title: 'Checklist',
-      submenu: [
-        { label: 'Checklists futuros', href: '/checklists-futuros' },
-        { label: 'Checklists criados', href: '/checklists-criados' },
-      ]
-    },
     {
       title: 'Organização',
       submenu: [
         { label: 'Visão Geral', href: '/organizacao' },
         { label: 'Grupos de Empresa', href: '/organizacao/grupos-empresa' },
+        { label: 'Colaboradores', href: '/organizacao/colaboradores' },
         { label: 'Copilotos', href: '/organizacao/copilotos' },
         { label: 'Tipos de Negócio', href: '/organizacao/tipos-negocio' },
-      ]
-    },
-    {
-      title: 'Relatórios',
-      submenu: [
-        { label: 'Performance', href: '/performance' },
-        { label: 'Respostas', href: '/respostas' },
       ]
     },
     {
@@ -66,8 +84,9 @@ export default function DashboardAdmin() {
     }
   ]
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem('user')
+    await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/login')
   }
 
@@ -150,30 +169,134 @@ export default function DashboardAdmin() {
             <p style={{ color: '#6b7280' }}>Painel de Administração</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-            
-            <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', padding: '1.5rem', color: 'white' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Checklists dos Últimos 30 Dias</h2>
-              </div>
-              <div style={{ padding: '1.5rem', textAlign: 'center', color: '#9ca3af' }}>
-                <CheckSquare size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                <p>Nenhum checklist cadastrado ainda</p>
-              </div>
-            </div>
-
-            <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', padding: '1.5rem', color: 'white' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Performance das Empresas</h2>
-              </div>
-              <div style={{ padding: '1.5rem', minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#9ca3af' }}>
-                <div>
-                  <FileText size={48} style={{ margin: '0 auto 1rem' }} />
-                  <p>Gráfico de performance</p>
+          {/* Cards de resumo */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+            {[
+              { label: 'Total de Clientes', value: alunos.length, color: '#3b82f6', bg: '#eff6ff', icon: <Building2 size={20} /> },
+              { label: 'Ativos', value: alunos.filter((a) => a.ativo).length, color: '#10b981', bg: '#f0fdf4', icon: <CheckCircle size={20} /> },
+              { label: 'Inativos', value: alunos.filter((a) => !a.ativo).length, color: '#ef4444', bg: '#fef2f2', icon: <XCircle size={20} /> },
+              { label: 'Colaboradores', value: '—', color: '#8b5cf6', bg: '#f5f3ff', icon: <Users size={20} />, href: '/organizacao/colaboradores' },
+            ].map((card) => (
+              <div
+                key={card.label}
+                onClick={card.href ? () => router.push(card.href!) : undefined}
+                style={{
+                  backgroundColor: card.bg, borderRadius: '0.75rem',
+                  padding: '1.25rem 1.5rem', border: `1px solid ${card.color}30`,
+                  cursor: card.href ? 'pointer' : 'default'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: card.color, marginBottom: '0.5rem' }}>
+                  {card.icon}
+                  <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>{card.label}</span>
                 </div>
+                <p style={{ color: card.color, fontSize: '1.75rem', fontWeight: 'bold', margin: 0 }}>{card.value}</p>
               </div>
+            ))}
+          </div>
+
+          {/* Lista de empresas com ativo/desativo */}
+          <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <Building2 size={22} style={{ color: 'white' }} />
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0, color: 'white' }}>Clientes / Grupos de Empresa</h2>
+              </div>
+              <button
+                onClick={() => router.push('/organizacao/grupos-empresa')}
+                style={{ padding: '0.375rem 0.875rem', backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.85rem' }}
+              >
+                Ver todos
+              </button>
             </div>
 
+            {loadingAlunos ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af' }}>Carregando...</div>
+            ) : alunos.length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af' }}>
+                <CheckSquare size={40} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
+                <p>Nenhum cliente cadastrado</p>
+              </div>
+            ) : (
+              <div style={{ padding: '1rem', display: 'grid', gap: '0.5rem' }}>
+                {alunos.slice(0, 10).map((aluno) => (
+                  <div
+                    key={aluno.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.75rem',
+                      padding: '0.875rem 1rem', borderRadius: '0.5rem',
+                      border: `1px solid ${aluno.ativo ? '#d1fae5' : '#fee2e2'}`,
+                      backgroundColor: aluno.ativo ? '#f0fdf4' : '#fef2f2',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    {aluno.ativo
+                      ? <CheckCircle size={18} style={{ color: '#10b981', flexShrink: 0 }} />
+                      : <XCircle size={18} style={{ color: '#ef4444', flexShrink: 0 }} />
+                    }
+                    <div style={{ flex: 1, minWidth: '120px' }}>
+                      <p style={{ margin: 0, fontWeight: '600', color: '#1f2937', fontSize: '0.9rem' }}>{aluno.clientes || 'Sem nome'}</p>
+                      <p style={{ margin: 0, color: '#6b7280', fontSize: '0.8rem' }}>{aluno['e-mail'] || ''}{aluno.programa ? ` • ${aluno.programa}` : ''}</p>
+                    </div>
+                    <button
+                      onClick={() => toggleAtivo(aluno)}
+                      disabled={toggling === aluno.id}
+                      style={{
+                        padding: '0.375rem 0.875rem', border: 'none', borderRadius: '0.375rem',
+                        cursor: toggling === aluno.id ? 'not-allowed' : 'pointer',
+                        fontWeight: '600', fontSize: '0.8rem',
+                        backgroundColor: toggling === aluno.id ? '#e5e7eb' : aluno.ativo ? '#fee2e2' : '#d1fae5',
+                        color: toggling === aluno.id ? '#9ca3af' : aluno.ativo ? '#dc2626' : '#059669',
+                      }}
+                    >
+                      {toggling === aluno.id ? '...' : aluno.ativo ? 'Desativar' : 'Ativar'}
+                    </button>
+                  </div>
+                ))}
+                {alunos.length > 10 && (
+                  <button
+                    onClick={() => router.push('/organizacao/grupos-empresa')}
+                    style={{ padding: '0.75rem', textAlign: 'center', backgroundColor: '#f9fafb', border: '1px dashed #e5e7eb', borderRadius: '0.5rem', cursor: 'pointer', color: '#6b7280', fontSize: '0.875rem' }}
+                  >
+                    Ver mais {alunos.length - 10} clientes →
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Cards de ações rápidas */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
+            <div
+              onClick={() => router.push('/checklists-futuros')}
+              style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', cursor: 'pointer', border: '2px solid transparent', transition: 'all 0.2s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              <CheckSquare size={32} style={{ color: '#8b5cf6', marginBottom: '0.75rem' }} />
+              <h3 style={{ fontWeight: '600', color: '#1f2937', margin: '0 0 0.375rem' }}>Checklists Futuros</h3>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Gerencie os checklists agendados</p>
+            </div>
+            <div
+              onClick={() => router.push('/organizacao/colaboradores')}
+              style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', cursor: 'pointer', border: '2px solid transparent', transition: 'all 0.2s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              <Users size={32} style={{ color: '#10b981', marginBottom: '0.75rem' }} />
+              <h3 style={{ fontWeight: '600', color: '#1f2937', margin: '0 0 0.375rem' }}>Colaboradores</h3>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Cadastre colaboradores nas empresas</p>
+            </div>
+            <div
+              onClick={() => router.push('/performance')}
+              style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', cursor: 'pointer', border: '2px solid transparent', transition: 'all 0.2s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              <FileText size={32} style={{ color: '#3b82f6', marginBottom: '0.75rem' }} />
+              <h3 style={{ fontWeight: '600', color: '#1f2937', margin: '0 0 0.375rem' }}>Relatórios</h3>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Performance e relatórios gerais</p>
+            </div>
           </div>
         </main>
       </div>

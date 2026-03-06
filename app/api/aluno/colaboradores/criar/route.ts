@@ -14,6 +14,13 @@ export async function POST(request: NextRequest) {
   try {
     const { email, senha, nome, celular, cargo, empresa_id } = await request.json()
 
+    if (!email || !senha || !nome || !cargo || !empresa_id) {
+      return NextResponse.json({ error: 'email, senha, nome, cargo e empresa_id são obrigatórios' }, { status: 400 })
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      return NextResponse.json({ error: 'E-mail inválido' }, { status: 400 })
+    }
+
     const supabase = db()
 
     // Verificar se o colaborador já está cadastrado nesta empresa específica
@@ -93,7 +100,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro interno'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

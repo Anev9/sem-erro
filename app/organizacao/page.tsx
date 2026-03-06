@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Building2, Users, Briefcase, ArrowLeft } from 'lucide-react'
+import { Building2, Users, Briefcase, ArrowLeft, UserCheck } from 'lucide-react'
 
 export default function OrganizacaoPage() {
   const router = useRouter()
@@ -13,6 +13,13 @@ export default function OrganizacaoPage() {
       icon: Building2,
       href: '/organizacao/grupos-empresa',
       color: '#3b82f6'
+    },
+    {
+      title: 'Colaboradores',
+      description: 'Cadastre e gerencie colaboradores de todas as empresas',
+      icon: UserCheck,
+      href: '/organizacao/colaboradores',
+      color: '#10b981'
     },
     {
       title: 'Copilotos',

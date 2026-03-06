@@ -180,8 +180,9 @@ export default function DashboardAluno() {
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem('user')
+    await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/login')
   }
 

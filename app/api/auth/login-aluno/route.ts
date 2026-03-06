@@ -3,11 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const body = await request.json()
+    const { email, password } = body
 
-    console.log('[login-aluno] Tentativa de login:', email)
-    console.log('[login-aluno] SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'OK' : 'MISSING')
-    console.log('[login-aluno] SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'OK' : 'MISSING')
+    // Validação de entrada
+    if (!email || !password) {
+      return NextResponse.json({ error: 'E-mail e senha são obrigatórios' }, { status: 400 })
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      return NextResponse.json({ error: 'E-mail inválido' }, { status: 400 })
+    }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,22 +26,23 @@ export async function POST(request: NextRequest) {
       .eq('e-mail', email)
       .single()
 
-    console.log('[login-aluno] Aluno encontrado:', !!aluno)
-    if (error) console.log('[login-aluno] Erro na query:', error.message)
-
     if (!aluno || error) {
+      return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
+    }
+
+    // Admin não pode logar pela rota de aluno — deve usar o login Supabase Auth
+    if (aluno['tipo'] === 'admin') {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
     }
 
     const senhaCorreta = aluno['senha'] || process.env.ALUNO_DEFAULT_PASSWORD
     const senhaOk = password === senhaCorreta
-    console.log('[login-aluno] Senha confere:', senhaOk)
 
     if (!senhaOk) {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
     }
 
-    return NextResponse.json({
+    const userData = {
       id: aluno.id,
       aluno_id: aluno.id,
       email: aluno['e-mail'],
@@ -45,10 +51,21 @@ export async function POST(request: NextRequest) {
       tipo: aluno['tipo'],
       programa: aluno['programa'],
       ativo: aluno['ativo'],
-      created_at: aluno['created_at']
+      created_at: aluno['created_at'],
+    }
+
+    const response = NextResponse.json(userData)
+
+    // Cookie HttpOnly para proteger rotas via middleware
+    response.cookies.set('sem-erro-aluno-id', String(aluno.id), {
+      httpOnly: true,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 24 horas
     })
-  } catch (err: any) {
-    console.log('[login-aluno] EXCEPTION:', err?.message)
+
+    return response
+  } catch {
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Calendar, Clock, CheckCircle, AlertCircle, PlayCircle, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, Calendar, Clock, CheckCircle, AlertCircle, PlayCircle, Trash2, Pencil } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type ChecklistFuturo = {
@@ -422,6 +422,25 @@ export default function ChecklistsFuturosPage() {
                         }}
                       >
                         Ver Detalhes
+                      </button>
+                      <button
+                        onClick={() => router.push(`/checklists-futuros/editar/${checklist.id}`)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.625rem 1.25rem',
+                          backgroundColor: 'transparent',
+                          color: '#3b82f6',
+                          border: '1px solid #3b82f6',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '0.95rem'
+                        }}
+                      >
+                        <Pencil size={16} />
+                        Editar
                       </button>
                       <button
                         onClick={() => excluirChecklist(checklist.id, checklist.nome)}

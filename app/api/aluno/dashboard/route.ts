@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ empresas: [], checklists: [], todosChecklists: [] })
     }
 
-    const empresaIds = empresas.map((e: any) => e.id)
+    const empresaIds = empresas.map((e: { id: string }) => e.id)
 
     // 2. Buscar checklists dos últimos 30 dias
     const dataLimite = new Date()
