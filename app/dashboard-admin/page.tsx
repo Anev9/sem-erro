@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, ChevronDown, Menu, X, LogOut, User, Building2, CheckCircle, XCircle, Users } from 'lucide-react'
+import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Building2, CheckCircle, XCircle, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface Aluno {
