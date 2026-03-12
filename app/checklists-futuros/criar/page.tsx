@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Plus, Trash2, Copy, Key, FileText, Upload, Download } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Trash2, Copy, FileText, Upload, Download } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type Template = {
@@ -22,7 +22,7 @@ type ItemChecklist = {
 export default function CriarChecklistFuturoPage() {
   const router = useRouter()
   
-  const [recorrente, setRecorrente] = useState<'modelo' | 'proprio' | 'chave' | 'importar'>('proprio')
+  const [recorrente, setRecorrente] = useState<'modelo' | 'proprio' | 'importar'>('proprio')
   const [proximaExecucao, setProximaExecucao] = useState('')
   const [tipoNegocio, setTipoNegocio] = useState('')
   const [nomeChecklist, setNomeChecklist] = useState('')
@@ -527,36 +527,6 @@ export default function CriarChecklistFuturoPage() {
                   cursor: 'pointer',
                   padding: '0.75rem',
                   borderRadius: '0.5rem',
-                  backgroundColor: recorrente === 'chave' ? '#eff6ff' : 'transparent',
-                  border: `2px solid ${recorrente === 'chave' ? '#3b82f6' : 'transparent'}`,
-                  transition: 'all 0.2s ease'
-                }}>
-                  <input
-                    type="radio"
-                    name="recorrente"
-                    value="chave"
-                    checked={recorrente === 'chave'}
-                    onChange={() => setRecorrente('chave')}
-                    style={{
-                      width: '1.25rem',
-                      height: '1.25rem',
-                      cursor: 'pointer',
-                      accentColor: '#3b82f6'
-                    }}
-                  />
-                  <Key size={20} color={recorrente === 'chave' ? '#3b82f6' : '#6b7280'} />
-                  <span style={{ fontSize: '1rem', color: '#374151', fontWeight: recorrente === 'chave' ? '600' : '400' }}>
-                    Usar chave de compartilhamento
-                  </span>
-                </label>
-
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  padding: '0.75rem',
-                  borderRadius: '0.5rem',
                   backgroundColor: recorrente === 'importar' ? '#f0fdf4' : 'transparent',
                   border: `2px solid ${recorrente === 'importar' ? '#10b981' : 'transparent'}`,
                   transition: 'all 0.2s ease'
@@ -863,51 +833,6 @@ export default function CriarChecklistFuturoPage() {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* SEÇÃO: CHAVE DE COMPARTILHAMENTO */}
-            {recorrente === 'chave' && (
-              <div style={{ 
-                padding: '1.5rem', 
-                backgroundColor: '#f9fafb', 
-                borderRadius: '0.75rem',
-                marginBottom: '2rem'
-              }}>
-                <h4 style={{ 
-                  fontSize: '1rem', 
-                  fontWeight: '600', 
-                  color: '#1f2937',
-                  marginBottom: '0.5rem'
-                }}>
-                  Chave de compartilhamento
-                </h4>
-                <p style={{ 
-                  fontSize: '0.875rem', 
-                  color: '#6b7280',
-                  marginBottom: '1rem'
-                }}>
-                  Digite a chave que foi compartilhada com você
-                </p>
-                <input
-                  type="text"
-                  placeholder="Ex: ABC123XYZ"
-                  value={chaveCompartilhamento}
-                  onChange={(e) => setChaveCompartilhamento(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    border: '2px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    backgroundColor: 'white',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
-                />
               </div>
             )}
 
