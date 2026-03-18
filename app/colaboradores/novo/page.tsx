@@ -37,8 +37,8 @@ export default function NovoColaborador() {
     celular: '',
     cargo: '',
     empresa_id: '',
-    senha: '',
-    confirmarSenha: ''
+    senha: '123mudar',
+    confirmarSenha: '123mudar'
   })
 
   useEffect(() => {

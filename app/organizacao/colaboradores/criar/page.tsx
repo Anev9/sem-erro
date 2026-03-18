@@ -21,7 +21,7 @@ export default function CriarColaboradorAdminPage() {
     empresa_id: '',
     nome: '',
     email: '',
-    senha: '',
+    senha: '123mudar',
     celular: '',
     cargo: '',
   })

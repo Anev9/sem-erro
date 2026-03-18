@@ -10,7 +10,8 @@ import {
   Trash2,
   Mail,
   Briefcase,
-  Building2
+  Building2,
+  KeyRound
 } from 'lucide-react'
 
 interface Colaborador {
@@ -73,6 +74,17 @@ export default function ColaboradoresPage() {
     if (!res.ok) { alert('Erro ao excluir colaborador'); return }
     alert('Colaborador excluído com sucesso!')
     if (alunoId) carregarColaboradores(alunoId)
+  }
+
+  async function handleResetSenha(id: string, nome: string) {
+    if (!confirm(`Resetar a senha de ${nome} para "123mudar"?`)) return
+    const res = await fetch('/api/aluno/colaboradores/reset-senha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ colaborador_id: id })
+    })
+    if (!res.ok) { alert('Erro ao resetar senha'); return }
+    alert(`Senha de ${nome} resetada para "123mudar" com sucesso!`)
   }
 
   return (
@@ -231,7 +243,7 @@ export default function ColaboradoresPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
                       <button
                         onClick={() => router.push(`/colaboradores/editar/${colab.id}`)}
                         style={{
@@ -252,6 +264,28 @@ export default function ColaboradoresPage() {
                       >
                         <Edit size={16} />
                         Editar
+                      </button>
+                      <button
+                        onClick={() => handleResetSenha(colab.id, colab.nome)}
+                        title="Resetar senha para 123mudar"
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          padding: '0.625rem',
+                          backgroundColor: 'white',
+                          color: '#f97316',
+                          border: '1.5px solid #f97316',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '600'
+                        }}
+                      >
+                        <KeyRound size={16} />
+                        Reset Senha
                       </button>
                       <button
                         onClick={() => handleDelete(colab.id, colab.nome)}
