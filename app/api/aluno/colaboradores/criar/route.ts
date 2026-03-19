@@ -78,6 +78,27 @@ export async function POST(request: NextRequest) {
       authCriado = true
     }
 
+    // Verificar se já existe um registro sem auth_id para este email (cadastro antigo)
+    const { data: semAuthId } = await supabase
+      .from('colaboradores')
+      .select('id')
+      .eq('email', email)
+      .is('auth_id', null)
+      .maybeSingle()
+
+    if (semAuthId) {
+      // Atualizar o registro existente com o auth_id
+      const { error: colabError } = await supabase
+        .from('colaboradores')
+        .update({ auth_id: authUserId, nome, celular: celular || null, cargo, empresa_id, ativo: true })
+        .eq('id', semAuthId.id)
+      if (colabError) {
+        if (authCriado) await supabase.auth.admin.deleteUser(authUserId)
+        return NextResponse.json({ error: colabError.message }, { status: 500 })
+      }
+      return NextResponse.json({ success: true })
+    }
+
     // Inserir na tabela colaboradores
     const { error: colabError } = await supabase
       .from('colaboradores')
