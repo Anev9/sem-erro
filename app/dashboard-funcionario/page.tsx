@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { 
+import {
   ClipboardList,
   CheckCircle,
   Clock,
@@ -56,39 +55,34 @@ export default function DashboardColaborador() {
 
   async function verificarAutenticacao() {
     try {
-      // Verificar se está logado
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
-      if (authError || !user) {
-        alert('Você precisa estar logado como colaborador')
+      const userStr = localStorage.getItem('user')
+      if (!userStr) {
         router.push('/login')
         return
       }
 
-      // Buscar colaborador baseado no auth_id
-      const { data: colaboradorData, error: colaboradorError } = await supabase
-        .from('colaboradores')
-        .select(`
-          *,
-          empresas (
-            nome_fantasia
-          )
-        `)
-        .eq('auth_id', user.id)
-        .eq('ativo', true)
-        .single()
+      const user = JSON.parse(userStr)
 
-      if (colaboradorError || !colaboradorData) {
-        alert('Colaborador não encontrado. Entre em contato com seu gestor.')
+      if (user.role !== 'colaborador') {
         router.push('/login')
         return
       }
 
-      setColaborador(colaboradorData)
-      await carregarChecklists(colaboradorData.id)
+      setColaborador({
+        id: user.id,
+        auth_id: user.auth_id,
+        nome: user.nome,
+        email: user.email,
+        cargo: user.cargo,
+        empresa_id: user.empresa_id,
+        ativo: true,
+        empresas: user.empresa_nome ? { nome_fantasia: user.empresa_nome } : undefined
+      })
+
+      await carregarChecklists(user.id)
     } catch (error) {
       console.error('Erro ao verificar autenticação:', error)
-      alert('Erro ao verificar autenticação')
+      router.push('/login')
     }
   }
 
@@ -96,81 +90,33 @@ export default function DashboardColaborador() {
     try {
       setLoading(true)
 
-      // Buscar checklists atribuídos ao colaborador
-      const { data: checklistsData, error: checklistsError } = await supabase
-        .from('checklists_futuros')
-        .select(`
-          *,
-          empresas (
-            nome_fantasia
-          )
-        `)
-        .eq('colaborador_id', colaboradorId)
-        .eq('ativo', true)
-        .order('proxima_execucao', { ascending: false })
+      const res = await fetch(`/api/colaborador/checklists?colaborador_id=${colaboradorId}`)
+      if (!res.ok) throw new Error('Erro ao carregar checklists')
+      // A API já retorna os dados com contagens
+      const checklistsData: (Checklist & { proxima_execucao?: string; dias_tolerancia?: number; recorrencia?: string })[] = await res.json()
 
-      if (checklistsError) throw checklistsError
+      const checklistsComStatus = checklistsData.map((checklist) => {
+        const totalPerguntas = checklist.total_perguntas || 0
+        const respostasCount = checklist.respostas_count || 0
 
-      // Para cada checklist, buscar total de perguntas e respostas
-      const checklistsComStatus = await Promise.all(
-        (checklistsData || []).map(async (checklist) => {
-          try {
-            // Buscar total de perguntas
-            const { count: totalPerguntas, error: erroItens } = await supabase
-              .from('checklist_futuro_itens')
-              .select('*', { count: 'exact', head: true })
-              .eq('checklist_futuro_id', checklist.id)
+        let status: 'pendente' | 'em_andamento' | 'concluido' | 'atrasado' = 'pendente'
+        if (respostasCount >= totalPerguntas && totalPerguntas > 0) {
+          status = 'concluido'
+        } else if (respostasCount > 0) {
+          status = 'em_andamento'
+        }
 
-            if (erroItens) throw erroItens
+        if (status !== 'concluido' && checklist.proxima_execucao) {
+          const dataLimite = new Date(checklist.proxima_execucao)
+          dataLimite.setDate(dataLimite.getDate() + (checklist.dias_tolerancia || 0))
+          dataLimite.setHours(23, 59, 59, 999)
+          if (new Date() > dataLimite) status = 'atrasado'
+        }
 
-            // Buscar respostas do colaborador
-            const { count: respostasCount, error: erroRespostas } = await supabase
-              .from('checklist_respostas')
-              .select('*', { count: 'exact', head: true })
-              .eq('checklist_futuro_id', checklist.id)
-              .eq('colaborador_id', colaboradorId)
+        return { ...checklist, status, total_perguntas: totalPerguntas, respostas_count: respostasCount }
+      })
 
-            if (erroRespostas) throw erroRespostas
-
-            // Determinar status
-            let status: 'pendente' | 'em_andamento' | 'concluido' | 'atrasado' = 'pendente'
-            if (respostasCount && totalPerguntas) {
-              if (respostasCount >= totalPerguntas) {
-                status = 'concluido'
-              } else if (respostasCount > 0) {
-                status = 'em_andamento'
-              }
-            }
-
-            // Verificar se está atrasado (data limite = proxima_execucao + dias_tolerancia)
-            if (status !== 'concluido' && checklist.proxima_execucao) {
-              const dataLimite = new Date(checklist.proxima_execucao)
-              dataLimite.setDate(dataLimite.getDate() + (checklist.dias_tolerancia || 0))
-              dataLimite.setHours(23, 59, 59, 999)
-              if (new Date() > dataLimite) {
-                status = 'atrasado'
-              }
-            }
-
-            return {
-              ...checklist,
-              status,
-              total_perguntas: totalPerguntas || 0,
-              respostas_count: respostasCount || 0
-            }
-          } catch {
-            return {
-              ...checklist,
-              status: 'pendente' as const,
-              total_perguntas: 0,
-              respostas_count: 0
-            }
-          }
-        })
-      )
-
-      // Filtrar checklists nulos (fora do período) e ordenar
-      setChecklists(checklistsComStatus.filter(c => c !== null) as Checklist[])
+      setChecklists(checklistsComStatus as Checklist[])
     } catch (error) {
       console.error('Erro ao carregar checklists:', error)
       alert('Erro ao carregar checklists')
@@ -179,14 +125,9 @@ export default function DashboardColaborador() {
     }
   }
 
-  async function handleLogout() {
-    try {
-      await supabase.auth.signOut()
-      router.push('/login')
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error)
-      alert('Erro ao fazer logout')
-    }
+  function handleLogout() {
+    localStorage.removeItem('user')
+    router.push('/login')
   }
 
   function responderChecklist(checklistId: string) {
