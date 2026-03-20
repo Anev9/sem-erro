@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
     }
 
-    const senhaCorreta = aluno['senha'] || process.env.ALUNO_DEFAULT_PASSWORD
+    const senhaCorreta = aluno['senha'] || process.env.ALUNO_DEFAULT_PASSWORD || '123mudar'
     const senhaOk = password === senhaCorreta
 
     if (!senhaOk) {

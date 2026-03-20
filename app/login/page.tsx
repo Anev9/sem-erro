@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -53,28 +52,21 @@ export default function LoginPage() {
           throw new Error(adminData.error || 'E-mail ou senha incorretos');
         }
 
-        // Não é admin — tentar como colaborador via Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+        // TENTATIVA 2: Login como COLABORADOR
+        const colabRes = await fetch('/api/auth/login-colaborador', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
         });
+        const colabData = await colabRes.json();
 
-        if (authData.user && !authError) {
-          const checkRes = await fetch('/api/auth/check-admin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: authData.user.id, email: authData.user.email }),
-          });
-          const checkData = await checkRes.json();
-
-          if (checkData.isColaborador && checkData.profile) {
-            localStorage.setItem('user', JSON.stringify(checkData.profile));
-            window.location.href = '/dashboard-funcionario';
-            return;
-          }
+        if (colabRes.ok && colabData.isColaborador && colabData.profile) {
+          localStorage.setItem('user', JSON.stringify(colabData.profile));
+          window.location.href = '/dashboard-funcionario';
+          return;
         }
 
-        // TENTATIVA 2: Login como ALUNO
+        // TENTATIVA 3: Login como ALUNO
         const alunoRes = await fetch('/api/auth/login-aluno', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
