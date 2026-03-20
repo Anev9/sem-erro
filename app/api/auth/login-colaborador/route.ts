@@ -20,12 +20,13 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = db()
+    const emailNorm = email.toLowerCase().trim()
 
-    // Buscar colaborador pelo email
+    // Buscar colaborador pelo email (case-insensitive)
     const { data: colaborador, error: findError } = await supabase
       .from('colaboradores')
       .select('*, empresas(nome_fantasia)')
-      .eq('email', email.toLowerCase().trim())
+      .ilike('email', emailNorm)
       .eq('ativo', true)
       .maybeSingle()
 
@@ -33,25 +34,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
     }
 
-    let authOk = false
+    // Verificar senha via Supabase Auth REST API diretamente
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-    if (colaborador.auth_id) {
-      // Já tem conta — tentar logar via Supabase Auth
-      const anonClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-      const { error: authError } = await anonClient.auth.signInWithPassword({ email, password })
-      authOk = !authError
-    } else {
-      // Sem conta — só aceita a senha padrão
-      if (password !== DEFAULT_PASSWORD) {
-        return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
+    const authRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': anonKey,
+      },
+      body: JSON.stringify({ email: emailNorm, password }),
+    })
+
+    if (authRes.ok) {
+      // Senha correta no Supabase Auth — verificar se auth_id está salvo
+      const authData = await authRes.json()
+      const authUserId = authData.user?.id
+
+      if (authUserId && !colaborador.auth_id) {
+        await supabase.from('colaboradores').update({ auth_id: authUserId }).eq('id', colaborador.id)
+        colaborador.auth_id = authUserId
       }
-
-      // Criar conta no Supabase Auth
+    } else if (password === DEFAULT_PASSWORD) {
+      // Senha padrão — criar ou atualizar conta no Supabase Auth
       const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const existingAuthUser = listData?.users?.find((u) => u.email === email.toLowerCase().trim())
+      const existingAuthUser = listData?.users?.find(
+        (u) => u.email?.toLowerCase() === emailNorm
+      )
 
       let authId: string
 
@@ -60,10 +70,10 @@ export async function POST(request: NextRequest) {
         await supabase.auth.admin.updateUserById(authId, { password: DEFAULT_PASSWORD })
       } else {
         const { data: created, error: createError } = await supabase.auth.admin.createUser({
-          email: email.toLowerCase().trim(),
+          email: emailNorm,
           password: DEFAULT_PASSWORD,
           email_confirm: true,
-          user_metadata: { nome: colaborador.nome, role: 'colaborador' }
+          user_metadata: { nome: colaborador.nome, role: 'colaborador' },
         })
         if (createError) {
           return NextResponse.json({ error: 'Erro ao criar conta: ' + createError.message }, { status: 500 })
@@ -71,13 +81,9 @@ export async function POST(request: NextRequest) {
         authId = created.user!.id
       }
 
-      // Salvar auth_id
       await supabase.from('colaboradores').update({ auth_id: authId }).eq('id', colaborador.id)
       colaborador.auth_id = authId
-      authOk = true
-    }
-
-    if (!authOk) {
+    } else {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
     }
 
@@ -96,6 +102,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ isColaborador: true, profile })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno'
+    console.error('[login-colaborador]', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
