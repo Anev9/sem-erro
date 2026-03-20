@@ -40,6 +40,7 @@ export default function LoginPage() {
           body: JSON.stringify({ email, password }),
         });
         const adminData = await adminRes.json();
+        console.log('[LOGIN] admin:', adminRes.status, adminData);
 
         if (adminRes.ok && adminData.isAdmin) {
           const profile = adminData.profile || { email, full_name: 'Administrador', role: 'admin' };
@@ -59,6 +60,7 @@ export default function LoginPage() {
           body: JSON.stringify({ email, password }),
         });
         const colabData = await colabRes.json();
+        console.log('[LOGIN] colaborador:', colabRes.status, colabData);
 
         if (colabRes.ok && colabData.isColaborador && colabData.profile) {
           localStorage.setItem('user', JSON.stringify(colabData.profile));
@@ -72,18 +74,20 @@ export default function LoginPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
+        const alunoData = alunoRes.ok ? await alunoRes.json() : await alunoRes.json().catch(() => ({}));
+        console.log('[LOGIN] aluno:', alunoRes.status, alunoData);
 
         if (alunoRes.ok) {
-          const userData = await alunoRes.json();
-          localStorage.setItem('user', JSON.stringify(userData));
+          localStorage.setItem('user', JSON.stringify(alunoData));
           window.location.href = '/dashboard-aluno';
           return;
         }
 
-        throw new Error('E-mail ou senha incorretos');
+        throw new Error(alunoData?.error || colabData?.error || 'E-mail ou senha incorretos');
 
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : 'E-mail ou senha incorretos';
+        console.error('[LOGIN] erro final:', msg);
         setErrors({ ...newErrors, password: msg });
         setLoading(false);
       }
