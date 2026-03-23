@@ -51,17 +51,21 @@ export default function DashboardColaborador() {
   const [erroChecklists, setErroChecklists] = useState(false)
 
   useEffect(() => {
+    console.log('[DASH] useEffect disparado')
     verificarAutenticacao()
   }, [])
 
   async function verificarAutenticacao() {
     try {
+      console.log('[DASH] iniciando verificação')
       let user = null
 
       // 1. Tentar localStorage primeiro (caminho rápido)
       const userStr = localStorage.getItem('user')
+      console.log('[DASH] localStorage:', userStr ? 'encontrado' : 'VAZIO')
       if (userStr) {
         const parsed = JSON.parse(userStr)
+        console.log('[DASH] role:', parsed.role)
         if (parsed.role === 'colaborador') {
           user = parsed
         }
@@ -69,16 +73,19 @@ export default function DashboardColaborador() {
 
       // 2. Fallback: verificar pelo cookie no servidor
       if (!user) {
+        console.log('[DASH] buscando via cookie...')
         const res = await fetch('/api/colaborador/sessao')
+        console.log('[DASH] sessao status:', res.status)
         if (!res.ok) {
-          router.push('/login')
+          console.log('[DASH] → redireciona para login (sem sessão)')
+          window.location.href = '/login'
           return
         }
         user = await res.json()
-        // Salvar no localStorage para as próximas visitas
         localStorage.setItem('user', JSON.stringify(user))
       }
 
+      console.log('[DASH] ✓ autenticado como', user.nome)
       setColaborador({
         id: user.id,
         auth_id: user.auth_id,
@@ -92,8 +99,8 @@ export default function DashboardColaborador() {
 
       await carregarChecklists(user.id)
     } catch (error) {
-      console.error('Erro ao verificar autenticação:', error)
-      router.push('/login')
+      console.error('[DASH] ERRO:', error)
+      window.location.href = '/login'
     }
   }
 
