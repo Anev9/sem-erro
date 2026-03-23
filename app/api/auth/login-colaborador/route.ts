@@ -52,14 +52,26 @@ export async function POST(request: NextRequest) {
         colaborador.auth_id = authData.user.id
       }
     } else {
-      // Login falhou — buscar conta Auth pelo email
-      const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const authUser = listData?.users?.find(u => u.email?.toLowerCase() === emailNorm)
+      // Login falhou — buscar conta Auth
+      let authUser: { id: string; email?: string } | null = null
+
+      // Tentativa 1: buscar direto pelo auth_id se disponível
+      if (colaborador.auth_id) {
+        const { data: byId } = await supabase.auth.admin.getUserById(colaborador.auth_id)
+        if (byId?.user?.email?.toLowerCase() === emailNorm) {
+          authUser = byId.user
+        }
+      }
+
+      // Tentativa 2: buscar pelo email via listUsers
+      if (!authUser) {
+        const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+        authUser = listData?.users?.find(u => u.email?.toLowerCase() === emailNorm) ?? null
+      }
 
       if (authUser) {
         // Conta existe mas senha errada
         if (password === DEFAULT_PASSWORD) {
-          // Resetar senha e corrigir auth_id se necessário
           await supabase.auth.admin.updateUserById(authUser.id, { password: DEFAULT_PASSWORD })
           if (authUser.id !== colaborador.auth_id) {
             await supabase.from('colaboradores').update({ auth_id: authUser.id }).eq('id', colaborador.id)
@@ -78,15 +90,29 @@ export async function POST(request: NextRequest) {
         })
 
         if (createError) {
-          console.error('[login-colaborador] erro ao criar conta:', createError.message)
-          return NextResponse.json(
-            { error: 'Não foi possível criar a conta. Tente com a senha: 123mudar' },
-            { status: 500 }
-          )
+          // Tratar caso onde o email já existe mas não foi encontrado pelo listUsers
+          if (createError.message?.toLowerCase().includes('already')) {
+            if (password === DEFAULT_PASSWORD) {
+              const { data: listData2 } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+              const found = listData2?.users?.find(u => u.email?.toLowerCase() === emailNorm)
+              if (found) {
+                await supabase.auth.admin.updateUserById(found.id, { password: DEFAULT_PASSWORD })
+                await supabase.from('colaboradores').update({ auth_id: found.id }).eq('id', colaborador.id)
+                colaborador.auth_id = found.id
+              } else {
+                return NextResponse.json({ error: 'Conta de acesso com problema. Contate o administrador.' }, { status: 500 })
+              }
+            } else {
+              return NextResponse.json({ error: 'E-mail já cadastrado. Tente com a senha: 123mudar' }, { status: 401 })
+            }
+          } else {
+            console.error('[login-colaborador] erro ao criar conta:', createError.message)
+            return NextResponse.json({ error: 'Não foi possível criar a conta. Tente com a senha: 123mudar' }, { status: 500 })
+          }
+        } else {
+          await supabase.from('colaboradores').update({ auth_id: created.user!.id }).eq('id', colaborador.id)
+          colaborador.auth_id = created.user!.id
         }
-
-        await supabase.from('colaboradores').update({ auth_id: created.user!.id }).eq('id', colaborador.id)
-        colaborador.auth_id = created.user!.id
       }
     }
 
