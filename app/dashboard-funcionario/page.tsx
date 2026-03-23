@@ -56,14 +56,18 @@ export default function DashboardColaborador() {
   async function verificarAutenticacao() {
     try {
       const userStr = localStorage.getItem('user')
+      console.log('[DASH] userStr:', userStr ? 'encontrado' : 'NULO')
       if (!userStr) {
+        console.log('[DASH] redirect: sem userStr no localStorage')
         router.push('/login')
         return
       }
 
       const user = JSON.parse(userStr)
+      console.log('[DASH] user.role:', user.role, '| user.id:', user.id)
 
       if (user.role !== 'colaborador') {
+        console.log('[DASH] redirect: role incorreto =', user.role)
         router.push('/login')
         return
       }
@@ -81,7 +85,7 @@ export default function DashboardColaborador() {
 
       await carregarChecklists(user.id)
     } catch (error) {
-      console.error('Erro ao verificar autenticação:', error)
+      console.error('[DASH] ERRO em verificarAutenticacao:', error)
       router.push('/login')
     }
   }
