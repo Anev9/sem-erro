@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
     }
 
-    // Verificar senha via Supabase Auth REST API diretamente
+    // Verificar senha via Supabase Auth REST API
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
@@ -49,56 +49,66 @@ export async function POST(request: NextRequest) {
     })
 
     if (authRes.ok) {
-      // Senha correta no Supabase Auth — verificar se auth_id está salvo
+      // Senha correta — garantir que auth_id está vinculado
       const authData = await authRes.json()
       const authUserId = authData.user?.id
-
       if (authUserId && !colaborador.auth_id) {
         await supabase.from('colaboradores').update({ auth_id: authUserId }).eq('id', colaborador.id)
         colaborador.auth_id = authUserId
       }
-    } else if (password === DEFAULT_PASSWORD) {
-      // Senha padrão — criar ou atualizar conta no Supabase Auth
-      // Busca direto pelo email para evitar limite de paginação
-      const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      let existingAuthUser = listData?.users?.find(
-        (u) => u.email?.toLowerCase() === emailNorm
-      )
+    } else {
+      // Login falhou — verificar se a conta Auth realmente existe
+      let authUserExists = false
 
-      // Se não encontrou na primeira página, busca nas demais
-      if (!existingAuthUser && listData?.users && listData.users.length === 1000) {
-        let page = 2
-        while (!existingAuthUser) {
-          const { data: nextPage } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
-          if (!nextPage?.users?.length) break
-          existingAuthUser = nextPage.users.find((u) => u.email?.toLowerCase() === emailNorm)
-          if (nextPage.users.length < 1000) break
-          page++
-        }
+      if (colaborador.auth_id) {
+        const { data: authUserData } = await supabase.auth.admin.getUserById(colaborador.auth_id)
+        // Confirma que o auth user existe e o email bate
+        authUserExists = !!authUserData?.user && authUserData.user.email?.toLowerCase() === emailNorm
       }
 
-      let authId: string
-
-      if (existingAuthUser) {
-        authId = existingAuthUser.id
-        await supabase.auth.admin.updateUserById(authId, { password: DEFAULT_PASSWORD })
+      if (authUserExists) {
+        // Conta existe mas senha está errada
+        if (password === DEFAULT_PASSWORD) {
+          // Senha padrão: resetar a senha para permitir o acesso
+          await supabase.auth.admin.updateUserById(colaborador.auth_id!, { password: DEFAULT_PASSWORD })
+        } else {
+          return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
+        }
       } else {
+        // Conta Auth não existe (ou auth_id está desatualizado) — criar agora
         const { data: created, error: createError } = await supabase.auth.admin.createUser({
           email: emailNorm,
-          password: DEFAULT_PASSWORD,
+          password,
           email_confirm: true,
           user_metadata: { nome: colaborador.nome, role: 'colaborador' },
         })
-        if (createError) {
-          return NextResponse.json({ error: 'Erro ao criar conta: ' + createError.message }, { status: 500 })
-        }
-        authId = created.user!.id
-      }
 
-      await supabase.from('colaboradores').update({ auth_id: authId }).eq('id', colaborador.id)
-      colaborador.auth_id = authId
-    } else {
-      return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
+        if (createError) {
+          // Email já existe no Auth mas com auth_id diferente — tentar vincular
+          if (createError.message?.toLowerCase().includes('already')) {
+            if (password === DEFAULT_PASSWORD) {
+              // Procurar pelo email e resetar a senha
+              const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+              const found = listData?.users?.find(u => u.email?.toLowerCase() === emailNorm)
+              if (found) {
+                await supabase.auth.admin.updateUserById(found.id, { password: DEFAULT_PASSWORD })
+                await supabase.from('colaboradores').update({ auth_id: found.id }).eq('id', colaborador.id)
+                colaborador.auth_id = found.id
+              } else {
+                return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
+              }
+            } else {
+              return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
+            }
+          } else {
+            return NextResponse.json({ error: 'Erro ao criar conta: ' + createError.message }, { status: 500 })
+          }
+        } else {
+          // Conta criada com sucesso — vincular ao colaborador
+          await supabase.from('colaboradores').update({ auth_id: created.user!.id }).eq('id', colaborador.id)
+          colaborador.auth_id = created.user!.id
+        }
+      }
     }
 
     const profile = {
