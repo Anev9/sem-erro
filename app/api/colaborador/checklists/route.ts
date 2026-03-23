@@ -31,10 +31,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  if (!checklists || checklists.length === 0) {
+    return NextResponse.json([])
+  }
+
   // Buscar contagens para cada checklist
   const checklistsComContagem = await Promise.all(
-    (checklists || []).map(async (checklist) => {
-      const [{ count: totalPerguntas }, { count: respostasCount }] = await Promise.all([
+    checklists.map(async (checklist) => {
+      const [resItens, resRespostas] = await Promise.all([
         supabase
           .from('checklist_futuro_itens')
           .select('*', { count: 'exact', head: true })
@@ -48,8 +52,8 @@ export async function GET(request: NextRequest) {
 
       return {
         ...checklist,
-        total_perguntas: totalPerguntas || 0,
-        respostas_count: respostasCount || 0,
+        total_perguntas: resItens.count || 0,
+        respostas_count: resRespostas.count || 0,
       }
     })
   )

@@ -48,6 +48,7 @@ export default function DashboardColaborador() {
   const [colaborador, setColaborador] = useState<Colaborador | null>(null)
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [loading, setLoading] = useState(true)
+  const [erroChecklists, setErroChecklists] = useState(false)
 
   useEffect(() => {
     verificarAutenticacao()
@@ -129,7 +130,7 @@ export default function DashboardColaborador() {
       setChecklists(checklistsComStatus as Checklist[])
     } catch (error) {
       console.error('Erro ao carregar checklists:', error)
-      alert('Erro ao carregar checklists')
+      setErroChecklists(true)
     } finally {
       setLoading(false)
     }
@@ -382,6 +383,24 @@ export default function DashboardColaborador() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '4rem 0' }}>
             <p style={{ color: '#6b7280' }}>Carregando seus checklists...</p>
+          </div>
+        ) : erroChecklists ? (
+          <div className="fade-in" style={{
+            backgroundColor: '#fef2f2',
+            borderRadius: '1rem',
+            padding: '2rem',
+            textAlign: 'center',
+            border: '1px solid #fecaca'
+          }}>
+            <p style={{ color: '#dc2626', marginBottom: '1rem' }}>
+              Não foi possível carregar os checklists. Verifique sua conexão.
+            </p>
+            <button
+              onClick={() => { setErroChecklists(false); colaborador && carregarChecklists(colaborador.id) }}
+              style={{ padding: '0.5rem 1.5rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : checklists.length === 0 ? (
           <div className="fade-in" style={{
