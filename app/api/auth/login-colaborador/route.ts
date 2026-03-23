@@ -23,11 +23,12 @@ export async function POST(request: NextRequest) {
     const emailNorm = email.toLowerCase().trim()
 
     // Buscar colaborador pelo email (case-insensitive)
+    // Usa neq('ativo', false) para incluir também registros com ativo = NULL
     const { data: colaborador, error: findError } = await supabase
       .from('colaboradores')
       .select('*, empresas(nome_fantasia)')
       .ilike('email', emailNorm)
-      .eq('ativo', true)
+      .neq('ativo', false)
       .maybeSingle()
 
     if (findError || !colaborador) {
@@ -58,10 +59,23 @@ export async function POST(request: NextRequest) {
       }
     } else if (password === DEFAULT_PASSWORD) {
       // Senha padrão — criar ou atualizar conta no Supabase Auth
+      // Busca direto pelo email para evitar limite de paginação
       const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const existingAuthUser = listData?.users?.find(
+      let existingAuthUser = listData?.users?.find(
         (u) => u.email?.toLowerCase() === emailNorm
       )
+
+      // Se não encontrou na primeira página, busca nas demais
+      if (!existingAuthUser && listData?.users && listData.users.length === 1000) {
+        let page = 2
+        while (!existingAuthUser) {
+          const { data: nextPage } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
+          if (!nextPage?.users?.length) break
+          existingAuthUser = nextPage.users.find((u) => u.email?.toLowerCase() === emailNorm)
+          if (nextPage.users.length < 1000) break
+          page++
+        }
+      }
 
       let authId: string
 

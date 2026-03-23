@@ -68,6 +68,11 @@ export default function LoginPage() {
           return;
         }
 
+        // Se o servidor retornou erro 500, não tenta login como aluno
+        if (colabRes.status === 500) {
+          throw new Error(colabData?.error || 'Erro interno ao autenticar. Tente novamente.');
+        }
+
         // TENTATIVA 3: Login como ALUNO
         const alunoRes = await fetch('/api/auth/login-aluno', {
           method: 'POST',
