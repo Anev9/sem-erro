@@ -1,0 +1,56 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+function db() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
+
+// GET /api/colaborador/sessao — verifica o cookie e retorna o perfil
+export async function GET(request: NextRequest) {
+  const colaboradorId = request.cookies.get('semerro-colaborador-id')?.value
+
+  if (!colaboradorId) {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  }
+
+  const supabase = db()
+
+  const { data: colaborador, error } = await supabase
+    .from('colaboradores')
+    .select('*, empresas(nome_fantasia)')
+    .eq('id', colaboradorId)
+    .neq('ativo', false)
+    .maybeSingle()
+
+  if (error || !colaborador) {
+    return NextResponse.json({ error: 'Colaborador não encontrado' }, { status: 401 })
+  }
+
+  return NextResponse.json({
+    id: colaborador.id,
+    auth_id: colaborador.auth_id,
+    email: colaborador.email,
+    nome: colaborador.nome,
+    role: 'colaborador',
+    empresa_id: colaborador.empresa_id,
+    empresa_nome: colaborador.empresas?.nome_fantasia,
+    cargo: colaborador.cargo,
+    created_at: colaborador.created_at,
+  })
+}
+
+// POST /api/colaborador/sessao — limpa o cookie (logout)
+export async function POST() {
+  const response = NextResponse.json({ ok: true })
+  response.cookies.set('semerro-colaborador-id', '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  })
+  return response
+}

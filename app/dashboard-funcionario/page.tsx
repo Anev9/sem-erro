@@ -55,21 +55,27 @@ export default function DashboardColaborador() {
 
   async function verificarAutenticacao() {
     try {
+      let user = null
+
+      // 1. Tentar localStorage primeiro (caminho rápido)
       const userStr = localStorage.getItem('user')
-      console.log('[DASH] userStr:', userStr ? 'encontrado' : 'NULO')
-      if (!userStr) {
-        console.log('[DASH] redirect: sem userStr no localStorage')
-        router.push('/login')
-        return
+      if (userStr) {
+        const parsed = JSON.parse(userStr)
+        if (parsed.role === 'colaborador') {
+          user = parsed
+        }
       }
 
-      const user = JSON.parse(userStr)
-      console.log('[DASH] user.role:', user.role, '| user.id:', user.id)
-
-      if (user.role !== 'colaborador') {
-        console.log('[DASH] redirect: role incorreto =', user.role)
-        router.push('/login')
-        return
+      // 2. Fallback: verificar pelo cookie no servidor
+      if (!user) {
+        const res = await fetch('/api/colaborador/sessao')
+        if (!res.ok) {
+          router.push('/login')
+          return
+        }
+        user = await res.json()
+        // Salvar no localStorage para as próximas visitas
+        localStorage.setItem('user', JSON.stringify(user))
       }
 
       setColaborador({
@@ -85,7 +91,7 @@ export default function DashboardColaborador() {
 
       await carregarChecklists(user.id)
     } catch (error) {
-      console.error('[DASH] ERRO em verificarAutenticacao:', error)
+      console.error('Erro ao verificar autenticação:', error)
       router.push('/login')
     }
   }
@@ -131,6 +137,7 @@ export default function DashboardColaborador() {
 
   function handleLogout() {
     localStorage.removeItem('user')
+    fetch('/api/colaborador/sessao', { method: 'POST' }) // limpar cookie
     router.push('/login')
   }
 

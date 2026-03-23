@@ -102,7 +102,14 @@ export async function POST(request: NextRequest) {
       created_at: colaborador.created_at,
     }
 
-    return NextResponse.json({ isColaborador: true, profile })
+    const response = NextResponse.json({ isColaborador: true, profile })
+    response.cookies.set('semerro-colaborador-id', String(colaborador.id), {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 24 horas
+    })
+    return response
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno'
     console.error('[login-colaborador]', message)
