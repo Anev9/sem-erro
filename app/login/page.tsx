@@ -79,7 +79,9 @@ export default function LoginPage() {
         console.log('[LOGIN] colaborador:', colabRes.status, colabData);
 
         if (colabRes.ok && colabData.isColaborador && colabData.profile) {
-          localStorage.setItem('user', JSON.stringify(colabData.profile));
+          const perfil = { ...colabData.profile, role: 'colaborador' };
+          localStorage.setItem('user', JSON.stringify(perfil));
+          localStorage.setItem('userType', 'colaborador');
           console.log('[LOGIN] redirecionando para dashboard-funcionario...');
           window.location.href = '/dashboard-funcionario';
           return;

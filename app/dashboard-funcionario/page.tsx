@@ -62,13 +62,18 @@ export default function DashboardColaborador() {
 
       // 1. Tentar localStorage primeiro
       try {
+        const userType = localStorage.getItem('userType')
         const userStr = localStorage.getItem('user')
-        console.log('[DASH] localStorage:', userStr ? 'encontrado' : 'VAZIO')
+        console.log('[DASH] userType:', userType, '| user:', userStr ? 'encontrado' : 'VAZIO')
         if (userStr) {
           const parsed = JSON.parse(userStr)
           console.log('[DASH] role:', parsed.role, '| empresa_id:', parsed.empresa_id)
-          // Aceita role 'colaborador' OU perfis com empresa_id (compatibilidade com versões antigas)
-          if (parsed.role === 'colaborador' || (parsed.empresa_id && parsed.id && !parsed.aluno_id)) {
+          // Aceita: role explícito, flag userType, ou perfil com empresa_id (compat versões antigas)
+          if (
+            parsed.role === 'colaborador' ||
+            userType === 'colaborador' ||
+            (parsed.empresa_id && parsed.id && !parsed.aluno_id)
+          ) {
             user = { ...parsed, role: 'colaborador' }
           }
         }
