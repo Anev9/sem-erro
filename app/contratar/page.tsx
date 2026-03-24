@@ -4,6 +4,13 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Check, ArrowLeft, Send, Building2, User, Mail, Phone, MapPin, ShoppingBag } from 'lucide-react'
 
+const LINKS_ASAAS: Record<string, string> = {
+  starter: 'https://www.asaas.com/c/ehzwyhmn8e8omoyl',
+  // growth: 'https://www.asaas.com/c/...',
+  // scale: 'https://www.asaas.com/c/...',
+  // enterprise: 'https://www.asaas.com/c/...',
+}
+
 const PLANOS = {
   starter: {
     nome: 'Plano Starter',
@@ -92,6 +99,13 @@ function ContratarForm() {
     if (!validar()) return
     setEnviando(true)
     setErroEnvio('')
+
+    // Se o plano tem link direto do ASAAS, redireciona sem precisar de API
+    const linkAsaas = LINKS_ASAAS[planoKey]
+    if (linkAsaas) {
+      window.location.href = linkAsaas
+      return
+    }
 
     try {
       const res = await fetch('/api/asaas/criar-assinatura', {
