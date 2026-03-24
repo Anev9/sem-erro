@@ -71,9 +71,14 @@ export default function ResponderChecklistPage() {
       let colaboradorIdLocal: string | null = null
 
       const userStr = localStorage.getItem('user')
+      const userType = localStorage.getItem('userType')
       if (userStr) {
         const parsed = JSON.parse(userStr)
-        if (parsed.role === 'colaborador') {
+        if (
+          parsed.role === 'colaborador' ||
+          userType === 'colaborador' ||
+          (parsed.empresa_id && parsed.id && !parsed.aluno_id)
+        ) {
           colaboradorIdLocal = parsed.id
         }
       }

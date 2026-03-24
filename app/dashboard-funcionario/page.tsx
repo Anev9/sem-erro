@@ -121,7 +121,11 @@ export default function DashboardColaborador() {
       setLoading(true)
 
       const res = await fetch(`/api/colaborador/checklists?colaborador_id=${colaboradorId}`)
-      if (!res.ok) throw new Error('Erro ao carregar checklists')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        console.error('[DASH] checklists API erro:', res.status, errData)
+        throw new Error(errData.error || `Erro ${res.status} ao carregar checklists`)
+      }
       // A API já retorna os dados com contagens
       const checklistsData: (Checklist & { proxima_execucao?: string; dias_tolerancia?: number; recorrencia?: string })[] = await res.json()
 
