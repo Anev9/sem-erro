@@ -17,6 +17,7 @@ interface ColaboradorStats {
 export default function PerformanceColaboradores() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState('')
   const [colaboradores, setColaboradores] = useState<ColaboradorStats[]>([])
   const [busca, setBusca] = useState('')
   const [expandido, setExpandido] = useState<string | null>(null)
@@ -29,11 +30,15 @@ export default function PerformanceColaboradores() {
     carregarDados(user.id || user.aluno_id)
   }, [router])
 
-  async function carregarDados(alunoId: string) {
+  async function carregarDados(alunoId: string | number) {
     try {
       setLoading(true)
+      setErro('')
       const res = await fetch(`/api/aluno/respostas?aluno_id=${alunoId}`)
-      if (!res.ok) throw new Error('Erro ao carregar')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `Erro ${res.status} ao carregar dados`)
+      }
       const { respostas } = await res.json()
 
       const mapa: Record<string, ColaboradorStats> = {}
@@ -60,7 +65,9 @@ export default function PerformanceColaboradores() {
 
       setColaboradores(lista)
     } catch (error) {
-      console.error('Erro:', error)
+      const msg = error instanceof Error ? error.message : 'Erro ao carregar dados'
+      console.error('[performance-funcionarios]', msg)
+      setErro(msg)
     } finally {
       setLoading(false)
     }
@@ -109,6 +116,23 @@ export default function PerformanceColaboradores() {
 
           {loading ? (
             <p style={{ textAlign: 'center', color: '#6b7280', padding: '3rem 0' }}>Carregando dados...</p>
+          ) : erro ? (
+            <div style={{ textAlign: 'center', padding: '3rem 0' }}>
+              <p style={{ color: '#ef4444', fontWeight: '600', marginBottom: '0.5rem' }}>Erro ao carregar dados</p>
+              <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>{erro}</p>
+              <button
+                onClick={() => {
+                  const userData = localStorage.getItem('user')
+                  if (userData) {
+                    const user = JSON.parse(userData)
+                    carregarDados(user.id || user.aluno_id)
+                  }
+                }}
+                style={{ marginTop: '1rem', padding: '0.5rem 1.25rem', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Tentar novamente
+              </button>
+            </div>
           ) : colaboradores.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '4rem 0' }}>
               <Users size={56} style={{ color: '#9ca3af', margin: '0 auto 1rem' }} />

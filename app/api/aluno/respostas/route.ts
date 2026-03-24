@@ -10,6 +10,7 @@ function db() {
 
 // GET ?aluno_id=X[&empresa_id=Y][&data_inicio=Z][&data_fim=W][&resultado=conforme|nao_conforme]
 export async function GET(request: NextRequest) {
+  try {
   const { searchParams } = new URL(request.url)
   const alunoId = searchParams.get('aluno_id')
   if (!alunoId) return NextResponse.json({ error: 'aluno_id obrigatório' }, { status: 400 })
@@ -31,27 +32,29 @@ export async function GET(request: NextRequest) {
 
   if (empresaIdsFiltrados.length === 0) return NextResponse.json({ empresas: empresas || [], respostas: [] })
 
-  // 3. Checklists dessas empresas
-  const { data: checklists } = await db()
+  // 3. Checklists dessas empresas (com filtro de data, se informado)
+  const dataInicio = searchParams.get('data_inicio')
+  const dataFim = searchParams.get('data_fim')
+
+  let checklistsQuery = db()
     .from('checklists_futuros')
-    .select('id, titulo, empresa_id, colaborador_id')
+    .select('id, titulo, empresa_id, colaborador_id, created_at')
     .in('empresa_id', empresaIdsFiltrados)
+
+  if (dataInicio) checklistsQuery = checklistsQuery.gte('created_at', dataInicio)
+  if (dataFim) checklistsQuery = checklistsQuery.lte('created_at', dataFim + 'T23:59:59')
+
+  const { data: checklists } = await checklistsQuery
 
   const checklistIds = (checklists || []).map((c: any) => c.id)
   if (checklistIds.length === 0) return NextResponse.json({ empresas: empresas || [], respostas: [] })
 
-  // 4. Respostas com filtro de data
-  const dataInicio = searchParams.get('data_inicio')
-  const dataFim = searchParams.get('data_fim')
-
-  let query = db()
+  // 4. Respostas (sem filtro de data — checklist_respostas não tem created_at)
+  const query = db()
     .from('checklist_respostas')
-    .select('id, resposta, observacao, created_at, item_id, checklist_futuro_id')
+    .select('id, resposta, observacao, item_id, checklist_futuro_id')
     .in('checklist_futuro_id', checklistIds)
-    .order('created_at', { ascending: false })
-
-  if (dataInicio) query = query.gte('created_at', dataInicio)
-  if (dataFim) query = query.lte('created_at', dataFim + 'T23:59:59')
+    .order('id', { ascending: false })
 
   const { data: respostasRaw, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -94,9 +97,9 @@ export async function GET(request: NextRequest) {
       r.resposta === 'sim' ? 'conforme' :
       r.resposta === 'nao' ? 'nao_conforme' : 'na'
 
-    const dt = new Date(r.created_at)
-    const dataFormatada = dt.toLocaleDateString('pt-BR') + ' ' +
-      dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const dataFormatada = checklist?.created_at
+      ? new Date(checklist.created_at).toLocaleDateString('pt-BR')
+      : ''
 
     return {
       id: r.id,
@@ -117,4 +120,9 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ empresas: empresas || [], respostas: respostasMapeadas })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro interno'
+    console.error('[api/aluno/respostas]', message)
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
 }

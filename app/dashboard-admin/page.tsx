@@ -112,9 +112,9 @@ export default function DashboardAdmin() {
               
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ width: '3rem', height: '3rem', borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: 'white' }}>
-                  <img src="/logo-semerro.jpg" alt="Sem Erro" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src="/logo-semerro.jpg" alt="Performe seu Mercado" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
-                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>SEM ERRO - ADMIN</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>Performe seu Mercado - ADMIN</span>
               </div>
 
               <div className="desktop-menu" style={{ gap: '0.5rem', alignItems: 'center' }}>

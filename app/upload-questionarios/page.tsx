@@ -168,7 +168,7 @@ export default function UploadQuestionarios() {
               }}>
                 <img 
                   src="/logo-semerro.jpg" 
-                  alt="Sem Erro"
+                  alt="Performe seu Mercado"
                   style={{
                     width: '100%',
                     height: '100%',

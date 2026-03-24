@@ -33,7 +33,7 @@ export default function Dashboard() {
         }}>
           <img 
             src="/logo-semerro.jpg" 
-            alt="Sem Erro" 
+            alt="Performe seu Mercado"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
           />
         </div>

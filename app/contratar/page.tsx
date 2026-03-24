@@ -53,6 +53,7 @@ function ContratarForm() {
 
   const [enviado, setEnviado] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const [form, setForm] = useState({
@@ -90,10 +91,40 @@ function ContratarForm() {
     e.preventDefault()
     if (!validar()) return
     setEnviando(true)
-    // Simula envio (substitua por sua integração: email, CRM, Supabase, etc)
-    await new Promise((r) => setTimeout(r, 1500))
-    setEnviando(false)
-    setEnviado(true)
+    setErroEnvio('')
+
+    try {
+      const res = await fetch('/api/asaas/criar-assinatura', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: form.nomeResponsavel,
+          email: form.email,
+          telefone: form.telefone,
+          cnpj: form.cnpj,
+          nomeEmpresa: form.nomeEmpresa,
+          plano: planoKey,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || !data.ok) {
+        setErroEnvio(data.error || 'Erro ao processar pagamento. Tente novamente.')
+        setEnviando(false)
+        return
+      }
+
+      if (data.invoiceUrl) {
+        window.location.href = data.invoiceUrl
+      } else {
+        setEnviado(true)
+        setEnviando(false)
+      }
+    } catch {
+      setErroEnvio('Erro de conexão. Verifique sua internet e tente novamente.')
+      setEnviando(false)
+    }
   }
 
   const inputBase: React.CSSProperties = {
@@ -154,7 +185,7 @@ function ContratarForm() {
       {/* Header */}
       <div style={{ backgroundColor: '#f97316', padding: '1rem 2rem' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.25rem', letterSpacing: '0.05em' }}>SEM ERRO</span>
+          <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.25rem', letterSpacing: '0.05em' }}>Performe seu Mercado</span>
           <button
             onClick={() => router.push('/')}
             style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: 'white', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', opacity: 0.9 }}
@@ -280,6 +311,16 @@ function ContratarForm() {
               </div>
             </div>
 
+            {erroEnvio && (
+              <div style={{
+                backgroundColor: '#fef2f2', border: '1px solid #fecaca',
+                borderRadius: '0.5rem', padding: '0.875rem 1rem',
+                color: '#dc2626', fontSize: '0.9rem', fontWeight: '500'
+              }}>
+                ⚠️ {erroEnvio}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={enviando}
@@ -295,7 +336,7 @@ function ContratarForm() {
               }}
             >
               <Send size={18} />
-              {enviando ? 'Enviando...' : 'Quero contratar agora'}
+              {enviando ? 'Processando pagamento...' : 'Quero contratar agora'}
             </button>
             <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.8rem', margin: 0 }}>
               Sem compromisso. Nossa equipe entrará em contato para esclarecer tudo.

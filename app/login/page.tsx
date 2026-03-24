@@ -66,7 +66,7 @@ export default function LoginPage() {
           localStorage.setItem('user', JSON.stringify(colabData.profile));
           const lsOk = !!localStorage.getItem('user');
           console.log('[LOGIN] localStorage:', lsOk ? 'OK' : 'FALHOU - usando cookie');
-          window.location.href = '/dashboard-funcionario';
+          router.push('/dashboard-funcionario');
           return;
         }
 
@@ -184,7 +184,7 @@ export default function LoginPage() {
               }}>
                 <img 
                   src="/logo-semerro.jpg" 
-                  alt="Sem Erro Logo"
+                  alt="Performe seu Mercado Logo"
                   style={{
                     width: '100%',
                     height: '100%',
@@ -200,7 +200,7 @@ export default function LoginPage() {
                 marginBottom: '0.5rem',
                 letterSpacing: '-0.02em'
               }}>
-                Login SEM ERRO
+                Login Performe seu Mercado
               </h1>
               <p style={{ color: '#6b7280', fontSize: '1rem' }}>
                 Clientes e Colaboradores

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sem Erro - Sistema de Gestão",
+  title: "Performe seu Mercado - Sistema de Gestão",
   description: "Sistema completo de gestão de checklists e operações",
 };
 

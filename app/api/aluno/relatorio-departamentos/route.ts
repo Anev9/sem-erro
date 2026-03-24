@@ -48,13 +48,23 @@ export async function GET(request: NextRequest) {
   const cargoMap: Record<string, string> = {}
   ;(colaboradores || []).forEach((c: any) => { cargoMap[c.id] = c.cargo })
 
-  // Buscar respostas no período
+  // Buscar checklists no período (checklist_respostas não tem created_at)
+  const { data: checklists } = await supabase
+    .from('checklists_futuros')
+    .select('id')
+    .in('empresa_id', empresaIds)
+    .gte('created_at', `${dataInicio}T00:00:00`)
+    .lte('created_at', `${dataFim}T23:59:59`)
+
+  const checklistIds = (checklists || []).map((c: any) => c.id)
+  if (checklistIds.length === 0) return NextResponse.json(vazio)
+
+  // Buscar respostas desses checklists filtradas por colaborador
   const { data: respostas, error } = await supabase
     .from('checklist_respostas')
     .select('resposta, colaborador_id')
+    .in('checklist_futuro_id', checklistIds)
     .in('colaborador_id', colaboradorIds)
-    .gte('created_at', `${dataInicio}T00:00:00`)
-    .lte('created_at', `${dataFim}T23:59:59`)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!respostas || respostas.length === 0) return NextResponse.json(vazio)

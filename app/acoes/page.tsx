@@ -161,7 +161,7 @@ export default function ListaAcoes() {
           }}>
             <span style={{ fontSize: '1.5rem' }}>✓</span>
           </div>
-          <h1 style={{ color: 'white', fontSize: '1.5rem', fontWeight: '700', margin: 0 }}>SEM ERRO</h1>
+          <h1 style={{ color: 'white', fontSize: '1.5rem', fontWeight: '700', margin: 0 }}>Performe seu Mercado</h1>
         </div>
       </div>
 

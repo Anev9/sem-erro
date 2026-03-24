@@ -138,7 +138,7 @@ export default function SemErroLanding() {
               }}>
                 <img 
                   src="/logo-semerro.jpg" 
-                  alt="Logo Sem Erro"
+                  alt="Logo Performe seu Mercado"
                   style={{
                     width: '100%',
                     height: '100%',
@@ -151,7 +151,7 @@ export default function SemErroLanding() {
                 fontWeight: 'bold', 
                 margin: 0,
                 letterSpacing: '0.05em'
-              }}>SEM ERRO</h1>
+              }}>Performe seu Mercado</h1>
             </div>
             <button
               onClick={() => router.push('/login')}
@@ -973,7 +973,7 @@ export default function SemErroLanding() {
                     color: '#374151',
                     lineHeight: '1.7'
                   }}>
-                    O Sem Erro revolucionou completamente nossa operação. Nossa produtividade aumentou em <span style={{ fontWeight: 'bold', color: '#f97316' }}>47% já no primeiro mês</span>. O controle que temos agora sobre nossas operações é incomparável. A facilidade de uso e o suporte excepcional fizeram toda diferença. Foi, sem dúvida, o <span style={{ fontWeight: 'bold' }}>melhor investimento que fizemos</span> para nossa empresa!
+                    O Performe seu Mercado revolucionou completamente nossa operação. Nossa produtividade aumentou em <span style={{ fontWeight: 'bold', color: '#f97316' }}>47% já no primeiro mês</span>. O controle que temos agora sobre nossas operações é incomparável. A facilidade de uso e o suporte excepcional fizeram toda diferença. Foi, sem dúvida, o <span style={{ fontWeight: 'bold' }}>melhor investimento que fizemos</span> para nossa empresa!
                   </p>
                 </div>
               </div>
@@ -1003,7 +1003,7 @@ export default function SemErroLanding() {
               marginBottom: isMobile ? '1.5rem' : '2rem',
               padding: '0 1rem'
             }}>
-              Junte-se a centenas de empresas de sucesso que já utilizam o Sem Erro
+              Junte-se a centenas de empresas de sucesso que já utilizam o Performe seu Mercado
             </p>
             
             <div style={{
@@ -1123,7 +1123,7 @@ export default function SemErroLanding() {
               marginBottom: isMobile ? '2rem' : '3rem'
             }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Sem Erro</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Performe seu Mercado</h3>
                 <p style={{ color: '#9ca3af', lineHeight: '1.6' }}>
                   O sistema que revoluciona a gestão de operações no Brasil
                 </p>
@@ -1173,7 +1173,7 @@ export default function SemErroLanding() {
                 marginBottom: '1rem',
                 fontSize: isMobile ? '0.875rem' : '1rem'
               }}>
-                © 2024 Sem Erro - Todos os direitos reservados
+                © 2024 Performe seu Mercado - Todos os direitos reservados
               </p>
               <div style={{
                 display: 'flex',

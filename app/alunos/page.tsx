@@ -46,7 +46,7 @@ export default function AlunosPage() {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">Alunos - SEM ERRO</h1>
+      <h1 className="text-2xl font-bold mb-4">Alunos - Performe seu Mercado</h1>
       <p className="mb-4">Total de alunos: {alunos.length}</p>
       
       <div className="overflow-x-auto">
