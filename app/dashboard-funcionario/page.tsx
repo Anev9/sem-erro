@@ -60,24 +60,29 @@ export default function DashboardColaborador() {
       console.log('[DASH] iniciando verificação')
       let user = null
 
-      // 1. Tentar localStorage primeiro (caminho rápido)
-      const userStr = localStorage.getItem('user')
-      console.log('[DASH] localStorage:', userStr ? 'encontrado' : 'VAZIO')
-      if (userStr) {
-        const parsed = JSON.parse(userStr)
-        console.log('[DASH] role:', parsed.role)
-        if (parsed.role === 'colaborador') {
-          user = parsed
+      // 1. Tentar localStorage primeiro
+      try {
+        const userStr = localStorage.getItem('user')
+        console.log('[DASH] localStorage:', userStr ? 'encontrado' : 'VAZIO')
+        if (userStr) {
+          const parsed = JSON.parse(userStr)
+          console.log('[DASH] role:', parsed.role, '| empresa_id:', parsed.empresa_id)
+          // Aceita role 'colaborador' OU perfis com empresa_id (compatibilidade com versões antigas)
+          if (parsed.role === 'colaborador' || (parsed.empresa_id && parsed.id && !parsed.aluno_id)) {
+            user = { ...parsed, role: 'colaborador' }
+          }
         }
+      } catch (lsErr) {
+        console.warn('[DASH] erro ao ler localStorage:', lsErr)
       }
 
-      // 2. Fallback: verificar pelo cookie no servidor
+      // 2. Fallback: verificar pelo cookie no servidor (sempre tenta para ter dados frescos)
       if (!user) {
         console.log('[DASH] buscando via cookie...')
         const res = await fetch('/api/colaborador/sessao')
         console.log('[DASH] sessao status:', res.status)
         if (!res.ok) {
-          console.log('[DASH] → redireciona para login (sem sessão)')
+          console.log('[DASH] → sem sessão válida, redirecionando para login')
           window.location.href = '/login'
           return
         }
@@ -99,8 +104,10 @@ export default function DashboardColaborador() {
 
       await carregarChecklists(user.id)
     } catch (error) {
-      console.error('[DASH] ERRO:', error)
-      window.location.href = '/login'
+      console.error('[DASH] ERRO inesperado:', error)
+      // Não redireciona automaticamente — mostra erro e deixa o usuário decidir
+      setErroChecklists(true)
+      setLoading(false)
     }
   }
 

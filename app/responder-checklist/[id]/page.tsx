@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft,
   CheckCircle,
@@ -68,104 +67,74 @@ export default function ResponderChecklistPage() {
 
   async function carregarDados() {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) {
-        router.push('/login')
-        return
+      // Auth via localStorage (mesmo padrão do dashboard-funcionario)
+      let colaboradorIdLocal: string | null = null
+
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        const parsed = JSON.parse(userStr)
+        if (parsed.role === 'colaborador') {
+          colaboradorIdLocal = parsed.id
+        }
       }
 
-      // Buscar colaborador
-      const { data: colab, error: colabError } = await supabase
-        .from('colaboradores')
-        .select('id')
-        .eq('auth_id', user.id)
-        .eq('ativo', true)
-        .single()
-
-      if (colabError || !colab) {
-        alert('Colaborador não encontrado.')
-        router.push('/login')
-        return
+      if (!colaboradorIdLocal) {
+        const res = await fetch('/api/colaborador/sessao')
+        if (!res.ok) {
+          router.push('/login')
+          return
+        }
+        const userData = await res.json()
+        localStorage.setItem('user', JSON.stringify(userData))
+        colaboradorIdLocal = userData.id
       }
 
-      setColaboradorId(colab.id)
+      setColaboradorId(colaboradorIdLocal)
 
-      // Buscar checklist
-      const { data: checklistData, error: checklistError } = await supabase
-        .from('checklists_futuros')
-        .select(`*, empresas ( nome_fantasia )`)
-        .eq('id', checklistId)
-        .single()
-
-      if (checklistError || !checklistData) {
-        alert('Checklist não encontrado.')
+      // Buscar dados via API (usa service role, sem problemas de RLS)
+      const res = await fetch(`/api/colaborador/checklist-detail/${checklistId}?colaborador_id=${colaboradorIdLocal}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Checklist não encontrado.')
         router.push('/dashboard-funcionario')
         return
       }
 
-      // Verificar se o checklist pertence ao colaborador logado
-      if (checklistData.colaborador_id !== colab.id) {
-        alert('Você não tem permissão para acessar este checklist.')
-        router.push('/dashboard-funcionario')
-        return
-      }
+      const { checklist: checklistData, itens: itensData, respostas: respostasData } = await res.json()
 
       setChecklist(checklistData)
-
-      // Buscar itens
-      const { data: itensData, error: itensError } = await supabase
-        .from('checklist_futuro_itens')
-        .select('*')
-        .eq('checklist_futuro_id', checklistId)
-        .order('ordem')
-
-      if (itensError) throw itensError
 
       const listaItens: Item[] = itensData || []
       setItens(listaItens)
 
-      // Buscar respostas já existentes
-      const { data: respostasData } = await supabase
-        .from('checklist_respostas')
-        .select('*')
-        .eq('checklist_futuro_id', checklistId)
-        .eq('colaborador_id', colab.id)
-
-      // Montar mapa de respostas existentes
       const mapaInicial: MapaRespostas = {}
       const mapaFotoUrls: Record<string, string> = {}
 
       listaItens.forEach((item) => {
-        const respostaExistente = (respostasData || []).find(
-          (r: any) => r.item_id === item.id
-        )
+        const respostaExistente = (respostasData || []).find((r: Record<string, unknown>) => r.item_id === item.id)
         mapaInicial[item.id] = {
           item_id: item.id,
-          resposta: respostaExistente?.resposta ?? null,
-          observacao: respostaExistente?.observacao ?? ''
+          resposta: (respostaExistente?.resposta as 'sim' | 'nao' | 'na') ?? null,
+          observacao: (respostaExistente?.observacao as string) ?? ''
         }
         if (respostaExistente?.foto_url) {
-          mapaFotoUrls[item.id] = respostaExistente.foto_url
+          mapaFotoUrls[item.id] = respostaExistente.foto_url as string
         }
       })
 
       if (Object.keys(mapaFotoUrls).length > 0) {
         setFotoUrls(mapaFotoUrls)
-        setFotos(mapaFotoUrls) // usar mesma URL como preview para fotos já salvas
+        setFotos(mapaFotoUrls)
       }
 
       setRespostas(mapaInicial)
 
-      // Verificar se já está concluído
       const totalRespondidos = Object.values(mapaInicial).filter(r => r.resposta !== null).length
       if (totalRespondidos === listaItens.length && listaItens.length > 0) {
         setConcluido(true)
       }
 
-      // Ir para o primeiro item sem resposta
-      const primeiroSemResposta = listaItens.findIndex(
-        (item) => !mapaInicial[item.id]?.resposta
-      )
+      const primeiroSemResposta = listaItens.findIndex((item) => !mapaInicial[item.id]?.resposta)
       if (primeiroSemResposta !== -1) {
         setItemAtual(primeiroSemResposta)
       }
@@ -185,33 +154,22 @@ export default function ResponderChecklistPage() {
     try {
       const fotoSalvar = foto_url ?? fotoUrls[itemId] ?? null
 
-      // Verificar se já existe
-      const { data: existente } = await supabase
-        .from('checklist_respostas')
-        .select('id')
-        .eq('checklist_futuro_id', checklistId)
-        .eq('colaborador_id', colaboradorId)
-        .eq('item_id', itemId)
-        .single()
+      const res = await fetch('/api/colaborador/resposta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checklist_futuro_id: checklistId,
+          colaborador_id: colaboradorId,
+          item_id: itemId,
+          resposta,
+          observacao,
+          foto_url: fotoSalvar,
+        }),
+      })
 
-      if (existente) {
-        const { error: updateError } = await supabase
-          .from('checklist_respostas')
-          .update({ resposta, observacao, ...(fotoSalvar && { foto_url: fotoSalvar }) })
-          .eq('id', existente.id)
-        if (updateError) throw updateError
-      } else {
-        const { error: insertError } = await supabase
-          .from('checklist_respostas')
-          .insert({
-            checklist_futuro_id: checklistId,
-            colaborador_id: colaboradorId,
-            item_id: itemId,
-            resposta,
-            observacao,
-            ...(fotoSalvar && { foto_url: fotoSalvar })
-          })
-        if (insertError) throw insertError
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Erro ao salvar')
       }
     } catch (error) {
       console.error('Erro ao salvar resposta:', error)

@@ -38,11 +38,23 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-    const authRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': anonKey },
-      body: JSON.stringify({ email: emailNorm, password }),
-    })
+    const authController = new AbortController()
+    const authTimeout = setTimeout(() => authController.abort(), 10000)
+    let authRes: Response
+    try {
+      authRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': anonKey },
+        body: JSON.stringify({ email: emailNorm, password }),
+        signal: authController.signal,
+      })
+    } catch (fetchErr) {
+      clearTimeout(authTimeout)
+      console.error('[login-colaborador] timeout/erro na chamada auth:', fetchErr)
+      return NextResponse.json({ error: 'Serviço de autenticação indisponível. Tente novamente.' }, { status: 503 })
+    } finally {
+      clearTimeout(authTimeout)
+    }
 
     if (authRes.ok) {
       // Senha correta — vincular auth_id se necessário
@@ -63,10 +75,15 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Tentativa 2: buscar pelo email via listUsers
+      // Tentativa 2: buscar pelo email via listUsers (com timeout para não travar em produção)
       if (!authUser) {
-        const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-        authUser = listData?.users?.find(u => u.email?.toLowerCase() === emailNorm) ?? null
+        const listResult = await Promise.race([
+          supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000))
+        ])
+        if (listResult && 'data' in listResult) {
+          authUser = listResult.data?.users?.find(u => u.email?.toLowerCase() === emailNorm) ?? null
+        }
       }
 
       if (authUser) {
@@ -93,8 +110,13 @@ export async function POST(request: NextRequest) {
           // Tratar caso onde o email já existe mas não foi encontrado pelo listUsers
           if (createError.message?.toLowerCase().includes('already')) {
             if (password === DEFAULT_PASSWORD) {
-              const { data: listData2 } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-              const found = listData2?.users?.find(u => u.email?.toLowerCase() === emailNorm)
+              const listResult2 = await Promise.race([
+                supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+                new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000))
+              ])
+              const found = listResult2 && 'data' in listResult2
+                ? listResult2.data?.users?.find(u => u.email?.toLowerCase() === emailNorm)
+                : undefined
               if (found) {
                 await supabase.auth.admin.updateUserById(found.id, { password: DEFAULT_PASSWORD })
                 await supabase.from('colaboradores').update({ auth_id: found.id }).eq('id', colaborador.id)
@@ -129,11 +151,13 @@ export async function POST(request: NextRequest) {
     }
 
     const response = NextResponse.json({ isColaborador: true, profile })
+    const isProd = process.env.NODE_ENV === 'production'
     response.cookies.set('semerro-colaborador-id', String(colaborador.id), {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24, // 24 horas
+      maxAge: 60 * 60 * 24 * 7, // 7 dias
+      secure: isProd,
     })
     return response
   } catch (err: unknown) {

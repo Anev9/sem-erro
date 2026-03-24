@@ -12,29 +12,44 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
 
+  async function fetchComTimeout(url: string, options: RequestInit, ms = 15000): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        throw new Error('A requisição demorou muito. Verifique sua conexão e tente novamente.');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const newErrors = { email: '', password: '' };
-    
+
     if (!email) {
       newErrors.email = 'Por favor, insira seu e-mail';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'Por favor, insira um e-mail válido';
     }
-    
+
     if (!password) {
       newErrors.password = 'Por favor, insira sua senha';
     }
-    
+
     setErrors(newErrors);
-    
+
     if (!newErrors.email && !newErrors.password) {
       setLoading(true);
 
       try {
         // TENTATIVA 1: Login como ADMIN
-        const adminRes = await fetch('/api/auth/login-admin', {
+        const adminRes = await fetchComTimeout('/api/auth/login-admin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
@@ -54,7 +69,8 @@ export default function LoginPage() {
         }
 
         // TENTATIVA 2: Login como COLABORADOR
-        const colabRes = await fetch('/api/auth/login-colaborador', {
+        console.log('[LOGIN] tentando colaborador...');
+        const colabRes = await fetchComTimeout('/api/auth/login-colaborador', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
@@ -64,19 +80,18 @@ export default function LoginPage() {
 
         if (colabRes.ok && colabData.isColaborador && colabData.profile) {
           localStorage.setItem('user', JSON.stringify(colabData.profile));
-          const lsOk = !!localStorage.getItem('user');
-          console.log('[LOGIN] localStorage:', lsOk ? 'OK' : 'FALHOU - usando cookie');
+          console.log('[LOGIN] redirecionando para dashboard-funcionario...');
           window.location.href = '/dashboard-funcionario';
           return;
         }
 
-        // Se o servidor retornou erro 500, não tenta login como aluno
         if (colabRes.status === 500) {
           throw new Error(colabData?.error || 'Erro interno ao autenticar. Tente novamente.');
         }
 
         // TENTATIVA 3: Login como ALUNO
-        const alunoRes = await fetch('/api/auth/login-aluno', {
+        console.log('[LOGIN] tentando aluno...');
+        const alunoRes = await fetchComTimeout('/api/auth/login-aluno', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
