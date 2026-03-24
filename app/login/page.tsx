@@ -66,7 +66,7 @@ export default function LoginPage() {
           localStorage.setItem('user', JSON.stringify(colabData.profile));
           const lsOk = !!localStorage.getItem('user');
           console.log('[LOGIN] localStorage:', lsOk ? 'OK' : 'FALHOU - usando cookie');
-          router.push('/dashboard-funcionario');
+          window.location.href = '/dashboard-funcionario';
           return;
         }
 
