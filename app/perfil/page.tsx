@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft,
   User,
@@ -22,8 +21,7 @@ interface Colaborador {
   celular?: string
   cargo?: string
   empresa_id: string
-  auth_id: string
-  empresas?: { nome_fantasia: string }
+  empresa_nome?: string
 }
 
 export default function PerfilPage() {
@@ -43,33 +41,51 @@ export default function PerfilPage() {
 
   async function carregarPerfil() {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      let user = null
 
-      if (authError || !user) {
-        router.push('/login')
-        return
+      // 1. Tentar localStorage primeiro
+      try {
+        const userType = localStorage.getItem('userType')
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          const parsed = JSON.parse(userStr)
+          if (
+            parsed.role === 'colaborador' ||
+            userType === 'colaborador' ||
+            (parsed.empresa_id && parsed.id && !parsed.aluno_id)
+          ) {
+            user = { ...parsed, role: 'colaborador' }
+          }
+        }
+      } catch {}
+
+      // 2. Fallback: verificar cookie de sessão
+      if (!user) {
+        const res = await fetch('/api/colaborador/sessao')
+        if (!res.ok) {
+          window.location.href = '/login'
+          return
+        }
+        user = await res.json()
+        localStorage.setItem('user', JSON.stringify(user))
       }
 
-      const { data, error } = await supabase
-        .from('colaboradores')
-        .select(`*, empresas ( nome_fantasia )`)
-        .eq('auth_id', user.id)
-        .eq('ativo', true)
-        .single()
-
-      if (error || !data) {
-        alert('Perfil não encontrado.')
-        router.push('/login')
-        return
-      }
-
-      setColaborador(data)
+      setColaborador({
+        id: user.id,
+        nome: user.nome,
+        email: user.email,
+        celular: user.celular || '',
+        cargo: user.cargo,
+        empresa_id: user.empresa_id,
+        empresa_nome: user.empresa_nome,
+      })
       setFormData({
-        nome: data.nome,
-        celular: data.celular || ''
+        nome: user.nome,
+        celular: user.celular || ''
       })
     } catch (error) {
       console.error('Erro ao carregar perfil:', error)
+      window.location.href = '/login'
     } finally {
       setLoading(false)
     }
@@ -83,16 +99,29 @@ export default function PerfilPage() {
     setSucesso(false)
 
     try {
-      const { error } = await supabase
-        .from('colaboradores')
-        .update({
-          nome: formData.nome.trim(),
-          celular: formData.celular.trim() || null
-        })
-        .eq('id', colaborador.id)
-        .eq('auth_id', colaborador.auth_id) // segurança extra
+      const res = await fetch('/api/colaborador/perfil', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: formData.nome, celular: formData.celular })
+      })
 
-      if (error) throw error
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Erro ao salvar')
+      }
+
+      // Atualizar localStorage
+      try {
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          const parsed = JSON.parse(userStr)
+          localStorage.setItem('user', JSON.stringify({
+            ...parsed,
+            nome: formData.nome,
+            celular: formData.celular
+          }))
+        }
+      } catch {}
 
       setColaborador(prev => prev ? { ...prev, nome: formData.nome, celular: formData.celular } : prev)
       setSucesso(true)
@@ -158,7 +187,7 @@ export default function PerfilPage() {
               </h1>
               <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', margin: '0.25rem 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Building2 size={14} />
-                {colaborador.empresas?.nome_fantasia}
+                {colaborador.empresa_nome}
                 {colaborador.cargo && ` • ${colaborador.cargo}`}
               </p>
             </div>
@@ -195,7 +224,7 @@ export default function PerfilPage() {
               <Building2 size={18} style={{ color: '#9ca3af', flexShrink: 0 }} />
               <div>
                 <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Empresa</p>
-                <p style={{ fontSize: '0.95rem', color: '#374151', margin: '0.125rem 0 0', fontWeight: '500' }}>{colaborador.empresas?.nome_fantasia || '—'}</p>
+                <p style={{ fontSize: '0.95rem', color: '#374151', margin: '0.125rem 0 0', fontWeight: '500' }}>{colaborador.empresa_nome || '—'}</p>
               </div>
             </div>
           </div>

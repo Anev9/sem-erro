@@ -15,8 +15,17 @@ import {
   MessageSquare,
   Send,
   Camera,
-  X
+  X,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react'
+import {
+  salvarChecklistCache,
+  lerChecklistCache,
+  salvarRespostaPendente,
+  sincronizarPendentes,
+  contarRespostasPendentes,
+} from '@/lib/offline-db'
 
 interface Checklist {
   id: string
@@ -61,13 +70,64 @@ export default function ResponderChecklistPage() {
   const [uploadandoFoto, setUploadandoFoto] = useState(false)
   const [fotoExpandida, setFotoExpandida] = useState<string | null>(null)
 
+  // ── Estado offline ──────────────────────────────────────────────────────
+  const [isOnline, setIsOnline] = useState(true)
+  const [pendentes, setPendentes] = useState(0)
+  const [sincronizando, setSincronizando] = useState(false)
+  const [modoCache, setModoCache] = useState(false) // true = dados vieram do cache local
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine)
+    const online = () => {
+      setIsOnline(true)
+      triggerSync()
+    }
+    const offline = () => setIsOnline(false)
+    window.addEventListener('online', online)
+    window.addEventListener('offline', offline)
+    return () => { window.removeEventListener('online', online); window.removeEventListener('offline', offline) }
+  }, [])
+
+  // Ouve mensagem do Service Worker quando sincronização termina
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'SYNC_CONCLUIDO') atualizarContadorPendentes()
+    }
+    navigator.serviceWorker?.addEventListener('message', handler)
+    return () => navigator.serviceWorker?.removeEventListener('message', handler)
+  }, [])
+
+  async function atualizarContadorPendentes() {
+    try {
+      const count = await contarRespostasPendentes()
+      setPendentes(count)
+    } catch { /* IndexedDB indisponível */ }
+  }
+
+  async function triggerSync() {
+    setSincronizando(true)
+    try {
+      // Tenta usar Background Sync do SW; fallback manual
+      if ('serviceWorker' in navigator && 'SyncManager' in window) {
+        const reg = await navigator.serviceWorker.ready
+        await (reg as any).sync.register('sync-respostas')
+      } else {
+        await sincronizarPendentes()
+      }
+      await atualizarContadorPendentes()
+    } catch { /* silencioso */ } finally {
+      setSincronizando(false)
+    }
+  }
+
   useEffect(() => {
     carregarDados()
+    atualizarContadorPendentes()
   }, [checklistId])
 
   async function carregarDados() {
     try {
-      // Auth via localStorage (mesmo padrão do dashboard-funcionario)
+      // Auth via localStorage
       let colaboradorIdLocal: string | null = null
 
       const userStr = localStorage.getItem('user')
@@ -84,39 +144,71 @@ export default function ResponderChecklistPage() {
       }
 
       if (!colaboradorIdLocal) {
-        const res = await fetch('/api/colaborador/sessao')
-        if (!res.ok) {
+        try {
+          const res = await fetch('/api/colaborador/sessao')
+          if (!res.ok) { router.push('/login'); return }
+          const userData = await res.json()
+          localStorage.setItem('user', JSON.stringify(userData))
+          colaboradorIdLocal = userData.id
+        } catch {
           router.push('/login')
           return
         }
-        const userData = await res.json()
-        localStorage.setItem('user', JSON.stringify(userData))
-        colaboradorIdLocal = userData.id
       }
 
       setColaboradorId(colaboradorIdLocal)
 
-      // Buscar dados via API (usa service role, sem problemas de RLS)
-      const res = await fetch(`/api/colaborador/checklist-detail/${checklistId}?colaborador_id=${colaboradorIdLocal}`)
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        alert(data.error || 'Checklist não encontrado.')
-        router.push('/dashboard-funcionario')
-        return
+      // ── Tenta buscar online ─────────────────────────────────────────────
+      let checklistData: Record<string, unknown> | null = null
+      let itensData: Record<string, unknown>[] = []
+      let respostasData: Record<string, unknown>[] = []
+      let usouCache = false
+
+      try {
+        const res = await fetch(`/api/colaborador/checklist-detail/${checklistId}?colaborador_id=${colaboradorIdLocal}`)
+        if (res.ok) {
+          const json = await res.json()
+          checklistData = json.checklist
+          itensData = json.itens || []
+          respostasData = json.respostas || []
+
+          // Salva no cache para uso offline futuro
+          await salvarChecklistCache({
+            checklistId,
+            checklist: checklistData!,
+            itens: itensData,
+            respostas: respostasData,
+            savedAt: Date.now(),
+          })
+        } else {
+          throw new Error('API indisponível')
+        }
+      } catch {
+        // ── Fallback: cache local ──────────────────────────────────────────
+        const cache = await lerChecklistCache(checklistId)
+        if (cache) {
+          checklistData = cache.checklist
+          itensData = cache.itens
+          respostasData = cache.respostas
+          usouCache = true
+          setModoCache(true)
+        } else {
+          alert('Sem conexão e checklist não encontrado em cache. Abra este checklist online primeiro.')
+          router.push('/dashboard-funcionario')
+          return
+        }
       }
 
-      const { checklist: checklistData, itens: itensData, respostas: respostasData } = await res.json()
+      setChecklist(checklistData as unknown as Checklist)
 
-      setChecklist(checklistData)
-
-      const listaItens: Item[] = itensData || []
+      const listaItens: Item[] = itensData as unknown as Item[]
       setItens(listaItens)
 
       const mapaInicial: MapaRespostas = {}
       const mapaFotoUrls: Record<string, string> = {}
 
       listaItens.forEach((item) => {
-        const respostaExistente = (respostasData || []).find((r: Record<string, unknown>) => r.item_id === item.id)
+        const respostaExistente = respostasData.find((r) => r.item_id === item.id)
         mapaInicial[item.id] = {
           item_id: item.id,
           resposta: (respostaExistente?.resposta as 'sim' | 'nao' | 'na') ?? null,
@@ -140,9 +232,7 @@ export default function ResponderChecklistPage() {
       }
 
       const primeiroSemResposta = listaItens.findIndex((item) => !mapaInicial[item.id]?.resposta)
-      if (primeiroSemResposta !== -1) {
-        setItemAtual(primeiroSemResposta)
-      }
+      if (primeiroSemResposta !== -1) setItemAtual(primeiroSemResposta)
 
     } catch (error) {
       console.error('Erro ao carregar checklist:', error)
@@ -156,9 +246,9 @@ export default function ResponderChecklistPage() {
     if (!colaboradorId) return
     setSalvando(true)
 
-    try {
-      const fotoSalvar = foto_url ?? fotoUrls[itemId] ?? null
+    const fotoSalvar = foto_url ?? fotoUrls[itemId] ?? null
 
+    try {
       const res = await fetch('/api/colaborador/resposta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -172,12 +262,23 @@ export default function ResponderChecklistPage() {
         }),
       })
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Erro ao salvar')
+      if (!res.ok) throw new Error('Erro ao salvar')
+
+    } catch {
+      // Sem internet ou API fora do ar → salva localmente
+      try {
+        await salvarRespostaPendente({
+          checklistId,
+          colaboradorId,
+          itemId,
+          resposta,
+          observacao,
+          foto_url: fotoSalvar,
+        })
+        await atualizarContadorPendentes()
+      } catch (dbErr) {
+        console.error('[offline-db] Erro ao salvar localmente:', dbErr)
       }
-    } catch (error) {
-      console.error('Erro ao salvar resposta:', error)
     } finally {
       setSalvando(false)
     }
@@ -434,9 +535,38 @@ export default function ResponderChecklistPage() {
       <style>{`
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .btn-resposta { transition: all 0.15s ease; border: 2px solid; cursor: pointer; border-radius: 0.75rem; padding: 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 1rem; }
         .btn-resposta:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
       `}</style>
+
+      {/* Banner offline / sincronizando */}
+      {!isOnline && (
+        <div style={{ backgroundColor: '#1f2937', color: 'white', padding: '0.6rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.875rem' }}>
+          <WifiOff size={15} style={{ color: '#f97316', flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>
+            <strong>Modo offline.</strong> Suas respostas estão sendo salvas no dispositivo{pendentes > 0 ? ` (${pendentes} pendente${pendentes > 1 ? 's' : ''})` : ''}.
+          </span>
+        </div>
+      )}
+      {isOnline && pendentes > 0 && (
+        <div style={{ backgroundColor: '#f97316', color: 'white', padding: '0.6rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.875rem' }}>
+          <RefreshCw size={15} style={{ animation: sincronizando ? 'spin 1s linear infinite' : 'none', flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>
+            {sincronizando ? 'Sincronizando respostas...' : `${pendentes} resposta${pendentes > 1 ? 's' : ''} pendente${pendentes > 1 ? 's' : ''} de sincronização.`}
+          </span>
+          {!sincronizando && (
+            <button onClick={triggerSync} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '0.25rem 0.75rem', borderRadius: '9999px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
+              Sincronizar agora
+            </button>
+          )}
+        </div>
+      )}
+      {modoCache && isOnline && pendentes === 0 && (
+        <div style={{ backgroundColor: '#fffbeb', color: '#92400e', padding: '0.6rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.875rem', borderBottom: '1px solid #fde68a' }}>
+          <span>⚠️ Carregado do cache local. Dados podem estar desatualizados.</span>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', padding: '1.25rem 1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>

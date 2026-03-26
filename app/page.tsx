@@ -1,1207 +1,551 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Award, TrendingUp, Smartphone, Shield, Check, ChevronRight } from 'lucide-react';
+import { TrendingUp, Smartphone, Shield, Check, ChevronRight, BarChart3, MapPin, ClipboardList, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-export default function SemErroLanding() {
+export default function PerformeSeumercadoLanding() {
   const router = useRouter();
-  
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 23,
-    minutes: 59,
-    seconds: 29
-  });
+
+  const [timeLeft, setTimeLeft] = useState({ hours: 23, minutes: 59, seconds: 29 });
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         let { hours, minutes, seconds } = prev;
-        
-        if (seconds > 0) {
-          seconds--;
-        } else {
-          seconds = 59;
-          if (minutes > 0) {
-            minutes--;
-          } else {
-            minutes = 59;
-            if (hours > 0) {
-              hours--;
-            } else {
-              hours = 23;
-              minutes = 59;
-              seconds = 59;
-            }
-          }
-        }
-        
+        if (seconds > 0) { seconds--; }
+        else { seconds = 59; if (minutes > 0) { minutes--; } else { minutes = 59; hours = hours > 0 ? hours - 1 : 23; } }
         return { hours, minutes, seconds };
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
 
-  const formatTime = (num: number) => String(num).padStart(2, '0');
+  const fmt = (n: number) => String(n).padStart(2, '0');
+  const scrollToPlans = () => document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' });
 
-  const scrollToPlans = () => {
-    document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const BENEFITS = [
+    { icon: TrendingUp, title: '+47% de Produtividade', desc: 'Maximize os resultados da sua equipe com checklists inteligentes e automação de processos operacionais.', featured: false },
+    { icon: Smartphone, title: 'Controle Total', desc: 'Monitore todas as operações em tempo real direto do seu celular, de qualquer lugar do mundo.', featured: true },
+    { icon: Shield, title: '100% Seguro', desc: 'Geolocalização e registro preciso de horários com máxima segurança para o seu negócio.', featured: false },
+  ];
+
+  const FEATURES = [
+    { icon: ClipboardList, title: 'Checklists Inteligentes', desc: 'Crie e gerencie checklists personalizados para cada área da loja.' },
+    { icon: BarChart3, title: 'Relatórios Automáticos', desc: 'Dados em tempo real com gráficos e análises detalhadas de performance.' },
+    { icon: MapPin, title: 'Geolocalização', desc: 'Controle de presença e localização precisa dos colaboradores.' },
+    { icon: Users, title: 'Gestão de Equipes', desc: 'Acompanhe a performance individual e por departamento.' },
+  ];
+
+  const PLANS = [
+    { key: 'starter', nome: 'Starter', lojas: '1 Loja', precoOld: 'R$ 500,00', preco: 'R$ 250,00', itens: ['Todos os recursos incluídos', 'Suporte prioritário', 'Treinamento completo'], popular: false },
+    { key: 'growth', nome: 'Growth', lojas: '2 a 5 Lojas', precoOld: 'R$ 319,98', preco: 'R$ 159,99', itens: ['Todos os recursos incluídos', 'Suporte prioritário VIP', 'Treinamento completo', 'Economia de 50%'], popular: true },
+    { key: 'scale', nome: 'Scale', lojas: '6 a 9 Lojas', precoOld: 'R$ 279,98', preco: 'R$ 139,99', itens: ['Todos os recursos incluídos', 'Suporte VIP 24/7', 'Treinamento personalizado'], popular: false },
+    { key: 'enterprise', nome: 'Enterprise', lojas: '10+ Lojas', precoOld: 'R$ 259,98', preco: 'R$ 129,99', itens: ['Todos os recursos incluídos', 'Suporte VIP 24/7', 'Consultor dedicado'], popular: false },
+  ];
+
+  const TESTIMONIALS = [
+    { nome: 'Autran Júnior', cargo: 'Diretor de Operações', emoji: '👔', texto: 'O Performe seu Mercado revolucionou nossa operação. A produtividade aumentou 47% já no primeiro mês. Foi, sem dúvida, o melhor investimento que fizemos para a empresa!' },
+    { nome: 'Mariana Costa', cargo: 'Gerente de Loja', emoji: '👩', texto: 'Antes eu passava horas fazendo relatórios manualmente. Hoje o sistema faz tudo automático e tenho mais tempo para focar no que importa: minha equipe.' },
+    { nome: 'Ricardo Mendes', cargo: 'Dono de rede (5 lojas)', emoji: '🏪', texto: 'Com 5 lojas é impossível estar em todo lugar. Agora monitoro tudo pelo celular em tempo real. O suporte é excepcional e a implementação foi muito rápida.' },
+  ];
 
   return (
     <>
       <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.8; }
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .animate-pulse {
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        .animate-fade-in {
-          animation: fadeIn 0.6s ease-out;
-        }
-
-        .hover-scale {
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .hover-scale:hover {
-          transform: scale(1.05);
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .hover-lift {
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .hover-lift:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        * {
-          box-sizing: border-box;
-        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .anim-pulse { animation: pulse 2.5s ease-in-out infinite; }
+        .anim-fade { animation: fadeIn 0.7s ease-out; }
+        .card-hover { transition: transform 0.25s ease, box-shadow 0.25s ease; cursor: default; }
+        .card-hover:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.12); }
+        .btn-primary { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(249,115,22,0.45) !important; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
       `}</style>
 
-      <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-        {/* Header */}
+      <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+
+        {/* ── HEADER ── */}
         <header style={{
-          background: 'linear-gradient(to right, #f97316, #fb923c, #2563eb)',
-          color: 'white',
-          padding: isMobile ? '1rem' : '1.5rem',
-          position: 'sticky',
-          top: 0,
-          zIndex: 1000,
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          backgroundColor: 'white',
+          borderBottom: '1px solid #e5e7eb',
+          padding: '0.875rem 1.5rem',
+          position: 'sticky', top: 0, zIndex: 1000,
+          boxShadow: '0 1px 6px rgba(0,0,0,0.07)'
         }}>
-          <div style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: isMobile ? '1rem' : '0'
-          }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{
-                width: isMobile ? '2.5rem' : '3rem',
-                height: isMobile ? '2.5rem' : '3rem',
-                backgroundColor: 'white',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                overflow: 'hidden'
-              }}>
-                <img 
-                  src="/logo-semerro.jpg" 
-                  alt="Logo Performe seu Mercado"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                />
+              <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '50%', overflow: 'hidden', border: '2px solid #fed7aa', boxShadow: '0 2px 8px rgba(249,115,22,0.2)', flexShrink: 0 }}>
+                <img src="/logo-semerro.jpg" alt="Performe seu Mercado" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
-              <h1 style={{ 
-                fontSize: isMobile ? '1.25rem' : '1.75rem', 
-                fontWeight: 'bold', 
-                margin: 0,
-                letterSpacing: '0.05em'
-              }}>Performe seu Mercado</h1>
+              <span style={{ fontSize: '1.2rem', fontWeight: '800', color: '#111827', letterSpacing: '-0.02em' }}>
+                Performe <span style={{ color: '#f97316' }}>seu Mercado</span>
+              </span>
             </div>
-            <button
-              onClick={() => router.push('/login')}
-              style={{
-              border: '2px solid white',
-              padding: isMobile ? '0.5rem 1.25rem' : '0.625rem 1.5rem',
-              borderRadius: '0.5rem',
-              background: 'transparent',
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: isMobile ? '0.875rem' : '1rem',
-              fontWeight: '600',
-              transition: 'all 0.3s ease',
-              width: isMobile ? '100%' : 'auto'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'white';
-              e.currentTarget.style.color = '#f97316';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'white';
-            }}>
-              👤 Área do Cliente
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              {!isMobile && (
+                <button onClick={scrollToPlans} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#374151', fontWeight: '600', fontSize: '0.925rem' }}>
+                  Ver Planos
+                </button>
+              )}
+              <button
+                onClick={() => router.push('/login')}
+                style={{
+                  backgroundColor: '#f97316', color: 'white', border: 'none',
+                  padding: '0.6rem 1.25rem', borderRadius: '0.5rem',
+                  cursor: 'pointer', fontSize: '0.9rem', fontWeight: '700',
+                  boxShadow: '0 2px 10px rgba(249,115,22,0.35)',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#ea580c'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#f97316'}
+              >
+                Área do Cliente
+              </button>
+            </div>
           </div>
         </header>
 
-        {/* Promo Banner */}
-        <div className="animate-pulse" style={{
-          backgroundColor: '#f97316',
-          color: 'white',
-          padding: isMobile ? '0.75rem 1rem' : '1rem',
-          textAlign: 'center'
-        }}>
-          <p style={{
-            fontSize: isMobile ? '0.813rem' : '1.125rem',
-            fontWeight: 'bold',
-            margin: 0,
-            lineHeight: '1.5'
-          }}>
-            🔥 PROMOÇÃO RELÂMPAGO: 50% OFF + BÔNUS EXCLUSIVOS nos 3 primeiros meses! {!isMobile && 'TERMINA EM BREVE!'} 🔥
+        {/* ── PROMO BANNER ── */}
+        <div className="anim-pulse" style={{ backgroundColor: '#ea580c', color: 'white', padding: '0.75rem 1rem', textAlign: 'center' }}>
+          <p style={{ fontSize: isMobile ? '0.8rem' : '1rem', fontWeight: '700' }}>
+            🔥 PROMOÇÃO RELÂMPAGO: 50% OFF + BÔNUS EXCLUSIVOS nos 3 primeiros meses! TERMINA EM BREVE! 🔥
           </p>
         </div>
 
-        {/* Hero Section */}
+        {/* ── HERO ── */}
         <section style={{
-          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%)',
+          background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 55%, #2563eb 100%)',
           color: 'white',
-          padding: isMobile ? '2rem 1rem' : '4rem 1rem',
-          position: 'relative',
-          overflow: 'hidden'
+          padding: isMobile ? '3rem 1.25rem 2.5rem' : '5.5rem 1.5rem 4.5rem',
+          position: 'relative', overflow: 'hidden'
         }}>
-          {/* Background decoration */}
-          <div style={{
-            position: 'absolute',
-            top: '20px',
-            left: '10px',
-            width: isMobile ? '150px' : '300px',
-            height: isMobile ? '150px' : '300px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '50%',
-            filter: 'blur(60px)',
-            pointerEvents: 'none'
-          }}></div>
-          <div style={{
-            position: 'absolute',
-            bottom: '20px',
-            right: '10px',
-            width: isMobile ? '200px' : '400px',
-            height: isMobile ? '200px' : '400px',
-            background: 'rgba(249, 115, 22, 0.2)',
-            borderRadius: '50%',
-            filter: 'blur(80px)',
-            pointerEvents: 'none'
-          }}></div>
+          {/* decoração de fundo */}
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: '-120px', right: '-120px', width: '550px', height: '550px', background: 'rgba(249,115,22,0.1)', borderRadius: '50%', filter: 'blur(90px)' }} />
+            <div style={{ position: 'absolute', bottom: '-80px', left: '-80px', width: '400px', height: '400px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', filter: 'blur(70px)' }} />
+          </div>
 
-          <div className="animate-fade-in" style={{ 
-            maxWidth: '1152px', 
-            margin: '0 auto', 
-            textAlign: 'center',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            <h2 style={{
-              fontSize: isMobile ? '2rem' : '3.75rem',
-              fontWeight: 'bold',
-              marginBottom: isMobile ? '1rem' : '1.5rem',
-              lineHeight: '1.2',
-              margin: `0 0 ${isMobile ? '1rem' : '1.5rem'} 0`
+          <div className="anim-fade" style={{ maxWidth: '860px', margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+            {/* badge */}
+            <div style={{
+              display: 'inline-block', marginBottom: '1.5rem',
+              backgroundColor: 'rgba(249,115,22,0.2)', border: '1px solid rgba(249,115,22,0.45)',
+              borderRadius: '9999px', padding: '0.375rem 1.1rem',
+              fontSize: '0.8rem', fontWeight: '700', letterSpacing: '0.06em', color: '#fed7aa'
             }}>
-              REVOLUCIONE SUA GESTÃO<br />
-              <span style={{ color: '#fb923c' }}>AGORA!</span>
-            </h2>
+              ✅ MAIS DE 500 EMPRESAS JÁ TRANSFORMARAM SUA GESTÃO
+            </div>
+
+            <h1 style={{
+              fontSize: isMobile ? '2.1rem' : '3.75rem',
+              fontWeight: '900', lineHeight: '1.12',
+              marginBottom: '1.25rem', letterSpacing: '-0.025em'
+            }}>
+              REVOLUCIONE A GESTÃO<br />
+              DO SEU <span style={{ color: '#fb923c' }}>SUPERMERCADO</span>
+            </h1>
+
             <p style={{
-              fontSize: isMobile ? '1.125rem' : '1.5rem',
-              marginBottom: isMobile ? '1.5rem' : '2rem',
-              padding: '0 1rem',
-              color: '#dbeafe'
+              fontSize: isMobile ? '1.05rem' : '1.3rem',
+              color: '#bfdbfe', lineHeight: '1.65',
+              maxWidth: '640px', margin: `0 auto ${isMobile ? '2rem' : '2.75rem'}`
             }}>
-              Sistema que aumentou em até <span style={{ color: '#fb923c', fontWeight: 'bold' }}>47%</span> a produtividade de <span style={{ color: '#fb923c', fontWeight: 'bold' }}>+500 empresas</span>
+              Checklists inteligentes, controle em tempo real e relatórios automáticos que aumentaram a produtividade em até{' '}
+              <strong style={{ color: '#fb923c' }}>47%</strong>
             </p>
-            
-            {/* Countdown Timer */}
-            <div className="hover-scale" style={{
-              backgroundColor: '#f97316',
-              borderRadius: '1rem',
-              padding: isMobile ? '1.5rem' : '2rem',
-              maxWidth: isMobile ? '100%' : '42rem',
-              margin: `0 auto ${isMobile ? '1.5rem' : '2rem'} auto`,
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+
+            {/* Countdown */}
+            <div style={{
+              backgroundColor: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(249,115,22,0.3)',
+              borderRadius: '1rem', padding: isMobile ? '1.25rem' : '1.75rem',
+              maxWidth: '400px', margin: `0 auto ${isMobile ? '2rem' : '2.75rem'}`
             }}>
-              <p style={{
-                fontSize: isMobile ? '1rem' : '1.5rem',
-                fontWeight: 'bold',
-                marginBottom: '1rem'
-              }}>
+              <p style={{ fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.08em', color: '#fed7aa', marginBottom: '0.875rem' }}>
                 ⏰ OFERTA ESPECIAL TERMINA EM:
               </p>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: isMobile ? '0.5rem' : '1rem',
-                flexWrap: 'wrap'
-              }}>
-                <div style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '0.75rem',
-                  padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
-                  minWidth: isMobile ? '70px' : '90px'
-                }}>
-                  <div style={{ 
-                    fontSize: isMobile ? '2rem' : '3rem',
-                    fontWeight: 'bold',
-                    lineHeight: '1'
-                  }}>{formatTime(timeLeft.hours)}</div>
-                  <div style={{ fontSize: isMobile ? '0.625rem' : '0.75rem', marginTop: '0.25rem' }}>HORAS</div>
-                </div>
-                <div style={{ fontSize: isMobile ? '2rem' : '3rem', fontWeight: 'bold' }}>:</div>
-                <div style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '0.75rem',
-                  padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
-                  minWidth: isMobile ? '70px' : '90px'
-                }}>
-                  <div style={{ 
-                    fontSize: isMobile ? '2rem' : '3rem',
-                    fontWeight: 'bold',
-                    lineHeight: '1'
-                  }}>{formatTime(timeLeft.minutes)}</div>
-                  <div style={{ fontSize: isMobile ? '0.625rem' : '0.75rem', marginTop: '0.25rem' }}>MIN</div>
-                </div>
-                <div style={{ fontSize: isMobile ? '2rem' : '3rem', fontWeight: 'bold' }}>:</div>
-                <div style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '0.75rem',
-                  padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
-                  minWidth: isMobile ? '70px' : '90px'
-                }}>
-                  <div style={{ 
-                    fontSize: isMobile ? '2rem' : '3rem',
-                    fontWeight: 'bold',
-                    lineHeight: '1'
-                  }}>{formatTime(timeLeft.seconds)}</div>
-                  <div style={{ fontSize: isMobile ? '0.625rem' : '0.75rem', marginTop: '0.25rem' }}>SEG</div>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.625rem' }}>
+                {[{ val: timeLeft.hours, label: 'HORAS' }, { val: timeLeft.minutes, label: 'MIN' }, { val: timeLeft.seconds, label: 'SEG' }].map((item, i) => (
+                  <React.Fragment key={item.label}>
+                    {i > 0 && <div style={{ fontSize: isMobile ? '1.75rem' : '2.25rem', fontWeight: '900', color: '#fb923c', lineHeight: 1 }}>:</div>}
+                    <div style={{ backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: '0.625rem', padding: isMobile ? '0.625rem 0.875rem' : '0.875rem 1.1rem', minWidth: isMobile ? '64px' : '80px', textAlign: 'center' }}>
+                      <div style={{ fontSize: isMobile ? '1.875rem' : '2.5rem', fontWeight: '900', lineHeight: 1 }}>{fmt(item.val)}</div>
+                      <div style={{ fontSize: '0.6rem', marginTop: '0.25rem', color: '#93c5fd', letterSpacing: '0.05em' }}>{item.label}</div>
+                    </div>
+                  </React.Fragment>
+                ))}
               </div>
             </div>
 
-            <button 
+            <button
               onClick={scrollToPlans}
-              className="hover-scale"
+              className="btn-primary"
               style={{
-                backgroundColor: '#f97316',
-                color: 'white',
-                padding: isMobile ? '0.875rem 2rem' : '1rem 3rem',
-                borderRadius: '9999px',
-                fontSize: isMobile ? '1.125rem' : '1.25rem',
-                fontWeight: 'bold',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                width: isMobile ? '100%' : 'auto',
-                justifyContent: 'center'
+                backgroundColor: '#f97316', color: 'white',
+                padding: isMobile ? '1rem 2rem' : '1.1rem 3rem',
+                borderRadius: '9999px', fontSize: isMobile ? '1rem' : '1.2rem',
+                fontWeight: '800', border: 'none', cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(249,115,22,0.45)',
+                display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                width: isMobile ? '100%' : 'auto', justifyContent: 'center'
               }}
             >
-              COMECE AGORA
-              <ChevronRight style={{ width: '1.5rem', height: '1.5rem' }} />
+              QUERO COMEÇAR AGORA <ChevronRight size={22} />
             </button>
           </div>
         </section>
 
-        {/* Benefits Section */}
-        <section style={{ 
-          padding: isMobile ? '2rem 1rem' : '4rem 1rem', 
-          backgroundColor: 'white' 
-        }}>
-          <div style={{ maxWidth: '1152px', margin: '0 auto' }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: isMobile ? '1.5rem' : '2rem'
-            }}>
-              {/* Benefit 1 */}
-              <div className="hover-lift" style={{
-                backgroundColor: 'white',
-                borderRadius: '1rem',
-                padding: isMobile ? '1.5rem' : '2rem',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                textAlign: 'center',
-                border: '2px solid transparent'
-              }}>
-                <div style={{
-                  backgroundColor: '#fed7aa',
-                  width: isMobile ? '3.5rem' : '5rem',
-                  height: isMobile ? '3.5rem' : '5rem',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 1rem auto'
-                }}>
-                  <TrendingUp style={{
-                    width: isMobile ? '2rem' : '3rem',
-                    height: isMobile ? '2rem' : '3rem',
-                    color: '#f97316'
-                  }} />
-                </div>
-                <h3 style={{
-                  fontSize: isMobile ? '1.5rem' : '1.875rem',
-                  fontWeight: 'bold',
-                  marginBottom: '1rem',
-                  color: '#1f2937'
-                }}>
-                  +47% de<br />Produtividade
-                </h3>
-                <p style={{
-                  fontSize: isMobile ? '0.938rem' : '1rem',
-                  color: '#4b5563',
-                  lineHeight: '1.6'
-                }}>
-                  Maximize os resultados da sua equipe com checklists inteligentes e automação
-                </p>
+        {/* ── STATS STRIP ── */}
+        <div style={{ backgroundColor: '#111827', color: 'white', padding: '1.5rem 1.5rem' }}>
+          <div style={{
+            maxWidth: '900px', margin: '0 auto',
+            display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)',
+            gap: '1rem', textAlign: 'center'
+          }}>
+            {[
+              { num: '+500', label: 'Empresas Atendidas' },
+              { num: '47%', label: 'Mais Produtividade' },
+              { num: '30 dias', label: 'Garantia Total' },
+              { num: '24h', label: 'Para Implementar' },
+            ].map(s => (
+              <div key={s.label}>
+                <div style={{ fontSize: isMobile ? '1.625rem' : '2.1rem', fontWeight: '900', color: '#f97316', lineHeight: 1 }}>{s.num}</div>
+                <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: '0.3rem' }}>{s.label}</div>
               </div>
+            ))}
+          </div>
+        </div>
 
-              {/* Benefit 2 - Destacado */}
-              <div style={{
-                backgroundColor: '#fff7ed',
-                borderRadius: '1rem',
-                padding: isMobile ? '1.5rem' : '2rem',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-                border: '3px solid #f97316',
-                textAlign: 'center',
-                transform: isMobile ? 'scale(1)' : 'scale(1.05)'
-              }}>
-                <div style={{
-                  backgroundColor: '#f97316',
-                  width: isMobile ? '3.5rem' : '5rem',
-                  height: isMobile ? '3.5rem' : '5rem',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 1rem auto'
-                }}>
-                  <Smartphone style={{
-                    width: isMobile ? '2rem' : '3rem',
-                    height: isMobile ? '2rem' : '3rem',
-                    color: 'white'
-                  }} />
-                </div>
-                <h3 style={{
-                  fontSize: isMobile ? '1.5rem' : '1.875rem',
-                  fontWeight: 'bold',
-                  marginBottom: '1rem',
-                  color: '#1f2937'
-                }}>
-                  Controle Total
-                </h3>
-                <p style={{
-                  fontSize: isMobile ? '0.938rem' : '1rem',
-                  color: '#4b5563',
-                  lineHeight: '1.6',
-                  fontWeight: '500'
-                }}>
-                  Monitore todas as operações em tempo real direto do seu celular
-                </p>
-              </div>
-
-              {/* Benefit 3 */}
-              <div className="hover-lift" style={{
-                backgroundColor: 'white',
-                borderRadius: '1rem',
-                padding: isMobile ? '1.5rem' : '2rem',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                textAlign: 'center',
-                border: '2px solid transparent'
-              }}>
-                <div style={{
-                  backgroundColor: '#fed7aa',
-                  width: isMobile ? '3.5rem' : '5rem',
-                  height: isMobile ? '3.5rem' : '5rem',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 1rem auto'
-                }}>
-                  <Shield style={{
-                    width: isMobile ? '2rem' : '3rem',
-                    height: isMobile ? '2rem' : '3rem',
-                    color: '#f97316'
-                  }} />
-                </div>
-                <h3 style={{
-                  fontSize: isMobile ? '1.5rem' : '1.875rem',
-                  fontWeight: 'bold',
-                  marginBottom: '1rem',
-                  color: '#1f2937'
-                }}>
-                  100% Seguro
-                </h3>
-                <p style={{
-                  fontSize: isMobile ? '0.938rem' : '1rem',
-                  color: '#4b5563',
-                  lineHeight: '1.6'
-                }}>
-                  Geolocalização e registro preciso de horários com máxima segurança
-                </p>
-              </div>
+        {/* ── BENEFÍCIOS ── */}
+        <section style={{ padding: isMobile ? '3rem 1.25rem' : '5rem 1.5rem', backgroundColor: 'white' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? '2.5rem' : '3.5rem' }}>
+              <h2 style={{ fontSize: isMobile ? '1.75rem' : '2.25rem', fontWeight: '800', color: '#111827', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
+                Por que escolher a <span style={{ color: '#f97316' }}>Performe seu Mercado?</span>
+              </h2>
+              <p style={{ color: '#6b7280', fontSize: '1rem', maxWidth: '520px', margin: '0 auto' }}>
+                Resultados comprovados por centenas de supermercados e redes varejistas em todo o Brasil
+              </p>
             </div>
 
-            {/* Trust Badge */}
-            <div style={{ textAlign: 'center', marginTop: isMobile ? '2rem' : '3rem' }}>
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '1rem',
-                backgroundColor: '#fffbeb',
-                padding: isMobile ? '1rem' : '1.5rem 2rem',
-                borderRadius: '1rem',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                flexDirection: isMobile ? 'column' : 'row',
-                textAlign: isMobile ? 'center' : 'left'
-              }}>
-                <Award style={{
-                  width: isMobile ? '3rem' : '4rem',
-                  height: isMobile ? '3rem' : '4rem',
-                  color: '#eab308',
-                  flexShrink: 0
-                }} />
-                <div>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: '1.5rem' }}>
+              {BENEFITS.map((b, i) => (
+                <div key={i} className={b.featured ? undefined : 'card-hover'} style={{
+                  backgroundColor: b.featured ? '#f97316' : 'white',
+                  borderRadius: '1.25rem', padding: '2rem', textAlign: 'center',
+                  border: b.featured ? 'none' : '1px solid #e5e7eb',
+                  boxShadow: b.featured ? '0 20px 40px rgba(249,115,22,0.3)' : '0 2px 12px rgba(0,0,0,0.05)',
+                  transform: !isMobile && b.featured ? 'scale(1.04)' : 'none'
+                }}>
                   <div style={{
-                    fontSize: isMobile ? '1.125rem' : '1.5rem',
-                    fontWeight: 'bold',
-                    color: '#1f2937'
+                    width: '4.5rem', height: '4.5rem', borderRadius: '50%', margin: '0 auto 1.5rem',
+                    backgroundColor: b.featured ? 'rgba(255,255,255,0.2)' : '#fff7ed',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    LÍDER EM GESTÃO DE OPERAÇÕES
+                    <b.icon size={28} style={{ color: b.featured ? 'white' : '#f97316' }} />
                   </div>
-                  <div style={{
-                    color: '#4b5563',
-                    marginTop: '0.25rem',
-                    fontSize: isMobile ? '0.938rem' : '1.125rem'
-                  }}>
-                    Mais de 500 empresas já revolucionaram sua gestão!
-                  </div>
+                  <h3 style={{ fontSize: '1.375rem', fontWeight: '800', marginBottom: '0.75rem', color: b.featured ? 'white' : '#111827' }}>{b.title}</h3>
+                  <p style={{ color: b.featured ? 'rgba(255,255,255,0.85)' : '#6b7280', lineHeight: '1.65', fontSize: '0.95rem' }}>{b.desc}</p>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Pricing Section */}
-        <section id="planos" style={{ 
-          padding: isMobile ? '2rem 1rem' : '4rem 1rem', 
-          backgroundColor: '#f3f4f6' 
-        }}>
-          <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-            <h2 style={{
-              fontSize: isMobile ? '1.75rem' : '2.5rem',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              marginBottom: isMobile ? '0.5rem' : '1rem',
-              padding: '0 1rem',
-              lineHeight: '1.3',
-              color: '#1f2937'
-            }}>
-              ESCOLHA O PLANO IDEAL
-            </h2>
-            <p style={{
-              textAlign: 'center',
-              color: '#6b7280',
-              marginBottom: isMobile ? '2rem' : '3rem',
-              fontSize: isMobile ? '1rem' : '1.125rem'
-            }}>
-              Todos os planos incluem 30 dias de garantia
-            </p>
+        {/* ── FUNCIONALIDADES ── */}
+        <section style={{ padding: isMobile ? '3rem 1.25rem' : '5rem 1.5rem', backgroundColor: '#f8fafc' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? '2.5rem' : '3.5rem' }}>
+              <h2 style={{ fontSize: isMobile ? '1.75rem' : '2.25rem', fontWeight: '800', color: '#111827', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
+                Tudo que você precisa <span style={{ color: '#f97316' }}>em um só lugar</span>
+              </h2>
+              <p style={{ color: '#6b7280', fontSize: '1rem' }}>
+                Ferramentas profissionais para gestão completa do seu varejo
+              </p>
+            </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: isMobile ? '1.5rem' : '1.5rem',
-              maxWidth: '1200px',
-              margin: '0 auto'
-            }}>
-              {/* Plano Starter */}
-              <div className="hover-lift" style={{
-                backgroundColor: 'white',
-                borderRadius: '1rem',
-                padding: '1.5rem',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                border: '2px solid #e5e7eb'
-              }}>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1f2937' }}>Plano Starter</h3>
-                <p style={{ color: '#9ca3af', textDecoration: 'line-through', marginBottom: '0.5rem' }}>R$ 500,00</p>
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#f97316', marginBottom: '0.5rem' }}>R$ 250,00</div>
-                <p style={{ color: '#4b5563', marginBottom: '1rem', fontSize: '0.938rem' }}>por CNPJ/mês</p>
-                <div style={{ 
-                  backgroundColor: '#fff7ed', 
-                  padding: '0.75rem', 
-                  borderRadius: '0.5rem', 
-                  marginBottom: '1rem',
-                  border: '1px solid #fed7aa'
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '1.25rem' }}>
+              {FEATURES.map((f, i) => (
+                <div key={i} className="card-hover" style={{
+                  backgroundColor: 'white', borderRadius: '1rem', padding: isMobile ? '1.25rem' : '1.5rem',
+                  border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                  textAlign: isMobile ? 'center' : 'left'
                 }}>
-                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#9a3412', margin: 0 }}>✨ Ideal para 1 Loja</p>
+                  <div style={{
+                    width: '3rem', height: '3rem', borderRadius: '0.75rem',
+                    backgroundColor: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginBottom: '1rem', margin: isMobile ? '0 auto 1rem' : '0 0 1rem'
+                  }}>
+                    <f.icon size={22} style={{ color: '#f97316' }} />
+                  </div>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' }}>{f.title}</h3>
+                  <p style={{ fontSize: '0.85rem', color: '#6b7280', lineHeight: '1.6' }}>{f.desc}</p>
                 </div>
-                <ul style={{ fontSize: '0.875rem', marginBottom: '1.5rem', listStyle: 'none', padding: 0 }}>
-                  <li style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Todos os recursos incluídos</span>
-                  </li>
-                  <li style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Suporte prioritário</span>
-                  </li>
-                  <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Treinamento completo</span>
-                  </li>
-                </ul>
-                <button
-                onClick={() => router.push('/contratar?plano=starter')}
-                style={{
-                  width: '100%',
-                  backgroundColor: '#f97316',
-                  color: 'white',
-                  padding: '0.875rem',
-                  borderRadius: '0.5rem',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ea580c'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f97316'}>
-                  Começar Agora
-                </button>
-              </div>
-
-              {/* Plano Growth - Popular */}
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '1rem',
-                padding: '1.5rem',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)',
-                border: '3px solid #f97316',
-                position: 'relative',
-                transform: isMobile ? 'scale(1)' : 'scale(1.05)'
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  top: '-1rem',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: '#f97316',
-                  color: 'white',
-                  padding: '0.5rem 1.5rem',
-                  borderRadius: '9999px',
-                  fontSize: '0.75rem',
-                  fontWeight: 'bold',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  whiteSpace: 'nowrap'
-                }}>
-                  🏆 MAIS POPULAR
-                </div>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', marginTop: '0.5rem', color: '#1f2937' }}>Plano Growth</h3>
-                <p style={{ color: '#9ca3af', textDecoration: 'line-through', marginBottom: '0.5rem' }}>R$ 319,98</p>
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#f97316', marginBottom: '0.5rem' }}>R$ 159,99</div>
-                <p style={{ color: '#4b5563', marginBottom: '1rem', fontSize: '0.938rem' }}>por CNPJ/mês</p>
-                <div style={{ 
-                  backgroundColor: '#fff7ed', 
-                  padding: '0.75rem', 
-                  borderRadius: '0.5rem', 
-                  marginBottom: '1rem',
-                  border: '1px solid #fed7aa'
-                }}>
-                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#9a3412', margin: 0 }}>✨ 2 a 5 Lojas</p>
-                </div>
-                <ul style={{ fontSize: '0.875rem', marginBottom: '1.5rem', listStyle: 'none', padding: 0 }}>
-                  <li style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Todos os recursos incluídos</span>
-                  </li>
-                  <li style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Suporte prioritário VIP</span>
-                  </li>
-                  <li style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Treinamento completo</span>
-                  </li>
-                  <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span style={{ fontWeight: 'bold', color: '#f97316' }}>Economia de 50%</span>
-                  </li>
-                </ul>
-                <button
-                onClick={() => router.push('/contratar?plano=growth')}
-                style={{
-                  width: '100%',
-                  backgroundColor: '#f97316',
-                  color: 'white',
-                  padding: '0.875rem',
-                  borderRadius: '0.5rem',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ea580c'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f97316'}>
-                  Começar Agora
-                </button>
-              </div>
-
-              {/* Plano Scale */}
-              <div className="hover-lift" style={{
-                backgroundColor: 'white',
-                borderRadius: '1rem',
-                padding: '1.5rem',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                border: '2px solid #e5e7eb'
-              }}>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1f2937' }}>Plano Scale</h3>
-                <p style={{ color: '#9ca3af', textDecoration: 'line-through', marginBottom: '0.5rem' }}>R$ 279,98</p>
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#f97316', marginBottom: '0.5rem' }}>R$ 139,99</div>
-                <p style={{ color: '#4b5563', marginBottom: '1rem', fontSize: '0.938rem' }}>por CNPJ/mês</p>
-                <div style={{ 
-                  backgroundColor: '#fff7ed', 
-                  padding: '0.75rem', 
-                  borderRadius: '0.5rem', 
-                  marginBottom: '1rem',
-                  border: '1px solid #fed7aa'
-                }}>
-                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#9a3412', margin: 0 }}>✨ 6 a 9 Lojas</p>
-                </div>
-                <ul style={{ fontSize: '0.875rem', marginBottom: '1.5rem', listStyle: 'none', padding: 0 }}>
-                  <li style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Todos os recursos incluídos</span>
-                  </li>
-                  <li style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Suporte VIP 24/7</span>
-                  </li>
-                  <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Treinamento personalizado</span>
-                  </li>
-                </ul>
-                <button
-                onClick={() => router.push('/contratar?plano=scale')}
-                style={{
-                  width: '100%',
-                  backgroundColor: '#f97316',
-                  color: 'white',
-                  padding: '0.875rem',
-                  borderRadius: '0.5rem',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ea580c'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f97316'}>
-                  Começar Agora
-                </button>
-              </div>
-
-              {/* Plano Enterprise */}
-              <div className="hover-lift" style={{
-                backgroundColor: 'white',
-                borderRadius: '1rem',
-                padding: '1.5rem',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                border: '2px solid #e5e7eb'
-              }}>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1f2937' }}>Plano Enterprise</h3>
-                <p style={{ color: '#9ca3af', textDecoration: 'line-through', marginBottom: '0.5rem' }}>R$ 259,98</p>
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#f97316', marginBottom: '0.5rem' }}>R$ 129,99</div>
-                <p style={{ color: '#4b5563', marginBottom: '1rem', fontSize: '0.938rem' }}>por CNPJ/mês</p>
-                <div style={{ 
-                  backgroundColor: '#fff7ed', 
-                  padding: '0.75rem', 
-                  borderRadius: '0.5rem', 
-                  marginBottom: '1rem',
-                  border: '1px solid #fed7aa'
-                }}>
-                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#9a3412', margin: 0 }}>✨ 10+ Lojas</p>
-                </div>
-                <ul style={{ fontSize: '0.875rem', marginBottom: '1.5rem', listStyle: 'none', padding: 0 }}>
-                  <li style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Todos os recursos incluídos</span>
-                  </li>
-                  <li style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span>Suporte VIP 24/7</span>
-                  </li>
-                  <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check style={{ width: '1.25rem', height: '1.25rem', color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
-                    <span style={{ fontWeight: 'bold' }}>Consultor dedicado</span>
-                  </li>
-                </ul>
-                <button 
-                onClick={() => router.push('/contratar?plano=enterprise')}
-                style={{
-                  width: '100%',
-                  backgroundColor: '#f97316',
-                  color: 'white',
-                  padding: '0.875rem',
-                  borderRadius: '0.5rem',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ea580c'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f97316'}>
-                  Começar Agora
-                </button>
-              </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Guarantee Section */}
-        <section style={{ 
-          padding: isMobile ? '2rem 1rem' : '4rem 1rem', 
-          backgroundColor: 'white' 
-        }}>
-          <div style={{ maxWidth: '896px', margin: '0 auto', textAlign: 'center' }}>
-            <div style={{
-              position: 'relative',
-              width: isMobile ? '8rem' : '10rem',
-              height: isMobile ? '8rem' : '10rem',
-              margin: '0 auto 1.5rem auto'
-            }}>
-              <div className="animate-pulse" style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'linear-gradient(to bottom right, #facc15, #f97316)',
-                borderRadius: '50%'
-              }}></div>
-              <div style={{
-                position: 'absolute',
-                inset: '0.5rem',
-                backgroundColor: '#000',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white'
-              }}>
-                <div>
-                  <div style={{ fontSize: isMobile ? '2.5rem' : '3rem', fontWeight: 'bold', lineHeight: '1' }}>30</div>
-                  <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>DIAS</div>
-                </div>
-              </div>
-              <div style={{
-                position: 'absolute',
-                inset: '-0.5rem',
-                border: '4px solid #facc15',
-                borderRadius: '50%'
-              }}></div>
+        {/* ── PLANOS ── */}
+        <section id="planos" style={{ padding: isMobile ? '3rem 1.25rem' : '5rem 1.5rem', backgroundColor: '#f1f5f9' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? '2rem' : '3rem' }}>
+              <h2 style={{ fontSize: isMobile ? '1.75rem' : '2.25rem', fontWeight: '800', color: '#111827', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
+                Escolha o <span style={{ color: '#f97316' }}>Plano Ideal</span>
+              </h2>
+              <p style={{ color: '#6b7280', fontSize: '1rem' }}>Todos os planos incluem 30 dias de garantia total</p>
             </div>
-            
-            <h2 style={{
-              fontSize: isMobile ? '1.75rem' : '2.25rem',
-              fontWeight: 'bold',
-              marginBottom: '1rem',
-              padding: '0 1rem',
-              color: '#1f2937'
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(4,1fr)',
+              gap: '1.25rem', maxWidth: '1100px', margin: '0 auto'
             }}>
+              {PLANS.map(p => (
+                <div key={p.key} style={{
+                  backgroundColor: 'white', borderRadius: '1.25rem', padding: '1.75rem',
+                  border: p.popular ? '2.5px solid #f97316' : '1px solid #e5e7eb',
+                  boxShadow: p.popular ? '0 20px 40px rgba(249,115,22,0.15)' : '0 2px 12px rgba(0,0,0,0.06)',
+                  position: 'relative',
+                  transform: !isMobile && p.popular ? 'scale(1.04)' : 'none',
+                  display: 'flex', flexDirection: 'column'
+                }}>
+                  {p.popular && (
+                    <div style={{
+                      position: 'absolute', top: '-0.875rem', left: '50%', transform: 'translateX(-50%)',
+                      backgroundColor: '#f97316', color: 'white', padding: '0.375rem 1.25rem',
+                      borderRadius: '9999px', fontSize: '0.72rem', fontWeight: '800',
+                      whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(249,115,22,0.4)'
+                    }}>
+                      🏆 MAIS POPULAR
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: p.popular ? '0.5rem' : 0, flex: 1 }}>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#111827', marginBottom: '0.5rem' }}>Plano {p.nome}</h3>
+                    <span style={{
+                      display: 'inline-block', backgroundColor: '#fff7ed', color: '#9a3412',
+                      fontSize: '0.78rem', fontWeight: '700', padding: '0.25rem 0.625rem',
+                      borderRadius: '0.375rem', marginBottom: '1.25rem'
+                    }}>
+                      ✨ {p.lojas}
+                    </span>
+
+                    <p style={{ color: '#9ca3af', textDecoration: 'line-through', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{p.precoOld}</p>
+                    <div style={{ fontSize: '2.1rem', fontWeight: '900', color: '#f97316', lineHeight: 1.1 }}>{p.preco}</div>
+                    <p style={{ color: '#6b7280', fontSize: '0.825rem', marginBottom: '1.5rem', marginTop: '0.25rem' }}>por CNPJ/mês</p>
+
+                    <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1.75rem' }}>
+                      {p.itens.map(item => (
+                        <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.875rem', color: '#374151' }}>
+                          <Check size={15} style={{ color: '#22c55e', flexShrink: 0, marginTop: '0.125rem' }} />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <button
+                    onClick={() => router.push(`/contratar?plano=${p.key}`)}
+                    style={{
+                      width: '100%', padding: '0.875rem',
+                      backgroundColor: p.popular ? '#f97316' : 'white',
+                      color: p.popular ? 'white' : '#f97316',
+                      border: '2px solid #f97316',
+                      borderRadius: '0.625rem', fontSize: '0.95rem', fontWeight: '700',
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#f97316'; e.currentTarget.style.color = 'white'; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = p.popular ? '#f97316' : 'white'; e.currentTarget.style.color = p.popular ? 'white' : '#f97316'; }}
+                  >
+                    Começar Agora
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── GARANTIA ── */}
+        <section style={{ padding: isMobile ? '3rem 1.25rem' : '5rem 1.5rem', backgroundColor: 'white' }}>
+          <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center' }}>
+            <div style={{ width: isMobile ? '8rem' : '10rem', height: isMobile ? '8rem' : '10rem', margin: '0 auto 2rem', position: 'relative' }}>
+              <div className="anim-pulse" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #facc15, #f97316)', borderRadius: '50%' }} />
+              <div style={{ position: 'absolute', inset: '0.5rem', backgroundColor: '#111827', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                <div style={{ fontSize: isMobile ? '2.5rem' : '3rem', fontWeight: '900', lineHeight: 1 }}>30</div>
+                <div style={{ fontSize: '0.65rem', color: '#9ca3af', letterSpacing: '0.05em' }}>DIAS</div>
+              </div>
+              <div style={{ position: 'absolute', inset: '-0.5rem', border: '3px solid #facc15', borderRadius: '50%' }} />
+            </div>
+            <h2 style={{ fontSize: isMobile ? '1.75rem' : '2.25rem', fontWeight: '800', marginBottom: '1rem', color: '#111827', letterSpacing: '-0.02em' }}>
               GARANTIA DUPLA DE SATISFAÇÃO
             </h2>
-            <p style={{
-              fontSize: isMobile ? '1.125rem' : '1.25rem',
-              marginBottom: '1rem',
-              padding: '0 1rem',
-              fontWeight: '600',
-              color: '#374151'
-            }}>
+            <p style={{ fontSize: isMobile ? '1rem' : '1.15rem', fontWeight: '700', color: '#374151', marginBottom: '0.75rem' }}>
               30 DIAS PARA TESTAR + 30 DIAS DE GARANTIA
             </p>
-            <p style={{
-              fontSize: isMobile ? '1rem' : '1.125rem',
-              color: '#4b5563',
-              padding: '0 1rem',
-              lineHeight: '1.7'
-            }}>
-              Se não estiver 100% satisfeito com os resultados, devolvemos seu dinheiro integralmente.
-              <span style={{ fontWeight: 'bold', color: '#f97316' }}> Sem burocracia, sem perguntas, sem compromisso.</span>
+            <p style={{ fontSize: '1rem', color: '#6b7280', lineHeight: '1.75', maxWidth: '520px', margin: '0 auto' }}>
+              Se não estiver 100% satisfeito com os resultados, devolvemos seu dinheiro integralmente.{' '}
+              <strong style={{ color: '#f97316' }}>Sem burocracia, sem perguntas, sem compromisso.</strong>
             </p>
           </div>
         </section>
 
-        {/* Testimonial Section */}
-        <section style={{ 
-          padding: isMobile ? '2rem 1rem' : '4rem 1rem', 
-          background: 'linear-gradient(to bottom right, #f9fafb, #fff7ed)' 
-        }}>
-          <div style={{ maxWidth: '1024px', margin: '0 auto' }}>
-            <h2 style={{
-              fontSize: isMobile ? '1.75rem' : '2.25rem',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              marginBottom: isMobile ? '2rem' : '3rem',
-              color: '#1f2937'
-            }}>
-              O QUE NOSSOS CLIENTES DIZEM
+        {/* ── DEPOIMENTOS ── */}
+        <section style={{ padding: isMobile ? '3rem 1.25rem' : '5rem 1.5rem', background: 'linear-gradient(135deg, #f9fafb, #fff7ed)' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <h2 style={{ fontSize: isMobile ? '1.75rem' : '2.25rem', fontWeight: '800', textAlign: 'center', marginBottom: isMobile ? '2rem' : '3rem', color: '#111827', letterSpacing: '-0.02em' }}>
+              O que nossos <span style={{ color: '#f97316' }}>clientes dizem</span>
             </h2>
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '1rem',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-              padding: isMobile ? '1.5rem' : '2.5rem'
-            }}>
-              <div style={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: isMobile ? '1.5rem' : '2rem',
-                alignItems: 'center'
-              }}>
-                <div style={{ 
-                  flexShrink: 0, 
-                  textAlign: 'center',
-                  width: isMobile ? '100%' : 'auto'
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: '1.25rem' }}>
+              {TESTIMONIALS.map((t, i) => (
+                <div key={i} className="card-hover" style={{
+                  backgroundColor: 'white', borderRadius: '1.25rem', padding: '1.75rem',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.07)', border: '1px solid #f3f4f6',
+                  display: 'flex', flexDirection: 'column', gap: '1rem'
                 }}>
-                  <div style={{
-                    width: isMobile ? '6rem' : '8rem',
-                    height: isMobile ? '6rem' : '8rem',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(to bottom right, #fbb6ce, #86efac, #fde047)',
-                    padding: '0.25rem',
-                    margin: '0 auto 1rem auto'
-                  }}>
+                  <div style={{ fontSize: '2.5rem', color: '#f97316', lineHeight: 1 }}>"</div>
+                  <p style={{ fontSize: '0.925rem', color: '#374151', lineHeight: '1.7', flex: 1 }}>{t.texto}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #f3f4f6' }}>
                     <div style={{
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: '50%',
-                      backgroundColor: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: isMobile ? '2.5rem' : '3rem'
-                    }}>
-                      👤
+                      width: '3rem', height: '3rem', borderRadius: '50%', flexShrink: 0,
+                      backgroundColor: '#fff7ed', border: '2px solid #fed7aa',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.375rem'
+                    }}>{t.emoji}</div>
+                    <div>
+                      <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.925rem' }}>{t.nome}</div>
+                      <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{t.cargo}</div>
+                      <div style={{ color: '#facc15', fontSize: '0.85rem', marginTop: '0.125rem' }}>⭐⭐⭐⭐⭐</div>
                     </div>
                   </div>
-                  <h3 style={{
-                    fontSize: isMobile ? '1.25rem' : '1.5rem',
-                    fontWeight: 'bold',
-                    marginBottom: '0.25rem',
-                    color: '#1f2937'
-                  }}>
-                    Autran Júnior
-                  </h3>
-                  <p style={{
-                    fontSize: isMobile ? '0.938rem' : '1rem',
-                    color: '#6b7280',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Diretor de Operações
-                  </p>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '0.25rem',
-                    color: '#facc15',
-                    fontSize: '1.25rem'
-                  }}>
-                    ⭐⭐⭐⭐⭐
-                  </div>
                 </div>
-                
-                <div style={{ flex: 1 }}>
-                  <div style={{
-                    fontSize: isMobile ? '3rem' : '4rem',
-                    color: '#f97316',
-                    lineHeight: '1',
-                    marginBottom: '0.5rem'
-                  }}>"</div>
-                  <p style={{
-                    fontSize: isMobile ? '1rem' : '1.125rem',
-                    fontStyle: 'italic',
-                    color: '#374151',
-                    lineHeight: '1.7'
-                  }}>
-                    O Performe seu Mercado revolucionou completamente nossa operação. Nossa produtividade aumentou em <span style={{ fontWeight: 'bold', color: '#f97316' }}>47% já no primeiro mês</span>. O controle que temos agora sobre nossas operações é incomparável. A facilidade de uso e o suporte excepcional fizeram toda diferença. Foi, sem dúvida, o <span style={{ fontWeight: 'bold' }}>melhor investimento que fizemos</span> para nossa empresa!
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Final CTA Section */}
-        <section style={{ 
-          padding: isMobile ? '2rem 1rem' : '4rem 1rem', 
-          background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
+        {/* ── CTA FINAL ── */}
+        <section style={{
+          padding: isMobile ? '3rem 1.25rem' : '5.5rem 1.5rem',
+          background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)',
           color: 'white'
         }}>
-          <div style={{ maxWidth: '896px', margin: '0 auto', textAlign: 'center' }}>
-            <h2 style={{
-              fontSize: isMobile ? '1.75rem' : '2.5rem',
-              fontWeight: 'bold',
-              marginBottom: '1rem',
-              padding: '0 1rem',
-              lineHeight: '1.3'
-            }}>
+          <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center' }}>
+            <h2 style={{ fontSize: isMobile ? '1.75rem' : '2.5rem', fontWeight: '900', marginBottom: '1rem', letterSpacing: '-0.025em' }}>
               PRONTO PARA TRANSFORMAR SUA EMPRESA?
             </h2>
-            <p style={{
-              fontSize: isMobile ? '1.125rem' : '1.25rem',
-              color: '#dbeafe',
-              marginBottom: isMobile ? '1.5rem' : '2rem',
-              padding: '0 1rem'
-            }}>
-              Junte-se a centenas de empresas de sucesso que já utilizam o Performe seu Mercado
+            <p style={{ fontSize: isMobile ? '1rem' : '1.2rem', color: '#bfdbfe', marginBottom: '2.5rem' }}>
+              Junte-se a centenas de supermercados que já utilizam o Performe seu Mercado
             </p>
-            
+
             <div style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '1rem',
-              padding: isMobile ? '1.5rem' : '2rem',
-              marginBottom: isMobile ? '1.5rem' : '2rem',
-              maxWidth: '600px',
-              margin: `0 auto ${isMobile ? '1.5rem' : '2rem'} auto`
+              backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '1rem',
+              padding: isMobile ? '1.5rem' : '2rem', marginBottom: '2rem',
+              maxWidth: '460px', margin: '0 auto 2rem', textAlign: 'left'
             }}>
-              <ul style={{
-                listStyle: 'none',
-                padding: 0,
-                margin: 0,
-                textAlign: 'left'
-              }}>
-                <li style={{ 
-                  display: 'flex', 
-                  alignItems: 'flex-start', 
-                  gap: '0.75rem', 
-                  marginBottom: '1rem',
-                  fontSize: isMobile ? '0.938rem' : '1.125rem'
-                }}>
-                  <Check style={{ 
-                    width: '1.5rem', 
-                    height: '1.5rem', 
-                    color: '#4ade80', 
-                    flexShrink: 0,
-                    marginTop: '0.125rem'
-                  }} />
-                  <span>30 dias de satisfação ou seu dinheiro de volta (Sem perguntas)</span>
-                </li>
-                <li style={{ 
-                  display: 'flex', 
-                  alignItems: 'flex-start', 
-                  gap: '0.75rem', 
-                  marginBottom: '1rem',
-                  fontSize: isMobile ? '0.938rem' : '1.125rem'
-                }}>
-                  <Check style={{ 
-                    width: '1.5rem', 
-                    height: '1.5rem', 
-                    color: '#4ade80', 
-                    flexShrink: 0,
-                    marginTop: '0.125rem'
-                  }} />
-                  <span>Implementação em 24 horas</span>
-                </li>
-                <li style={{ 
-                  display: 'flex', 
-                  alignItems: 'flex-start', 
-                  gap: '0.75rem',
-                  fontSize: isMobile ? '0.938rem' : '1.125rem'
-                }}>
-                  <Check style={{ 
-                    width: '1.5rem', 
-                    height: '1.5rem', 
-                    color: '#4ade80', 
-                    flexShrink: 0,
-                    marginTop: '0.125rem'
-                  }} />
-                  <span>Suporte completo na implementação</span>
-                </li>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                {['30 dias de garantia total (sem perguntas)', 'Implementação em até 24 horas', 'Suporte completo na implementação'].map(item => (
+                  <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: isMobile ? '0.925rem' : '1rem' }}>
+                    <Check size={20} style={{ color: '#4ade80', flexShrink: 0 }} />
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
             </div>
 
-            <button 
+            <button
               onClick={scrollToPlans}
-              className="hover-scale"
+              className="btn-primary"
               style={{
-                backgroundColor: '#f97316',
-                color: 'white',
-                padding: isMobile ? '1rem 1.5rem' : '1.25rem 2.5rem',
-                borderRadius: '9999px',
-                fontSize: isMobile ? '1rem' : '1.25rem',
-                fontWeight: 'bold',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                width: isMobile ? '100%' : 'auto',
-                justifyContent: 'center',
-                maxWidth: isMobile ? '100%' : '600px'
+                backgroundColor: '#f97316', color: 'white',
+                padding: isMobile ? '1rem 2rem' : '1.1rem 3rem',
+                borderRadius: '9999px', fontSize: isMobile ? '1rem' : '1.2rem',
+                fontWeight: '800', border: 'none', cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(249,115,22,0.5)',
+                display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                width: isMobile ? '100%' : 'auto', justifyContent: 'center'
               }}
             >
-              <span style={{ fontSize: isMobile ? '0.938rem' : '1.125rem' }}>
-                {isMobile ? 'COMEÇAR AGORA' : 'COMEÇAR MINHA TRANSFORMAÇÃO AGORA'}
-              </span>
-              <ChevronRight style={{ width: '1.5rem', height: '1.5rem' }} />
+              {isMobile ? 'COMEÇAR AGORA' : 'COMEÇAR MINHA TRANSFORMAÇÃO AGORA'} <ChevronRight size={22} />
             </button>
-            
-            <p style={{
-              fontSize: isMobile ? '0.875rem' : '1rem',
-              color: '#bfdbfe',
-              marginTop: '1rem',
-              padding: '0 1rem'
-            }}>
+            <p style={{ fontSize: '0.9rem', color: '#bfdbfe', marginTop: '1rem' }}>
               💳 Sem compromisso. Cancele quando quiser.
             </p>
           </div>
         </section>
 
-        {/* Footer */}
-        <footer style={{
-          backgroundColor: '#111827',
-          color: 'white',
-          padding: isMobile ? '2rem 1rem' : '3rem 1rem'
-        }}>
-          <div style={{ maxWidth: '1152px', margin: '0 auto' }}>
+        {/* ── FOOTER ── */}
+        <footer style={{ backgroundColor: '#0f172a', color: 'white', padding: isMobile ? '2.5rem 1.25rem' : '3.5rem 1.5rem' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)',
               gap: isMobile ? '2rem' : '3rem',
-              marginBottom: isMobile ? '2rem' : '3rem'
+              marginBottom: '2.5rem'
             }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Performe seu Mercado</h3>
-                <p style={{ color: '#9ca3af', lineHeight: '1.6' }}>
-                  O sistema que revoluciona a gestão de operações no Brasil
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '0.75rem' }}>
+                  Performe <span style={{ color: '#f97316' }}>seu Mercado</span>
+                </h3>
+                <p style={{ color: '#94a3b8', lineHeight: '1.7', fontSize: '0.9rem' }}>
+                  O sistema que revoluciona a gestão de operações no varejo brasileiro.
                 </p>
               </div>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Links Rápidos</h3>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#9ca3af' }}>
-                  <li style={{ marginBottom: '0.5rem' }}>
-                    <a href="#" style={{ color: '#9ca3af', textDecoration: 'none', transition: 'color 0.3s' }}
-                       onMouseEnter={(e) => e.currentTarget.style.color = '#f97316'}
-                       onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}>
-                      Funcionalidades
-                    </a>
-                  </li>
-                  <li style={{ marginBottom: '0.5rem' }}>
-                    <a href="#planos" style={{ color: '#9ca3af', textDecoration: 'none', transition: 'color 0.3s' }}
-                       onMouseEnter={(e) => e.currentTarget.style.color = '#f97316'}
-                       onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}>
-                      Planos
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" style={{ color: '#9ca3af', textDecoration: 'none', transition: 'color 0.3s' }}
-                       onMouseEnter={(e) => e.currentTarget.style.color = '#f97316'}
-                       onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}>
-                      Suporte
-                    </a>
-                  </li>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: '700', marginBottom: '0.875rem', color: '#e2e8f0' }}>Links Rápidos</h3>
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {[{ label: 'Funcionalidades', href: '#' }, { label: 'Planos', href: '#planos' }, { label: 'Suporte', href: '#' }].map(l => (
+                    <li key={l.label}>
+                      <a href={l.href} style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem', transition: 'color 0.2s' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#f97316'}
+                        onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}>
+                        {l.label}
+                      </a>
+                    </li>
+                  ))}
                 </ul>
               </div>
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Contato</h3>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#9ca3af', lineHeight: '2' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: '700', marginBottom: '0.875rem', color: '#e2e8f0' }}>Contato</h3>
+                <ul style={{ listStyle: 'none', color: '#94a3b8', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <li>📧 contato@semerro.com.br</li>
                   <li>📱 (11) 9999-9999</li>
                 </ul>
               </div>
             </div>
-            
+
             <div style={{
-              borderTop: '1px solid #374151',
-              paddingTop: isMobile ? '1.5rem' : '2rem',
-              textAlign: 'center'
+              borderTop: '1px solid #1e293b', paddingTop: '1.5rem',
+              display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+              justifyContent: 'space-between', alignItems: 'center',
+              gap: '1rem', textAlign: 'center'
             }}>
-              <p style={{
-                color: '#9ca3af',
-                marginBottom: '1rem',
-                fontSize: isMobile ? '0.875rem' : '1rem'
-              }}>
-                © 2024 Performe seu Mercado - Todos os direitos reservados
+              <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                © 2025 Performe seu Mercado — Todos os direitos reservados
               </p>
-              <div style={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                justifyContent: 'center',
-                gap: isMobile ? '0.75rem' : '1.5rem',
-                fontSize: '0.875rem',
-                color: '#9ca3af'
-              }}>
-                <a href="#" style={{ color: '#9ca3af', textDecoration: 'none', transition: 'color 0.3s' }}
-                   onMouseEnter={(e) => e.currentTarget.style.color = '#f97316'}
-                   onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}>
-                  Política de Privacidade
-                </a>
-                <a href="#" style={{ color: '#9ca3af', textDecoration: 'none', transition: 'color 0.3s' }}
-                   onMouseEnter={(e) => e.currentTarget.style.color = '#f97316'}
-                   onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}>
-                  Termos de Uso
-                </a>
-                <a href="#" style={{ color: '#9ca3af', textDecoration: 'none', transition: 'color 0.3s' }}
-                   onMouseEnter={(e) => e.currentTarget.style.color = '#f97316'}
-                   onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}>
-                  Suporte
-                </a>
+              <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem' }}>
+                {['Política de Privacidade', 'Termos de Uso'].map(l => (
+                  <a key={l} href="#" style={{ color: '#64748b', textDecoration: 'none', transition: 'color 0.2s' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#f97316'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#64748b'}>
+                    {l}
+                  </a>
+                ))}
               </div>
             </div>
           </div>
         </footer>
+
       </div>
     </>
   );
