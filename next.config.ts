@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/sw.js',
+        destination: '/api/sw',
+      },
+    ]
+  },
   async headers() {
     return [
       {
