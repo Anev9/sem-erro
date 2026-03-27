@@ -9,11 +9,14 @@ function db() {
   )
 }
 
-// GET ?aluno_id=X  → lista colaboradores das empresas do aluno
+function getAlunoId(request: NextRequest): string | null {
+  return request.cookies.get('sem-erro-aluno-id')?.value || null
+}
+
+// GET → lista colaboradores das empresas do aluno autenticado
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const alunoId = searchParams.get('aluno_id')
-  if (!alunoId) return NextResponse.json({ error: 'aluno_id obrigatório' }, { status: 400 })
+  const alunoId = getAlunoId(request)
+  if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const { data: empresas } = await db()
     .from('empresas')
@@ -34,16 +37,19 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(data || [])
 }
 
-// PATCH body: { id, ativo, aluno_id }  → ativa/desativa colaborador
+// PATCH body: { id, ativo } → ativa/desativa colaborador do aluno autenticado
 export async function PATCH(request: NextRequest) {
-  const { id, ativo, aluno_id } = await request.json()
-  if (!id || !aluno_id) return NextResponse.json({ error: 'id e aluno_id obrigatórios' }, { status: 400 })
+  const alunoId = getAlunoId(request)
+  if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  // Verificar se o colaborador pertence a uma empresa do aluno
+  const { id, ativo } = await request.json()
+  if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
+
+  // Verificar se o colaborador pertence a uma empresa do aluno autenticado
   const { data: colab } = await db().from('colaboradores').select('empresa_id').eq('id', id).single()
   if (!colab) return NextResponse.json({ error: 'Colaborador não encontrado' }, { status: 404 })
 
-  const { data: empresa } = await db().from('empresas').select('id').eq('id', colab.empresa_id).eq('aluno_id', aluno_id).single()
+  const { data: empresa } = await db().from('empresas').select('id').eq('id', colab.empresa_id).eq('aluno_id', alunoId).single()
   if (!empresa) return NextResponse.json({ error: 'Sem permissão para alterar este colaborador' }, { status: 403 })
 
   const { error } = await db().from('colaboradores').update({ ativo }).eq('id', id)
@@ -51,11 +57,22 @@ export async function PATCH(request: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
-// PUT body: { id, nome, email, celular, cargo }  → atualiza dados
+// PUT body: { id, nome, email, celular, cargo, empresa_id } → atualiza dados do colaborador
 export async function PUT(request: NextRequest) {
+  const alunoId = getAlunoId(request)
+  if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
   const body = await request.json()
   const { id } = body
   if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
+
+  // Verificar se o colaborador pertence a uma empresa do aluno autenticado
+  const { data: colab } = await db().from('colaboradores').select('empresa_id').eq('id', id).single()
+  if (!colab) return NextResponse.json({ error: 'Colaborador não encontrado' }, { status: 404 })
+
+  const { data: empresa } = await db().from('empresas').select('id').eq('id', colab.empresa_id).eq('aluno_id', alunoId).single()
+  if (!empresa) return NextResponse.json({ error: 'Sem permissão para atualizar este colaborador' }, { status: 403 })
+
   const allowedFields = ['nome', 'email', 'celular', 'cargo', 'empresa_id']
   const campos = Object.fromEntries(
     Object.entries(body).filter(([key]) => allowedFields.includes(key))

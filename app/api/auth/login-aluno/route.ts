@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import bcrypt from 'bcryptjs'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request)
+    const { allowed, retryAfterSec } = checkRateLimit(ip)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Muitas tentativas. Tente novamente em ${retryAfterSec} segundos.` },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
     const { email, password } = body
 
@@ -35,8 +46,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
     }
 
-    const senhaCorreta = aluno['senha'] || process.env.ALUNO_DEFAULT_PASSWORD || '123mudar'
-    const senhaOk = password === senhaCorreta
+    const senhaCorreta = aluno['senha'] || ''
+    if (!senhaCorreta) {
+      return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
+    }
+
+    // Verificar se a senha no banco já é um hash bcrypt (começa com $2b$ ou $2a$)
+    const isBcrypt = senhaCorreta.startsWith('$2b$') || senhaCorreta.startsWith('$2a$')
+    const senhaOk = isBcrypt
+      ? await bcrypt.compare(password, senhaCorreta)
+      : password === senhaCorreta
 
     if (!senhaOk) {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })

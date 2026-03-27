@@ -8,18 +8,18 @@ function getServiceClient() {
   )
 }
 
+function getAlunoId(request: NextRequest): string | null {
+  return request.cookies.get('sem-erro-aluno-id')?.value || null
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const alunoId = searchParams.get('aluno_id')
-
-    if (!alunoId) {
-      return NextResponse.json({ error: 'aluno_id obrigatório' }, { status: 400 })
-    }
+    const alunoId = getAlunoId(request)
+    if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const supabase = getServiceClient()
 
-    // Buscar empresas do aluno
+    // Buscar empresas do aluno autenticado
     const { data: empresas, error: empresasError } = await supabase
       .from('empresas')
       .select('id, nome_fantasia')
@@ -55,6 +55,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const alunoId = getAlunoId(request)
+    if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
     const body = await request.json()
 
     if (!body.empresa_id || !body.titulo) {
@@ -62,6 +65,19 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getServiceClient()
+
+    // Verificar que a empresa pertence ao aluno autenticado
+    const { data: empresa } = await supabase
+      .from('empresas')
+      .select('id')
+      .eq('id', body.empresa_id)
+      .eq('aluno_id', alunoId)
+      .single()
+
+    if (!empresa) {
+      return NextResponse.json({ error: 'Sem permissão para criar ação nesta empresa' }, { status: 403 })
+    }
+
     const { data, error } = await supabase.from('acoes_corretivas').insert([body]).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(data)
@@ -72,17 +88,19 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const alunoId = getAlunoId(request)
+    if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    const alunoId = searchParams.get('aluno_id')
 
-    if (!id || !alunoId) {
-      return NextResponse.json({ error: 'id e aluno_id obrigatórios' }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
     }
 
     const supabase = getServiceClient()
 
-    // Verificar se a ação pertence a uma empresa do aluno
+    // Verificar se a ação pertence a uma empresa do aluno autenticado
     const { data: acao } = await supabase
       .from('acoes_corretivas')
       .select('empresa_id')

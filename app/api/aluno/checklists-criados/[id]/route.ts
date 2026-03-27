@@ -12,12 +12,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
   const { id: checklistId } = await params
-  const { searchParams } = new URL(request.url)
-  const alunoId = searchParams.get('aluno_id')
 
-  if (!alunoId) return NextResponse.json({ error: 'aluno_id obrigatório' }, { status: 400 })
-
+  // Buscar apenas empresas do aluno autenticado
   const { data: empresas } = await db()
     .from('empresas')
     .select('id')
@@ -25,6 +25,7 @@ export async function GET(
 
   const empresaIds = (empresas || []).map((e: any) => e.id)
 
+  // Filtrar checklist pelo id E pelas empresas do aluno (garante ownership)
   const { data: checklist, error: clError } = await db()
     .from('checklists_futuros')
     .select('*, empresas(nome_fantasia), colaboradores(nome)')

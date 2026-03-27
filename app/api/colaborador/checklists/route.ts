@@ -35,19 +35,48 @@ export async function GET(request: NextRequest) {
     return NextResponse.json([])
   }
 
+  // Calcula o início do período atual para checklists recorrentes
+  function inicioPeriodo(recorrencia: string | null): string | null {
+    const agora = new Date()
+    if (recorrencia === 'diaria') {
+      agora.setHours(0, 0, 0, 0)
+      return agora.toISOString()
+    }
+    if (recorrencia === 'semanal') {
+      const dia = agora.getDay()
+      agora.setDate(agora.getDate() - dia)
+      agora.setHours(0, 0, 0, 0)
+      return agora.toISOString()
+    }
+    if (recorrencia === 'mensal') {
+      agora.setDate(1)
+      agora.setHours(0, 0, 0, 0)
+      return agora.toISOString()
+    }
+    return null
+  }
+
   // Buscar contagens para cada checklist
   const checklistsComContagem = await Promise.all(
     checklists.map(async (checklist) => {
+      const periodoInicio = inicioPeriodo(checklist.recorrencia ?? null)
+
+      let queryRespostas = supabase
+        .from('checklist_respostas')
+        .select('*', { count: 'exact', head: true })
+        .eq('checklist_futuro_id', checklist.id)
+        .eq('colaborador_id', colaborador_id)
+
+      if (periodoInicio) {
+        queryRespostas = queryRespostas.gte('created_at', periodoInicio)
+      }
+
       const [resItens, resRespostas] = await Promise.all([
         supabase
           .from('checklist_futuro_itens')
           .select('*', { count: 'exact', head: true })
           .eq('checklist_futuro_id', checklist.id),
-        supabase
-          .from('checklist_respostas')
-          .select('*', { count: 'exact', head: true })
-          .eq('checklist_futuro_id', checklist.id)
-          .eq('colaborador_id', colaborador_id),
+        queryRespostas,
       ])
 
       return {

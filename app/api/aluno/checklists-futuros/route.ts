@@ -9,13 +9,32 @@ function db() {
 }
 
 export async function GET(request: NextRequest) {
+  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
   const { searchParams } = new URL(request.url)
   const empresaId = searchParams.get('empresa_id')
   const checklistId = searchParams.get('checklist_id')
-  const alunoId = searchParams.get('aluno_id')
 
-  // Itens de um checklist específico
+  // Itens de um checklist específico — verificar ownership via empresa
   if (checklistId) {
+    const { data: checklist } = await db()
+      .from('checklists_futuros')
+      .select('id, empresa_id')
+      .eq('id', checklistId)
+      .single()
+
+    if (!checklist) return NextResponse.json({ error: 'Checklist não encontrado' }, { status: 404 })
+
+    const { data: empresa } = await db()
+      .from('empresas')
+      .select('id')
+      .eq('id', checklist.empresa_id)
+      .eq('aluno_id', alunoId)
+      .single()
+
+    if (!empresa) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+
     const { data, error } = await db()
       .from('checklist_futuro_itens')
       .select('id, titulo, ordem')
@@ -25,8 +44,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data || [])
   }
 
-  // Checklists de uma empresa
+  // Checklists de uma empresa — verificar que empresa pertence ao aluno
   if (empresaId) {
+    const { data: empresa } = await db()
+      .from('empresas')
+      .select('id')
+      .eq('id', empresaId)
+      .eq('aluno_id', alunoId)
+      .single()
+
+    if (!empresa) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+
     const { data, error } = await db()
       .from('checklists_futuros')
       .select('id, titulo')
@@ -36,24 +64,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data || [])
   }
 
-  // Todos os checklists das empresas do aluno
-  if (alunoId) {
-    const { data: empresas } = await db()
-      .from('empresas')
-      .select('id')
-      .eq('aluno_id', alunoId)
+  // Todos os checklists das empresas do aluno autenticado
+  const { data: empresas } = await db()
+    .from('empresas')
+    .select('id')
+    .eq('aluno_id', alunoId)
 
-    const empresaIds = (empresas || []).map((e: { id: string }) => e.id)
-    if (empresaIds.length === 0) return NextResponse.json([])
+  const empresaIds = (empresas || []).map((e: { id: string }) => e.id)
+  if (empresaIds.length === 0) return NextResponse.json([])
 
-    const { data, error } = await db()
-      .from('checklists_futuros')
-      .select('*, empresas(nome_fantasia), colaboradores(nome)')
-      .in('empresa_id', empresaIds)
-      .order('created_at', { ascending: false })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(data || [])
-  }
-
-  return NextResponse.json({ error: 'Parâmetro obrigatório: empresa_id, checklist_id ou aluno_id' }, { status: 400 })
+  const { data, error } = await db()
+    .from('checklists_futuros')
+    .select('*, empresas(nome_fantasia), colaboradores(nome)')
+    .in('empresa_id', empresaIds)
+    .order('created_at', { ascending: false })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data || [])
 }

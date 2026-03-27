@@ -8,121 +8,121 @@ function db() {
   )
 }
 
-// GET ?aluno_id=X[&empresa_id=Y][&data_inicio=Z][&data_fim=W][&resultado=conforme|nao_conforme]
+// GET [&empresa_id=Y][&data_inicio=Z][&data_fim=W][&resultado=conforme|nao_conforme]
 export async function GET(request: NextRequest) {
   try {
-  const { searchParams } = new URL(request.url)
-  const alunoId = searchParams.get('aluno_id')
-  if (!alunoId) return NextResponse.json({ error: 'aluno_id obrigatório' }, { status: 400 })
+    const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+    if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  // 1. Empresas do aluno
-  const { data: empresas } = await db()
-    .from('empresas')
-    .select('id, nome_fantasia')
-    .eq('aluno_id', alunoId)
+    const { searchParams } = new URL(request.url)
 
-  const empresaIds = (empresas || []).map((e: any) => e.id)
-  if (empresaIds.length === 0) return NextResponse.json({ empresas: [], respostas: [] })
+    // 1. Empresas do aluno autenticado
+    const { data: empresas } = await db()
+      .from('empresas')
+      .select('id, nome_fantasia')
+      .eq('aluno_id', alunoId)
 
-  // 2. Filtro opcional por empresa_id
-  const empresaIdFiltro = searchParams.get('empresa_id')
-  const empresaIdsFiltrados = empresaIdFiltro
-    ? empresaIds.filter((id: string) => id === empresaIdFiltro)
-    : empresaIds
+    const empresaIds = (empresas || []).map((e: any) => e.id)
+    if (empresaIds.length === 0) return NextResponse.json({ empresas: [], respostas: [] })
 
-  if (empresaIdsFiltrados.length === 0) return NextResponse.json({ empresas: empresas || [], respostas: [] })
+    // 2. Filtro opcional por empresa_id (deve pertencer ao aluno)
+    const empresaIdFiltro = searchParams.get('empresa_id')
+    const empresaIdsFiltrados = empresaIdFiltro
+      ? empresaIds.filter((id: string) => id === empresaIdFiltro)
+      : empresaIds
 
-  // 3. Checklists dessas empresas (com filtro de data, se informado)
-  const dataInicio = searchParams.get('data_inicio')
-  const dataFim = searchParams.get('data_fim')
+    if (empresaIdsFiltrados.length === 0) return NextResponse.json({ empresas: empresas || [], respostas: [] })
 
-  let checklistsQuery = db()
-    .from('checklists_futuros')
-    .select('id, titulo, empresa_id, colaborador_id, created_at')
-    .in('empresa_id', empresaIdsFiltrados)
+    // 3. Checklists dessas empresas (com filtro de data, se informado)
+    const dataInicio = searchParams.get('data_inicio')
+    const dataFim = searchParams.get('data_fim')
 
-  if (dataInicio) checklistsQuery = checklistsQuery.gte('created_at', dataInicio)
-  if (dataFim) checklistsQuery = checklistsQuery.lte('created_at', dataFim + 'T23:59:59')
+    let checklistsQuery = db()
+      .from('checklists_futuros')
+      .select('id, titulo, empresa_id, colaborador_id, created_at')
+      .in('empresa_id', empresaIdsFiltrados)
 
-  const { data: checklists } = await checklistsQuery
+    if (dataInicio) checklistsQuery = checklistsQuery.gte('created_at', dataInicio)
+    if (dataFim) checklistsQuery = checklistsQuery.lte('created_at', dataFim + 'T23:59:59')
 
-  const checklistIds = (checklists || []).map((c: any) => c.id)
-  if (checklistIds.length === 0) return NextResponse.json({ empresas: empresas || [], respostas: [] })
+    const { data: checklists } = await checklistsQuery
 
-  // 4. Respostas (sem filtro de data — checklist_respostas não tem created_at)
-  const query = db()
-    .from('checklist_respostas')
-    .select('id, resposta, observacao, item_id, checklist_futuro_id')
-    .in('checklist_futuro_id', checklistIds)
-    .order('id', { ascending: false })
+    const checklistIds = (checklists || []).map((c: any) => c.id)
+    if (checklistIds.length === 0) return NextResponse.json({ empresas: empresas || [], respostas: [] })
 
-  const { data: respostasRaw, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // 4. Respostas
+    const query = db()
+      .from('checklist_respostas')
+      .select('id, resposta, observacao, item_id, checklist_futuro_id')
+      .in('checklist_futuro_id', checklistIds)
+      .order('id', { ascending: false })
 
-  if (!respostasRaw || respostasRaw.length === 0) {
-    return NextResponse.json({ empresas: empresas || [], respostas: [] })
-  }
+    const { data: respostasRaw, error } = await query
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 5. Itens dos checklists
-  const itemIds = [...new Set(respostasRaw.map((r: any) => r.item_id))]
-  const { data: itens } = await db()
-    .from('checklist_futuro_itens')
-    .select('id, titulo')
-    .in('id', itemIds)
-
-  // 6. Colaboradores
-  const colaboradorIds = [...new Set(
-    (checklists || []).filter((c: any) => c.colaborador_id).map((c: any) => c.colaborador_id)
-  )]
-  const { data: colaboradores } = colaboradorIds.length > 0
-    ? await db().from('colaboradores').select('id, nome').in('id', colaboradorIds)
-    : { data: [] }
-
-  // 7. Montar mapas
-  const itensMap = Object.fromEntries((itens || []).map((i: any) => [i.id, i]))
-  const checklistsMap = Object.fromEntries((checklists || []).map((c: any) => [c.id, c]))
-  const empresasMap = Object.fromEntries((empresas || []).map((e: any) => [e.id, e]))
-  const colaboradoresMap = Object.fromEntries((colaboradores || []).map((c: any) => [c.id, c]))
-
-  // 8. Mapear e filtrar resultado
-  const resultado = searchParams.get('resultado')
-
-  let respostasMapeadas = respostasRaw.map((r: any) => {
-    const checklist = checklistsMap[r.checklist_futuro_id]
-    const item = itensMap[r.item_id]
-    const empresa = checklist ? empresasMap[checklist.empresa_id] : null
-    const colaborador = checklist?.colaborador_id ? colaboradoresMap[checklist.colaborador_id] : null
-
-    const resultadoMapeado: string =
-      r.resposta === 'sim' ? 'conforme' :
-      r.resposta === 'nao' ? 'nao_conforme' : 'na'
-
-    const dataFormatada = checklist?.created_at
-      ? new Date(checklist.created_at).toLocaleDateString('pt-BR')
-      : ''
-
-    return {
-      id: r.id,
-      empresa: empresa?.nome_fantasia || 'Desconhecida',
-      empresa_id: empresa?.id || null,
-      checklist: checklist?.titulo || 'Desconhecido',
-      pergunta: item?.titulo || 'Item desconhecido',
-      resposta: r.resposta === 'sim' ? 'Sim' : r.resposta === 'nao' ? 'Não' : 'N/A',
-      resultado: resultadoMapeado,
-      responsavel: colaborador?.nome || '-',
-      data: dataFormatada,
-      observacao: r.observacao || ''
+    if (!respostasRaw || respostasRaw.length === 0) {
+      return NextResponse.json({ empresas: empresas || [], respostas: [] })
     }
-  })
 
-  if (resultado && resultado !== 'todos') {
-    respostasMapeadas = respostasMapeadas.filter((r: any) => r.resultado === resultado)
-  }
+    // 5. Itens dos checklists
+    const itemIds = [...new Set(respostasRaw.map((r: any) => r.item_id))]
+    const { data: itens } = await db()
+      .from('checklist_futuro_itens')
+      .select('id, titulo')
+      .in('id', itemIds)
 
-  return NextResponse.json({ empresas: empresas || [], respostas: respostasMapeadas })
+    // 6. Colaboradores
+    const colaboradorIds = [...new Set(
+      (checklists || []).filter((c: any) => c.colaborador_id).map((c: any) => c.colaborador_id)
+    )]
+    const { data: colaboradores } = colaboradorIds.length > 0
+      ? await db().from('colaboradores').select('id, nome').in('id', colaboradorIds)
+      : { data: [] }
+
+    // 7. Montar mapas
+    const itensMap = Object.fromEntries((itens || []).map((i: any) => [i.id, i]))
+    const checklistsMap = Object.fromEntries((checklists || []).map((c: any) => [c.id, c]))
+    const empresasMap = Object.fromEntries((empresas || []).map((e: any) => [e.id, e]))
+    const colaboradoresMap = Object.fromEntries((colaboradores || []).map((c: any) => [c.id, c]))
+
+    // 8. Mapear e filtrar resultado
+    const resultado = searchParams.get('resultado')
+
+    let respostasMapeadas = respostasRaw.map((r: any) => {
+      const checklist = checklistsMap[r.checklist_futuro_id]
+      const item = itensMap[r.item_id]
+      const empresa = checklist ? empresasMap[checklist.empresa_id] : null
+      const colaborador = checklist?.colaborador_id ? colaboradoresMap[checklist.colaborador_id] : null
+
+      const resultadoMapeado: string =
+        r.resposta === 'sim' ? 'conforme' :
+        r.resposta === 'nao' ? 'nao_conforme' : 'na'
+
+      const dataFormatada = checklist?.created_at
+        ? new Date(checklist.created_at).toLocaleDateString('pt-BR')
+        : ''
+
+      return {
+        id: r.id,
+        empresa: empresa?.nome_fantasia || 'Desconhecida',
+        empresa_id: empresa?.id || null,
+        checklist: checklist?.titulo || 'Desconhecido',
+        pergunta: item?.titulo || 'Item desconhecido',
+        resposta: r.resposta === 'sim' ? 'Sim' : r.resposta === 'nao' ? 'Não' : 'N/A',
+        resultado: resultadoMapeado,
+        responsavel: colaborador?.nome || '-',
+        data: dataFormatada,
+        observacao: r.observacao || ''
+      }
+    })
+
+    if (resultado && resultado !== 'todos') {
+      respostasMapeadas = respostasMapeadas.filter((r: any) => r.resultado === resultado)
+    }
+
+    return NextResponse.json({ empresas: empresas || [], respostas: respostasMapeadas })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno'
-    console.error('[api/aluno/respostas]', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

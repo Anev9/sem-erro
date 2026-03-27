@@ -10,21 +10,23 @@ function db() {
 }
 
 export async function GET(request: NextRequest) {
+  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
   const { searchParams } = new URL(request.url)
-  const alunoId = searchParams.get('aluno_id')
   const dataInicio = searchParams.get('data_inicio')
   const dataFim = searchParams.get('data_fim')
   const empresaId = searchParams.get('empresa_id')
   const cargo = searchParams.get('cargo')
 
-  if (!alunoId || !dataInicio || !dataFim) {
+  if (!dataInicio || !dataFim) {
     return NextResponse.json({ error: 'Parâmetros obrigatórios ausentes' }, { status: 400 })
   }
 
   const supabase = db()
   const vazio = { departamentos: [], totais: { totalRespostas: 0, conformes: 0, naoConformes: 0, taxaMedia: 0 } }
 
-  // Buscar empresas do aluno
+  // Buscar empresas do aluno autenticado
   let empresasQuery = supabase.from('empresas').select('id').eq('aluno_id', alunoId)
   if (empresaId) empresasQuery = empresasQuery.eq('id', empresaId)
   const { data: empresas } = await empresasQuery
@@ -48,7 +50,7 @@ export async function GET(request: NextRequest) {
   const cargoMap: Record<string, string> = {}
   ;(colaboradores || []).forEach((c: any) => { cargoMap[c.id] = c.cargo })
 
-  // Buscar checklists no período (checklist_respostas não tem created_at)
+  // Buscar checklists no período
   const { data: checklists } = await supabase
     .from('checklists_futuros')
     .select('id')

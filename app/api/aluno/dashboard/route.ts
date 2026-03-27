@@ -3,14 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const alunoId = searchParams.get('aluno_id')
+    const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+    if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-    if (!alunoId) {
-      return NextResponse.json({ error: 'aluno_id obrigatório' }, { status: 400 })
-    }
-
-    // Service role bypassa RLS — seguro pois é server-side
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!

@@ -12,6 +12,11 @@ function db() {
 // POST body: { email, senha, nome, celular, cargo, empresa_id }
 export async function POST(request: NextRequest) {
   try {
+    const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+    if (!alunoId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    }
+
     const { email, senha, nome, celular, cargo, empresa_id } = await request.json()
 
     if (!email || !senha || !nome || !cargo || !empresa_id) {
@@ -22,6 +27,18 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = db()
+
+    // Verificar que a empresa pertence ao aluno logado
+    const { data: empresa } = await supabase
+      .from('empresas')
+      .select('id')
+      .eq('id', empresa_id)
+      .eq('aluno_id', alunoId)
+      .maybeSingle()
+
+    if (!empresa) {
+      return NextResponse.json({ error: 'Sem permissão para adicionar colaborador nesta empresa' }, { status: 403 })
+    }
 
     // Verificar se o colaborador já está cadastrado nesta empresa específica
     const { data: existingColab } = await supabase

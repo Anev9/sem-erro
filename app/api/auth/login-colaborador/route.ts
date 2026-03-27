@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 function db() {
   return createClient(
@@ -9,10 +10,19 @@ function db() {
   )
 }
 
-const DEFAULT_PASSWORD = '123mudar'
+const DEFAULT_PASSWORD = process.env.COLABORADOR_DEFAULT_PASSWORD || ''
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request)
+    const { allowed, retryAfterSec } = checkRateLimit(ip)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Muitas tentativas. Tente novamente em ${retryAfterSec} segundos.` },
+        { status: 429 }
+      )
+    }
+
     const { email, password } = await request.json()
 
     if (!email || !password) {
@@ -125,11 +135,11 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'Conta de acesso com problema. Contate o administrador.' }, { status: 500 })
               }
             } else {
-              return NextResponse.json({ error: 'E-mail já cadastrado. Tente com a senha: 123mudar' }, { status: 401 })
+              return NextResponse.json({ error: 'E-mail já cadastrado. Tente com a senha padrão.' }, { status: 401 })
             }
           } else {
             console.error('[login-colaborador] erro ao criar conta:', createError.message)
-            return NextResponse.json({ error: 'Não foi possível criar a conta. Tente com a senha: 123mudar' }, { status: 500 })
+            return NextResponse.json({ error: 'Não foi possível criar a conta. Tente com a senha padrão.' }, { status: 500 })
           }
         } else {
           await supabase.from('colaboradores').update({ auth_id: created.user!.id }).eq('id', colaborador.id)

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 function db() {
@@ -9,8 +9,16 @@ function db() {
   )
 }
 
+function isAdmin(request: NextRequest): boolean {
+  return !!request.cookies.get('sem-erro-admin')?.value
+}
+
 // GET → lista todos os colaboradores de todas as empresas
-export async function GET() {
+export async function GET(request: NextRequest) {
+  if (!isAdmin(request)) {
+    return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 })
+  }
+
   const { data, error } = await db()
     .from('colaboradores')
     .select('*, empresas(nome_fantasia)')

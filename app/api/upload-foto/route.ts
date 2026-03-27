@@ -9,6 +9,9 @@ function db() {
   )
 }
 
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -17,6 +20,20 @@ export async function POST(request: NextRequest) {
 
     if (!file || !path) {
       return NextResponse.json({ error: 'file e path obrigatórios' }, { status: 400 })
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Tipo de arquivo não permitido. Use JPEG, PNG, GIF ou WebP.' },
+        { status: 400 }
+      )
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: 'Arquivo muito grande. Tamanho máximo: 5 MB.' },
+        { status: 400 }
+      )
     }
 
     const supabase = db()

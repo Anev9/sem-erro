@@ -8,11 +8,10 @@ function db() {
   )
 }
 
-// GET ?aluno_id=X  → lista checklists com empresas/colaboradores
+// GET → lista checklists com empresas/colaboradores do aluno autenticado
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const alunoId = searchParams.get('aluno_id')
-  if (!alunoId) return NextResponse.json({ error: 'aluno_id obrigatório' }, { status: 400 })
+  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const { data: empresas } = await db()
     .from('empresas')
