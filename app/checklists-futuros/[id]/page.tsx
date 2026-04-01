@@ -90,7 +90,7 @@ export default function DetalhesChecklistFuturoPage() {
         return
       }
 
-      setChecklist(checklistData)
+      setChecklist(checklistData as unknown as ChecklistFuturo)
 
       // Buscar itens
       const { data: itensData, error: itensError } = await supabase
