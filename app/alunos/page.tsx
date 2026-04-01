@@ -9,7 +9,7 @@ interface Aluno {
   clientes: string | null
   'e-mail': string | null
   telefone: string | null
-  created_at: string
+  created_at: string | null
 }
 
 export default function AlunosPage() {
