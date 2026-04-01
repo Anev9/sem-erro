@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 5. Itens dos checklists
-    const itemIds = [...new Set((respostasRaw as Resposta[]).map((r) => r.item_id))]
+    const itemIds = [...new Set((respostasRaw as Resposta[]).map((r) => r.item_id).filter((id): id is string => id !== null))]
     const { data: itens } = await db()
       .from('checklist_futuro_itens')
       .select('id, titulo')
