@@ -96,9 +96,9 @@ export async function GET(request: NextRequest) {
     const resultado = searchParams.get('resultado')
 
     let respostasMapeadas = (respostasRaw as Resposta[]).map((r) => {
-      const checklist = checklistsMap[r.checklist_futuro_id]
-      const item = itensMap[r.item_id]
-      const empresa = checklist ? empresasMap[checklist.empresa_id] : null
+      const checklist = r.checklist_futuro_id ? checklistsMap[r.checklist_futuro_id] : null
+      const item = r.item_id ? itensMap[r.item_id] : null
+      const empresa = checklist?.empresa_id ? empresasMap[checklist.empresa_id] : null
       const colaborador = checklist?.colaborador_id ? colaboradoresMap[checklist.colaborador_id] : null
 
       const resultadoMapeado: string =
