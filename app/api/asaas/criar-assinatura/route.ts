@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   try {
     const parsed = criarAssinaturaSchema.safeParse(await request.json())
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
     }
     const { nome, email, telefone, cnpj, nomeEmpresa, plano } = parsed.data
     const planoInfo = planoValores[plano ?? 'growth']
