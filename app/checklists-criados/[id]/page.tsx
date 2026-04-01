@@ -165,6 +165,7 @@ export default function DetalhesChecklistPage() {
   const formatarData = (d: string) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
 
   function exportarPDF() {
+    if (!checklist) return
     const labelResposta = { sim: '✅ Conforme', nao: '❌ Não Conforme', na: '➖ N/A', null: '⬜ Sem resposta' }
     const conteudo = `
       <html>
