@@ -56,7 +56,7 @@ export default function EditarChecklistPage() {
         .from('checklists_futuros')
         .select('*')
         .eq('id', id)
-        .eq('aluno_id', alunoId)
+        .eq('aluno_id', Number(alunoId))
         .single()
 
       if (error || !checklist) {

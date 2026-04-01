@@ -79,7 +79,7 @@ export default function DetalhesChecklistFuturoPage() {
           colaboradores ( nome, cargo )
         `)
         .eq('id', checklistId)
-        .eq('aluno_id', userId)
+        .eq('aluno_id', Number(userId))
         .single()
 
       if (checklistError || !checklistData) {
