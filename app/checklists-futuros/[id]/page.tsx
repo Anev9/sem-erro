@@ -9,18 +9,20 @@ import { toast } from 'sonner'
 interface ChecklistFuturo {
   id: string
   nome: string
-  descricao?: string
-  proxima_execucao?: string
+  descricao?: string | null
+  proxima_execucao?: string | null
   status: string
-  tipo_negocio?: string
-  departamento?: string
+  tipo_negocio?: string | null
+  departamento?: string | null
   recorrencia?: string | null
   dias_tolerancia?: number | null
-  aluno_id: string
-  empresa_id?: string
-  colaborador_id?: string
-  empresas?: { nome_fantasia: string }
-  colaboradores?: { nome: string; cargo?: string }
+  aluno_id: number | null
+  empresa_id?: string | null
+  colaborador_id?: string | null
+  data_inicio?: string | null
+  data_fim?: string | null
+  empresas?: { nome_fantasia: string } | null
+  colaboradores?: { nome: string; cargo?: string | null } | null
 }
 
 interface Item {
