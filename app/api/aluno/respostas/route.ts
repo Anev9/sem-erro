@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const { data: empresas } = await db()
       .from('empresas')
       .select('id, nome_fantasia')
-      .eq('aluno_id', alunoId)
+      .eq('aluno_id', Number(alunoId))
 
     const empresaIds = (empresas as Empresa[] || []).map((e) => e.id)
     if (empresaIds.length === 0) return NextResponse.json({ empresas: [], respostas: [] })
