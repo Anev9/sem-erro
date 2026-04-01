@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
   const feed: Array<{ tipo: string; descricao: string; data: string; checklist?: string }> = []
 
   for (const cl of (checklistsRecentes || [])) {
-    const empresa = (cl.empresas as { nome_fantasia: string } | null)?.nome_fantasia || ''
+    const empresaRel = cl.empresas as { nome_fantasia: string }[] | { nome_fantasia: string } | null
+    const empresa = (Array.isArray(empresaRel) ? empresaRel[0]?.nome_fantasia : empresaRel?.nome_fantasia) || ''
     feed.push({
       tipo: 'checklist',
       descricao: `Checklist "${cl.titulo}" criado${empresa ? ` para ${empresa}` : ''}`,
