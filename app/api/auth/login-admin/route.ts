@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { loginSchema } from '@/lib/schemas'
+import { logger } from '@/lib/logger'
 
 function serviceDb() {
   return createClient(
@@ -28,11 +30,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { email, password } = await request.json()
-    if (!email || !password) {
-      return NextResponse.json({ error: 'E-mail e senha são obrigatórios' }, { status: 400 })
+    const parsed = loginSchema.safeParse(await request.json())
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
     }
-
+    const { email, password } = parsed.data
     const emailNorm = email.toLowerCase().trim()
 
     if (!getAdminEmails().includes(emailNorm)) {
@@ -41,9 +43,16 @@ export async function POST(request: NextRequest) {
 
     const db = serviceDb()
 
-    // Verificar se o usuário já existe no Supabase Auth
-    const { data: authList } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 })
-    const existingUser = authList?.users?.find((u) => u.email?.toLowerCase() === emailNorm)
+    // Verificar se o usuário já existe no Supabase Auth (paginado, sem carregar tudo na memória)
+    let existingUser: { id: string; email?: string } | undefined
+    let page = 1
+    while (page <= 10) {
+      const { data: authList } = await db.auth.admin.listUsers({ page, perPage: 100 })
+      const users = authList?.users ?? []
+      existingUser = users.find((u) => u.email?.toLowerCase() === emailNorm)
+      if (existingUser || users.length < 100) break
+      page++
+    }
 
     let userId: string | undefined = existingUser?.id
 
@@ -79,18 +88,30 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Montar resposta com cookie de autenticação admin
-    const response = NextResponse.json({ isAdmin: true, profile })
-    response.cookies.set('sem-erro-admin', '1', {
-      httpOnly: true,
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 60 * 60 * 24, // 24 horas
+    // Obter JWT do Supabase Auth
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data: session, error: signInError } = await anonClient.auth.signInWithPassword({
+      email: emailNorm,
+      password,
     })
+    if (signInError || !session?.session?.access_token) {
+      logger.error('login-admin', 'Falha ao obter sessão JWT', signInError?.message)
+      return NextResponse.json({ error: 'Erro ao iniciar sessão. Tente novamente.' }, { status: 500 })
+    }
+
+    const isProd = process.env.NODE_ENV === 'production'
+    const cookieOpts = { httpOnly: true, sameSite: 'lax' as const, path: '/', secure: isProd }
+    const response = NextResponse.json({ isAdmin: true, profile })
+    response.cookies.set('sem-erro-token', session.session.access_token, { ...cookieOpts, maxAge: 60 * 60 })
+    response.cookies.set('sem-erro-refresh-token', session.session.refresh_token, { ...cookieOpts, maxAge: 60 * 60 * 24 * 30 })
+    response.cookies.set('sem-erro-admin', '1', { ...cookieOpts, maxAge: 60 * 60 * 24 * 30 })
     return response
 
   } catch (err) {
-    console.error('login-admin error:', err)
+    logger.error('login-admin', 'Erro interno', err)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

@@ -22,6 +22,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'file e path obrigatórios' }, { status: 400 })
     }
 
+    // Bloquear path traversal e caracteres inválidos
+    if (path.includes('..') || !/^[\w\-./]+$/.test(path)) {
+      return NextResponse.json({ error: 'Caminho inválido' }, { status: 400 })
+    }
+
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json(
         { error: 'Tipo de arquivo não permitido. Use JPEG, PNG, GIF ou WebP.' },

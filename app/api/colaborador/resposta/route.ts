@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 function db() {
   return createClient(
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno'
-    console.error('[resposta]', message)
+    logger.error('colaborador/resposta', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

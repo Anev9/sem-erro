@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface PreenchimentoEmpresa {
   id: number;
@@ -44,7 +45,7 @@ export default function RelatorioPreenchimentoEmpresas() {
   };
 
   const exportarRelatorio = () => {
-    alert('Exportando relatório...');
+    toast.info('Exportando relatório...');
   };
 
   const totalGeral = empresas.reduce((acc, e) => acc + e.totalChecklists, 0);

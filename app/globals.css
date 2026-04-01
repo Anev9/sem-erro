@@ -89,3 +89,33 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #b42b1d;
 }
+
+/* ===== MODO ESCURO ===== */
+html[data-theme="dark"] {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Re-inverte imagens para não ficarem distorcidas */
+html[data-theme="dark"] img,
+html[data-theme="dark"] video,
+html[data-theme="dark"] canvas,
+html[data-theme="dark"] svg image,
+html[data-theme="dark"] [data-no-invert] {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* ===== MODO ESCURO - scrollbar ===== */
+html[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+/* ===== VARIÁVEIS DE TEMA (base para futuras expansões) ===== */
+:root {
+  --color-brand: #f97316;
+  --color-brand-dark: #ea580c;
+  --color-nav: #334155;
+  --transition-theme: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}

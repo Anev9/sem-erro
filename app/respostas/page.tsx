@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface Filtros {
   empresa_id: string;
@@ -82,7 +83,7 @@ export default function TodasRespostas() {
       setMostrarResultados(true);
     } catch (err) {
       console.error('Erro ao carregar respostas:', err);
-      alert('Erro ao carregar respostas. Tente novamente.');
+      toast.error('Erro ao carregar respostas. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -94,7 +95,7 @@ export default function TodasRespostas() {
   const taxaConformidade = totalRespostas > 0 ? Math.round((conformes / totalRespostas) * 100) : 0;
 
   const exportarExcel = () => {
-    alert('Função de exportar para Excel será implementada!');
+    toast.info('Função de exportar para Excel será implementada!');
   };
 
   const getBadgeResultado = (resultado: string) => {

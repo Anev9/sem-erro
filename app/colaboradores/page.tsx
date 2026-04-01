@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import {
   ArrowLeft,
   Users,
@@ -71,8 +72,8 @@ export default function ColaboradoresPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, ativo: false, aluno_id: alunoId })
     })
-    if (!res.ok) { alert('Erro ao excluir colaborador'); return }
-    alert('Colaborador excluído com sucesso!')
+    if (!res.ok) { toast.error('Erro ao excluir colaborador'); return }
+    toast.success('Colaborador excluído com sucesso!')
     if (alunoId) carregarColaboradores(alunoId)
   }
 
@@ -83,8 +84,8 @@ export default function ColaboradoresPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ colaborador_id: id })
     })
-    if (!res.ok) { alert('Erro ao resetar senha'); return }
-    alert(`Senha de ${nome} resetada para "123mudar" com sucesso!`)
+    if (!res.ok) { toast.error('Erro ao resetar senha'); return }
+    toast.success(`Senha de ${nome} resetada para "123mudar" com sucesso!`)
   }
 
   return (

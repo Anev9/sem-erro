@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface PerformanceDepartamento {
   departamento: string;
@@ -86,7 +87,7 @@ export default function RelatorioPerformanceDepartamento() {
       setMostrarResultados(true);
     } catch (error) {
       console.error(error);
-      alert('Erro ao carregar relatório. Tente novamente.');
+      toast.error('Erro ao carregar relatório. Tente novamente.');
     } finally {
       setCarregando(false);
     }

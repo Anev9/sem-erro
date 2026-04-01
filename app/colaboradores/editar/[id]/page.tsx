@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { toast } from 'sonner'
 import {
   ArrowLeft,
   Users,
@@ -56,7 +57,7 @@ export default function EditarColaborador() {
       const data = lista.find((c: any) => c.id === id)
 
       if (!data) {
-        alert('Colaborador não encontrado ou acesso negado.')
+        toast.error('Colaborador não encontrado ou acesso negado.')
         router.push('/colaboradores')
         return
       }
@@ -69,7 +70,7 @@ export default function EditarColaborador() {
       })
     } catch (error) {
       console.error('Erro ao carregar colaborador:', error)
-      alert('Erro ao carregar dados do colaborador')
+      toast.error('Erro ao carregar dados do colaborador')
     } finally {
       setLoadingData(false)
     }
@@ -93,12 +94,12 @@ export default function EditarColaborador() {
       })
       if (!res.ok) throw new Error('Erro ao atualizar')
 
-      alert('✅ Colaborador atualizado com sucesso!')
+      toast.success('✅ Colaborador atualizado com sucesso!')
       router.push('/colaboradores')
 
     } catch (error: any) {
       console.error('Erro ao atualizar:', error)
-      alert('Erro: ' + error.message)
+      toast.error('Erro: ' + error.message)
     } finally {
       setLoading(false)
     }

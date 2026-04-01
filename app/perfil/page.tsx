@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import {
   ArrowLeft,
   User,
@@ -11,7 +12,9 @@ import {
   Building2,
   Save,
   Lock,
-  CheckCircle
+  CheckCircle,
+  Camera,
+  Loader2
 } from 'lucide-react'
 
 interface Colaborador {
@@ -22,6 +25,7 @@ interface Colaborador {
   cargo?: string
   empresa_id: string
   empresa_nome?: string
+  foto_url?: string | null
 }
 
 export default function PerfilPage() {
@@ -30,6 +34,7 @@ export default function PerfilPage() {
   const [loading, setLoading] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [sucesso, setSucesso] = useState(false)
+  const [uploadingFoto, setUploadingFoto] = useState(false)
   const [formData, setFormData] = useState({
     nome: '',
     celular: ''
@@ -78,6 +83,7 @@ export default function PerfilPage() {
         cargo: user.cargo,
         empresa_id: user.empresa_id,
         empresa_nome: user.empresa_nome,
+        foto_url: user.foto_url || null,
       })
       setFormData({
         nome: user.nome,
@@ -88,6 +94,40 @@ export default function PerfilPage() {
       window.location.href = '/login'
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !colaborador) return
+
+    setUploadingFoto(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('path', `colaboradores/${colaborador.id}/avatar`)
+
+      const res = await fetch('/api/upload-foto', { method: 'POST', body: form })
+      if (!res.ok) throw new Error('Erro ao enviar foto')
+      const { publicUrl } = await res.json()
+
+      await fetch('/api/colaborador/perfil', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: colaborador.nome, celular: colaborador.celular, foto_url: publicUrl }),
+      })
+
+      setColaborador(prev => prev ? { ...prev, foto_url: publicUrl } : prev)
+      try {
+        const userStr = localStorage.getItem('user')
+        if (userStr) localStorage.setItem('user', JSON.stringify({ ...JSON.parse(userStr), foto_url: publicUrl }))
+      } catch {}
+      toast.success('Foto atualizada com sucesso!')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar foto')
+    } finally {
+      setUploadingFoto(false)
+      e.target.value = ''
     }
   }
 
@@ -128,7 +168,7 @@ export default function PerfilPage() {
       setTimeout(() => setSucesso(false), 3000)
     } catch (error: any) {
       console.error('Erro ao salvar:', error)
-      alert('Erro ao salvar perfil: ' + error.message)
+      toast.error('Erro ao salvar perfil: ' + error.message)
     } finally {
       setSalvando(false)
     }
@@ -178,9 +218,32 @@ export default function PerfilPage() {
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-            <div style={{ width: '4rem', height: '4rem', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <User size={32} style={{ color: 'white' }} />
+            <div
+              style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}
+              onClick={() => document.getElementById('foto-input')?.click()}
+              title="Clique para trocar a foto"
+            >
+              {colaborador.foto_url ? (
+                <img
+                  src={colaborador.foto_url}
+                  alt={colaborador.nome}
+                  style={{ width: '4rem', height: '4rem', borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.5)' }}
+                />
+              ) : (
+                <div style={{ width: '4rem', height: '4rem', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: 'white', fontSize: '1.5rem', fontWeight: 'bold' }}>
+                    {colaborador.nome.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#2563eb', borderRadius: '50%', width: '1.4rem', height: '1.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white' }}>
+                {uploadingFoto
+                  ? <Loader2 size={10} style={{ color: 'white', animation: 'spin 1s linear infinite' }} />
+                  : <Camera size={10} style={{ color: 'white' }} />
+                }
+              </div>
             </div>
+            <input id="foto-input" type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleFotoUpload} />
             <div>
               <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'white', margin: 0 }}>
                 {colaborador.nome}

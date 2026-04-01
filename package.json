@@ -6,18 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "types": "supabase gen types typescript --project-id cyqiagacrmrsazhvrbgb > lib/database.types.ts"
   },
   "dependencies": {
-    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.93.3",
     "bcryptjs": "^3.0.3",
-    "dotenv": "^17.2.3",
     "lucide-react": "^0.562.0",
-    "next": "16.1.4",
+    "next": "^16.2.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-icons": "^5.5.0"
+    "react-icons": "^5.5.0",
+    "sonner": "^2.0.7",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

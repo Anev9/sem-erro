@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/database.types'
 
 function db() {
-  return createClient(
+  return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 }
+
+type Empresa = Pick<Database['public']['Tables']['empresas']['Row'], 'id' | 'nome_fantasia'>
+type ChecklistFuturo = Pick<Database['public']['Tables']['checklists_futuros']['Row'], 'id' | 'titulo' | 'empresa_id' | 'colaborador_id' | 'created_at'>
+type Resposta = Pick<Database['public']['Tables']['checklist_respostas']['Row'], 'id' | 'resposta' | 'observacao' | 'item_id' | 'checklist_futuro_id'>
+type Item = Pick<Database['public']['Tables']['checklist_futuro_itens']['Row'], 'id' | 'titulo'>
+type Colaborador = Pick<Database['public']['Tables']['colaboradores']['Row'], 'id' | 'nome'>
 
 // GET [&empresa_id=Y][&data_inicio=Z][&data_fim=W][&resultado=conforme|nao_conforme]
 export async function GET(request: NextRequest) {
@@ -22,13 +29,13 @@ export async function GET(request: NextRequest) {
       .select('id, nome_fantasia')
       .eq('aluno_id', alunoId)
 
-    const empresaIds = (empresas || []).map((e: any) => e.id)
+    const empresaIds = (empresas as Empresa[] || []).map((e) => e.id)
     if (empresaIds.length === 0) return NextResponse.json({ empresas: [], respostas: [] })
 
     // 2. Filtro opcional por empresa_id (deve pertencer ao aluno)
     const empresaIdFiltro = searchParams.get('empresa_id')
     const empresaIdsFiltrados = empresaIdFiltro
-      ? empresaIds.filter((id: string) => id === empresaIdFiltro)
+      ? empresaIds.filter((id) => id === empresaIdFiltro)
       : empresaIds
 
     if (empresaIdsFiltrados.length === 0) return NextResponse.json({ empresas: empresas || [], respostas: [] })
@@ -47,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     const { data: checklists } = await checklistsQuery
 
-    const checklistIds = (checklists || []).map((c: any) => c.id)
+    const checklistIds = (checklists as ChecklistFuturo[] || []).map((c) => c.id)
     if (checklistIds.length === 0) return NextResponse.json({ empresas: empresas || [], respostas: [] })
 
     // 4. Respostas
@@ -65,7 +72,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 5. Itens dos checklists
-    const itemIds = [...new Set(respostasRaw.map((r: any) => r.item_id))]
+    const itemIds = [...new Set((respostasRaw as Resposta[]).map((r) => r.item_id))]
     const { data: itens } = await db()
       .from('checklist_futuro_itens')
       .select('id, titulo')
@@ -73,22 +80,22 @@ export async function GET(request: NextRequest) {
 
     // 6. Colaboradores
     const colaboradorIds = [...new Set(
-      (checklists || []).filter((c: any) => c.colaborador_id).map((c: any) => c.colaborador_id)
+      (checklists as ChecklistFuturo[] || []).filter((c) => c.colaborador_id).map((c) => c.colaborador_id as string)
     )]
     const { data: colaboradores } = colaboradorIds.length > 0
       ? await db().from('colaboradores').select('id, nome').in('id', colaboradorIds)
       : { data: [] }
 
     // 7. Montar mapas
-    const itensMap = Object.fromEntries((itens || []).map((i: any) => [i.id, i]))
-    const checklistsMap = Object.fromEntries((checklists || []).map((c: any) => [c.id, c]))
-    const empresasMap = Object.fromEntries((empresas || []).map((e: any) => [e.id, e]))
-    const colaboradoresMap = Object.fromEntries((colaboradores || []).map((c: any) => [c.id, c]))
+    const itensMap = Object.fromEntries((itens as Item[] || []).map((i) => [i.id, i]))
+    const checklistsMap = Object.fromEntries((checklists as ChecklistFuturo[] || []).map((c) => [c.id, c]))
+    const empresasMap = Object.fromEntries((empresas as Empresa[] || []).map((e) => [e.id, e]))
+    const colaboradoresMap = Object.fromEntries((colaboradores as Colaborador[] || []).map((c) => [c.id, c]))
 
     // 8. Mapear e filtrar resultado
     const resultado = searchParams.get('resultado')
 
-    let respostasMapeadas = respostasRaw.map((r: any) => {
+    let respostasMapeadas = (respostasRaw as Resposta[]).map((r) => {
       const checklist = checklistsMap[r.checklist_futuro_id]
       const item = itensMap[r.item_id]
       const empresa = checklist ? empresasMap[checklist.empresa_id] : null
@@ -117,7 +124,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (resultado && resultado !== 'todos') {
-      respostasMapeadas = respostasMapeadas.filter((r: any) => r.resultado === resultado)
+      respostasMapeadas = respostasMapeadas.filter((r) => r.resultado === resultado)
     }
 
     return NextResponse.json({ empresas: empresas || [], respostas: respostasMapeadas })

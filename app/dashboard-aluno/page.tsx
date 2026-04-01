@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Calendar, TrendingUp, Building2 } from 'lucide-react'
+import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Calendar, TrendingUp, Building2, Activity } from 'lucide-react'
+import { ThemeToggle } from '../../components/ThemeToggle'
+import { LanguageToggle } from '../../components/LanguageToggle'
+import { useLang } from '../../contexts/LanguageContext'
 
 interface Checklist {
   id: string
@@ -25,6 +28,7 @@ interface PerformanceData {
 
 export default function DashboardAluno() {
   const router = useRouter()
+  const { t, lang } = useLang()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [checklists, setChecklists] = useState<Checklist[]>([])
@@ -32,37 +36,40 @@ export default function DashboardAluno() {
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState('')
   const [alunoId, setAlunoId] = useState<number | null>(null)
+  const [feed, setFeed] = useState<Array<{ tipo: string; descricao: string; data: string; checklist?: string }>>([])
+  const [loadingFeed, setLoadingFeed] = useState(false)
+  const [notifPermissao, setNotifPermissao] = useState<NotificationPermission | 'unsupported'>('default')
 
   const menuItems = [
     {
-      title: 'Ações',
-      submenu: [{ label: 'Ações', href: '/acoes' }]
+      title: t.nav.acoes,
+      submenu: [{ label: t.nav.acoes, href: '/acoes' }]
     },
     {
-      title: 'Checklist',
+      title: t.nav.checklist,
       submenu: [
-        { label: 'Checklists futuros', href: '/checklists-futuros' },
-        { label: 'Checklists criados', href: '/checklists-criados' },
-        { label: 'Upload checklist excel', href: '/upload-questionarios' },
-        { label: 'Alertas adicionais', href: '/alertas-adicionais' },
+        { label: t.nav.checklistsFuturos, href: '/checklists-futuros' },
+        { label: t.nav.checklistsCriados, href: '/checklists-criados' },
+        { label: t.nav.uploadChecklist, href: '/upload-questionarios' },
+        { label: t.nav.alertasAdicionais, href: '/alertas-adicionais' },
       ]
     },
     {
-      title: 'Organização',
+      title: t.nav.organizacao,
       submenu: [
-        { label: 'Colaboradores', href: '/colaboradores' },
-        { label: 'Minhas empresas', href: '/minhas-empresas' },
+        { label: t.nav.colaboradores, href: '/colaboradores' },
+        { label: t.nav.minhasEmpresas, href: '/minhas-empresas' },
       ]
     },
     {
-      title: 'Relatórios',
+      title: t.nav.relatorios,
       submenu: [
-        { label: 'Performance dos funcionários', href: '/performance-funcionarios' },
-        { label: 'Respostas', href: '/respostas' },
-        { label: 'Resultados checklist', href: '/resultados-checklist' },
-        { label: 'Feitos por empresa', href: '/feitos-por-empresa' },
-        { label: 'Indicador', href: '/indicador' },
-        { label: 'Feitos por departamento', href: '/feitos-por-departamento' },
+        { label: t.nav.performanceFuncionarios, href: '/performance-funcionarios' },
+        { label: t.nav.respostas, href: '/respostas' },
+        { label: t.nav.resultadosChecklist, href: '/resultados-checklist' },
+        { label: t.nav.feitosPorEmpresa, href: '/feitos-por-empresa' },
+        { label: t.nav.indicador, href: '/indicador' },
+        { label: t.nav.feitosPorDepartamento, href: '/feitos-por-departamento' },
       ]
     }
   ]
@@ -123,6 +130,14 @@ export default function DashboardAluno() {
       }))
       setChecklists(checklistsFormatados)
 
+      // Verificar prazos apenas 1x por dia
+      const hoje = new Date().toDateString()
+      const ultimaVerif = localStorage.getItem('ultima-verificacao-prazos')
+      if (ultimaVerif !== hoje) {
+        verificarPrazos(checklistsFormatados)
+        localStorage.setItem('ultima-verificacao-prazos', hoje)
+      }
+
       // Calcular performance
       const performancePorEmpresa: { [key: string]: { total: number; concluidos: number; pendentes: number } } = {}
       empresas.forEach((empresa: any) => {
@@ -150,11 +165,55 @@ export default function DashboardAluno() {
         }))
       setPerformance(performanceArray)
 
+      // Buscar feed de atividades
+      setLoadingFeed(true)
+      const feedRes = await fetch('/api/aluno/feed')
+      if (feedRes.ok) setFeed(await feedRes.json())
+      setLoadingFeed(false)
+
+      // Verificar permissão de notificações
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        setNotifPermissao(Notification.permission)
+      } else {
+        setNotifPermissao('unsupported')
+      }
+
     } catch (error) {
       console.error('❌ Erro geral:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  async function ativarNotificacoes() {
+    if (!('Notification' in window)) return
+    const perm = await Notification.requestPermission()
+    setNotifPermissao(perm)
+    if (perm === 'granted') {
+      new Notification('Performe seu Mercado', {
+        body: 'Notificações ativadas! Você será alertado sobre prazos de checklists.',
+        icon: '/logo-semerro.jpg',
+      })
+    }
+  }
+
+  function verificarPrazos(checklistsData: Checklist[]) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    checklistsData.forEach(cl => {
+      if (cl.status === 'concluido') return
+      // Checklist não concluído e criado há mais de 7 dias
+      const criado = new Date(cl.created_at)
+      const diffDias = Math.round((hoje.getTime() - criado.getTime()) / 86400000)
+      if (diffDias >= 7) {
+        new Notification(`Checklist pendente: ${cl.nome}`, {
+          body: `Checklist da empresa ${cl.empresa?.nome_fantasia || 'desconhecida'} está pendente há ${diffDias} dia(s).`,
+          icon: '/logo-semerro.jpg',
+          tag: `checklist-${cl.id}`,
+        })
+      }
+    })
   }
 
   function formatarData(data: string) {
@@ -245,14 +304,16 @@ export default function DashboardAluno() {
                   </div>
                 ))}
 
-                <div style={{ display: 'flex', gap: '1rem', marginLeft: '1rem', paddingLeft: '1rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
-                  <button onClick={() => router.push('/alterar-senha')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: 'transparent', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginLeft: '1rem', paddingLeft: '1rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
+                  <LanguageToggle />
+                  <ThemeToggle />
+                  <button onClick={() => router.push('/perfil-aluno')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: 'transparent', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
                     <User size={18} />
-                    Perfil
+                    {t.nav.perfil}
                   </button>
                   <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
                     <LogOut size={18} />
-                    Sair
+                    {t.nav.sair}
                   </button>
                 </div>
               </div>
@@ -282,12 +343,14 @@ export default function DashboardAluno() {
                     ))}
                   </div>
                 ))}
-                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '0.5rem', padding: '0 1rem' }}>
-                  <button onClick={() => router.push('/alterar-senha')} style={{ flex: 1, padding: '0.5rem', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
-                    Perfil
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '0.5rem', padding: '1rem 1rem 0', alignItems: 'center' }}>
+                  <LanguageToggle />
+                  <ThemeToggle />
+                  <button onClick={() => router.push('/perfil-aluno')} style={{ flex: 1, padding: '0.5rem', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
+                    {t.nav.perfil}
                   </button>
                   <button onClick={handleLogout} style={{ flex: 1, padding: '0.5rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
-                    Sair
+                    {t.nav.sair}
                   </button>
                 </div>
               </div>
@@ -299,10 +362,28 @@ export default function DashboardAluno() {
         <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
           <div style={{ marginBottom: '2rem' }}>
             <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
-              Bem-vindo, {userName}!
+              {t.dashboard.welcome}, {userName}!
             </h1>
             <p style={{ color: '#6b7280' }}>Painel do Cliente</p>
           </div>
+
+          {/* Banner de notificações push */}
+          {notifPermissao === 'default' && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.875rem 1.25rem', backgroundColor: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.25rem' }}>🔔</span>
+                <p style={{ fontSize: '0.875rem', color: '#1d4ed8', margin: 0 }}>
+                  {t.dashboard.notifBannerMsg}
+                </p>
+              </div>
+              <button
+                onClick={ativarNotificacoes}
+                style={{ padding: '0.5rem 1.25rem', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', whiteSpace: 'nowrap' }}
+              >
+                {t.dashboard.enableNotifications}
+              </button>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
             
@@ -315,7 +396,7 @@ export default function DashboardAluno() {
                 {loading ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>
                     <div style={{ width: '40px', height: '40px', border: '4px solid #f3f4f6', borderTopColor: '#8b5cf6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
-                    <p>Carregando...</p>
+                    <p>{t.common.loading}</p>
                   </div>
                 ) : checklists.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>
@@ -328,8 +409,9 @@ export default function DashboardAluno() {
                     {checklists.map((checklist) => {
                       const statusInfo = obterCorStatus(checklist.status)
                       return (
-                        <div 
+                        <div
                           key={checklist.id}
+                          onClick={() => router.push(`/checklists-criados/${checklist.id}`)}
                           style={{ padding: '1rem', border: '1px solid #e5e7eb', borderLeft: `4px solid ${statusInfo.text}`, borderRadius: '0.75rem', cursor: 'pointer', transition: 'all 0.2s' }}
                           onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(139, 92, 246, 0.1)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateX(0)'; }}
@@ -370,13 +452,13 @@ export default function DashboardAluno() {
             {/* Card: Performance por Tipo de Negócio */}
             <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
               <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', padding: '1.5rem', color: 'white' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Performance por Tipo de Negócio</h2>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{t.dashboard.performance}</h2>
               </div>
               <div style={{ padding: '1.5rem' }}>
                 {loading ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>
                     <div style={{ width: '40px', height: '40px', border: '4px solid #f3f4f6', borderTopColor: '#8b5cf6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
-                    <p>Carregando...</p>
+                    <p>{t.common.loading}</p>
                   </div>
                 ) : performance.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -428,6 +510,48 @@ export default function DashboardAluno() {
             </div>
 
           </div>
+
+          {/* Feed de atividades */}
+          <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginTop: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <Activity size={20} style={{ color: '#8b5cf6' }} />
+              <h2 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>{t.dashboard.recentActivity}</h2>
+            </div>
+            {loadingFeed ? (
+              <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>{t.common.loading}</p>
+            ) : feed.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem 0', color: '#9ca3af' }}>
+                <Activity size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.35 }} />
+                <p style={{ margin: 0, fontSize: '0.875rem' }}>{t.dashboard.noActivity}</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                {feed.map((item, idx) => {
+                  const icone = item.tipo === 'checklist' ? '📋' : item.tipo === 'acao' ? '⚠️' : '🔔'
+                  return (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem', padding: '0.75rem 0', borderBottom: idx < feed.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                      <span style={{ fontSize: '1.25rem', flexShrink: 0, marginTop: '1px' }}>{icone}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '0.875rem', color: '#1f2937', margin: 0, lineHeight: '1.4' }}>{item.descricao}</p>
+                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: '0.125rem 0 0' }}>
+                          {new Date(item.data).toLocaleDateString(lang === 'en' ? 'en-US' : 'pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      {item.checklist && (
+                        <button
+                          onClick={() => router.push(`/checklists-criados/${item.checklist}`)}
+                          style={{ fontSize: '0.75rem', color: '#8b5cf6', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, fontWeight: '600', padding: 0 }}
+                        >
+                          {t.dashboard.viewMore}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
         </main>
       </div>
     </>

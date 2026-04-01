@@ -26,6 +26,7 @@ import {
   sincronizarPendentes,
   contarRespostasPendentes,
 } from '@/lib/offline-db'
+import { toast } from 'sonner'
 
 interface Checklist {
   id: string
@@ -193,7 +194,7 @@ export default function ResponderChecklistPage() {
           usouCache = true
           setModoCache(true)
         } else {
-          alert('Sem conexão e checklist não encontrado em cache. Abra este checklist online primeiro.')
+          toast.error('Sem conexão e checklist não encontrado em cache. Abra este checklist online primeiro.')
           router.push('/dashboard-funcionario')
           return
         }
@@ -236,7 +237,7 @@ export default function ResponderChecklistPage() {
 
     } catch (error) {
       console.error('Erro ao carregar checklist:', error)
-      alert('Erro ao carregar checklist.')
+      toast.error('Erro ao carregar checklist.')
     } finally {
       setLoading(false)
     }
@@ -323,7 +324,7 @@ export default function ResponderChecklistPage() {
       }
     } catch (error) {
       console.error('Erro ao enviar foto:', error)
-      alert('Erro ao enviar foto. Tente novamente.')
+      toast.error('Erro ao enviar foto. Tente novamente.')
     } finally {
       setUploadandoFoto(false)
       e.target.value = ''
@@ -391,7 +392,7 @@ export default function ResponderChecklistPage() {
       const primeiroSemResposta = itens.findIndex(item => !respostas[item.id]?.resposta)
       if (primeiroSemResposta !== -1) {
         setItemAtual(primeiroSemResposta)
-        alert(`Ainda há ${itens.length - totalRespondidos} pergunta(s) sem resposta.`)
+        toast.warning(`Ainda há ${itens.length - totalRespondidos} pergunta(s) sem resposta.`)
       }
     }
   }

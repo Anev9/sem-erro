@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import {
   ArrowLeft,
   Calendar,
   Building2,
   FileCheck,
   Eye,
-  User
+  User,
+  Copy,
+  Loader2
 } from 'lucide-react'
 
 interface ChecklistCriado {
@@ -27,6 +30,7 @@ export default function ChecklistsCriados() {
   const router = useRouter()
   const [checklists, setChecklists] = useState<ChecklistCriado[]>([])
   const [loading, setLoading] = useState(true)
+  const [duplicandoId, setDuplicandoId] = useState<string | null>(null)
   const [empresas, setEmpresas] = useState<{ id: string; nome_fantasia: string }[]>([])
   const [filtros, setFiltros] = useState({
     empresa_id: '',
@@ -59,6 +63,26 @@ export default function ChecklistsCriados() {
       console.error('Erro ao carregar checklists:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function duplicarChecklist(id: string) {
+    setDuplicandoId(id)
+    try {
+      const res = await fetch('/api/aluno/checklists-criados/duplicar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checklist_id: id }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error || 'Erro ao duplicar')
+      const { titulo } = await res.json()
+      toast.success(`Checklist duplicado: "${titulo}"`)
+      const userStr = localStorage.getItem('user')
+      if (userStr) await carregarDados(JSON.parse(userStr).id)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao duplicar checklist')
+    } finally {
+      setDuplicandoId(null)
     }
   }
 
@@ -101,6 +125,7 @@ export default function ChecklistsCriados() {
     <>
       <style>{`
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .slide-up { animation: slideUp 0.4s ease-out; }
         .card-hover { transition: all 0.2s ease; }
         .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.12) !important; }
@@ -276,16 +301,28 @@ export default function ChecklistsCriados() {
                       </div>
                     </div>
 
-                    {/* Botão Ver Detalhes */}
-                    <button
-                      onClick={() => router.push(`/checklists-criados/${checklist.id}`)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', boxShadow: '0 4px 12px rgba(102,126,234,0.35)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(102,126,234,0.5)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(102,126,234,0.35)'; }}
-                    >
-                      <Eye size={16} />
-                      Ver Detalhes
-                    </button>
+                    {/* Botões */}
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => duplicarChecklist(checklist.id)}
+                        disabled={duplicandoId === checklist.id}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', background: '#f1f5f9', color: '#475569', border: '2px solid #e2e8f0', borderRadius: '10px', cursor: duplicandoId === checklist.id ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: '600', transition: 'all 0.2s', whiteSpace: 'nowrap', opacity: duplicandoId === checklist.id ? 0.7 : 1 }}
+                        onMouseEnter={(e) => { if (duplicandoId !== checklist.id) e.currentTarget.style.background = '#e2e8f0' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9' }}
+                      >
+                        {duplicandoId === checklist.id ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Copy size={16} />}
+                        Duplicar
+                      </button>
+                      <button
+                        onClick={() => router.push(`/checklists-criados/${checklist.id}`)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', boxShadow: '0 4px 12px rgba(102,126,234,0.35)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(102,126,234,0.5)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(102,126,234,0.35)'; }}
+                      >
+                        <Eye size={16} />
+                        Ver Detalhes
+                      </button>
+                    </div>
                   </div>
                 )
               })

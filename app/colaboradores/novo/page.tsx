@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import {
   ArrowLeft,
   Users,
@@ -49,7 +50,7 @@ export default function NovoColaborador() {
     try {
       const userStr = localStorage.getItem('user')
       if (!userStr) {
-        alert('Você precisa estar logado como cliente')
+        toast.warning('Você precisa estar logado como cliente')
         router.push('/login')
         return
       }
@@ -57,7 +58,7 @@ export default function NovoColaborador() {
       const user = JSON.parse(userStr)
 
       if (user.role !== 'aluno') {
-        alert('Apenas clientes podem cadastrar colaboradores')
+        toast.warning('Apenas clientes podem cadastrar colaboradores')
         router.push('/login')
         return
       }
@@ -67,7 +68,7 @@ export default function NovoColaborador() {
 
     } catch (error) {
       console.error('Erro ao verificar autenticação:', error)
-      alert('Erro ao verificar autenticação')
+      toast.error('Erro ao verificar autenticação')
     }
   }
 
@@ -90,17 +91,17 @@ export default function NovoColaborador() {
     e.preventDefault()
 
     if (!formData.empresa_id) {
-      alert('Por favor, selecione uma empresa/loja!')
+      toast.warning('Por favor, selecione uma empresa/loja!')
       return
     }
 
     if (formData.senha !== formData.confirmarSenha) {
-      alert('As senhas não coincidem!')
+      toast.warning('As senhas não coincidem!')
       return
     }
 
     if (formData.senha.length < 6) {
-      alert('A senha deve ter pelo menos 6 caracteres!')
+      toast.warning('A senha deve ter pelo menos 6 caracteres!')
       return
     }
 
@@ -126,7 +127,7 @@ export default function NovoColaborador() {
       setCredenciais({ email: formData.email, senha: formData.senha })
     } catch (error: any) {
       console.error('Erro ao cadastrar:', error)
-      alert(error.message || 'Erro ao cadastrar colaborador')
+      toast.error(error.message || 'Erro ao cadastrar colaborador')
     } finally {
       setLoading(false)
     }

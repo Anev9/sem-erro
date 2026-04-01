@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Save, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 export default function EditarEmpresaPage() {
   const router = useRouter()
@@ -50,7 +51,7 @@ export default function EditarEmpresaPage() {
       if (data) setEmpresa(data)
     } catch (error) {
       console.error('Erro ao buscar empresa:', error)
-      alert('Erro ao carregar dados')
+      toast.error('Erro ao carregar dados')
     } finally {
       setLoading(false)
     }
@@ -65,11 +66,11 @@ export default function EditarEmpresaPage() {
         .eq('id', id)
 
       if (error) throw error
-      alert('Salvo com sucesso!')
+      toast.success('Salvo com sucesso!')
       router.push('/organizacao/grupos-empresa')
     } catch (error) {
       console.error('Erro ao salvar:', error)
-      alert('Erro ao salvar')
+      toast.error('Erro ao salvar')
     } finally {
       setSaving(false)
     }
@@ -85,11 +86,11 @@ export default function EditarEmpresaPage() {
         .eq('id', id)
 
       if (error) throw error
-      alert('Deletado com sucesso!')
+      toast.success('Deletado com sucesso!')
       router.push('/organizacao/grupos-empresa')
     } catch (error) {
       console.error('Erro ao deletar:', error)
-      alert('Erro ao deletar')
+      toast.error('Erro ao deletar')
     }
   }
 

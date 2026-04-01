@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Calendar, Clock, CheckCircle, AlertCircle, PlayCircle, Trash2, Pencil } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 type ChecklistFuturo = {
   id: string
@@ -19,6 +20,7 @@ type ChecklistFuturo = {
   itens_respondidos?: number
   recorrencia?: string | null
   dias_tolerancia?: number | null
+  prazo_alerta?: string | null
 }
 
 export default function ChecklistsFuturosPage() {
@@ -118,12 +120,12 @@ export default function ChecklistsFuturosPage() {
 
       if (errorChecklist) throw errorChecklist
 
-      alert('Checklist excluído com sucesso!')
+      toast.success('Checklist excluído com sucesso!')
       buscarChecklists(userRole === 'admin', userId)
 
     } catch (error) {
       console.error('Erro ao excluir:', error)
-      alert('Erro ao excluir checklist')
+      toast.error('Erro ao excluir checklist')
     }
   }
 
@@ -151,6 +153,18 @@ export default function ChecklistsFuturosPage() {
     diaria: '🔄 Diária',
     semanal: '🔄 Semanal',
     mensal: '🔄 Mensal'
+  }
+
+  function obterAlertaPrazo(prazoAlerta: string | null | undefined): { nivel: 'vencido' | 'proximo' | null; diasRestantes: number } {
+    if (!prazoAlerta) return { nivel: null, diasRestantes: 0 }
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    const prazo = new Date(prazoAlerta)
+    prazo.setHours(0, 0, 0, 0)
+    const diff = Math.round((prazo.getTime() - hoje.getTime()) / 86400000)
+    if (diff < 0) return { nivel: 'vencido', diasRestantes: diff }
+    if (diff <= 3) return { nivel: 'proximo', diasRestantes: diff }
+    return { nivel: null, diasRestantes: diff }
   }
 
   function obterCorStatus(status: string) {
@@ -296,6 +310,7 @@ export default function ChecklistsFuturosPage() {
                 const statusInfo = obterCorStatus(checklist.status || 'pendente')
                 const StatusIcon = statusInfo.icon
                 const progresso = checklist.progresso_percentual || 0
+                const alertaPrazo = obterAlertaPrazo(checklist.prazo_alerta)
 
                 return (
                   <div
@@ -329,7 +344,17 @@ export default function ChecklistsFuturosPage() {
                         )}
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {alertaPrazo.nivel === 'vencido' && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: '0.8rem', fontWeight: '700', border: '1.5px solid #fca5a5' }}>
+                            ⚠️ Prazo vencido
+                          </span>
+                        )}
+                        {alertaPrazo.nivel === 'proximo' && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: '0.8rem', fontWeight: '700', border: '1.5px solid #fcd34d' }}>
+                            ⏰ Vence em {alertaPrazo.diasRestantes === 0 ? 'hoje' : `${alertaPrazo.diasRestantes}d`}
+                          </span>
+                        )}
                         <span style={{
                           display: 'flex',
                           alignItems: 'center',

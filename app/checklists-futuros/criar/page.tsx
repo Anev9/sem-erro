@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Plus, Trash2, Copy, FileText, Upload, Download } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 type Template = {
   id: string
@@ -179,7 +180,7 @@ export default function CriarChecklistFuturoPage() {
         }
       }).filter(item => item.titulo)
       if (novosItens.length === 0) {
-        alert('Nenhum item encontrado no arquivo. Verifique o formato.')
+        toast.warning('Nenhum item encontrado no arquivo. Verifique o formato.')
         return
       }
       setItens(novosItens)
@@ -195,7 +196,7 @@ export default function CriarChecklistFuturoPage() {
 
   function removerItem(index: number) {
     if (itens.length === 1) {
-      alert('Você precisa ter pelo menos 1 item no checklist')
+      toast.warning('Você precisa ter pelo menos 1 item no checklist')
       return
     }
     const novosItens = itens.filter((_, i) => i !== index)
@@ -224,7 +225,7 @@ export default function CriarChecklistFuturoPage() {
       }
     } catch (error: any) {
       console.error('ERRO:', error)
-      alert(`Erro: ${error?.message || 'Erro desconhecido'}`)
+      toast.error(`Erro: ${error?.message || 'Erro desconhecido'}`)
       setMensagemSalvamento(`❌ Erro: ${error?.message || 'Erro desconhecido'}`)
     } finally {
       setLoading(false)
@@ -235,7 +236,7 @@ export default function CriarChecklistFuturoPage() {
     const itensValidos = itens.filter(item => item.titulo.trim() !== '')
     
     if (itensValidos.length === 0) {
-      alert('❌ Adicione pelo menos 1 item com título')
+      toast.warning('❌ Adicione pelo menos 1 item com título')
       return
     }
 
@@ -284,7 +285,7 @@ export default function CriarChecklistFuturoPage() {
 
   async function criarDeTemplate() {
     if (!templateSelecionado) {
-      alert('Selecione um template')
+      toast.warning('Selecione um template')
       return
     }
 
@@ -344,7 +345,7 @@ export default function CriarChecklistFuturoPage() {
 
   async function criarDeChave() {
     if (!chaveCompartilhamento.trim()) {
-      alert('Digite a chave de compartilhamento')
+      toast.warning('Digite a chave de compartilhamento')
       return
     }
 
@@ -360,7 +361,7 @@ export default function CriarChecklistFuturoPage() {
       .single()
 
     if (errorBusca || !checklistOriginal) {
-      alert('Chave inválida')
+      toast.error('Chave inválida')
       setMensagemSalvamento('❌ Chave inválida')
       return
     }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 interface Empresa { id: string; nome_fantasia: string; ativo?: boolean }
 interface Checklist { id: string; titulo: string }
 interface Item { id: string; titulo: string; ordem: number }
@@ -108,8 +109,8 @@ export default function CriarAcao() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!formulario.titulo.trim()) { alert('Informe o título da ação.'); return; }
-    if (!formulario.empresa_id) { alert('Selecione a empresa.'); return; }
+    if (!formulario.titulo.trim()) { toast.warning('Informe o título da ação.'); return; }
+    if (!formulario.empresa_id) { toast.warning('Selecione a empresa.'); return; }
 
     setSalvando(true);
     try {
@@ -134,11 +135,11 @@ export default function CriarAcao() {
         })
       });
       if (!res.ok) throw new Error('Erro ao criar ação');
-      alert('Ação criada com sucesso!');
+      toast.success('Ação criada com sucesso!');
       router.push('/acoes');
     } catch (err) {
       console.error('Erro ao criar ação:', err);
-      alert('Erro ao criar ação. Tente novamente.');
+      toast.error('Erro ao criar ação. Tente novamente.');
     } finally {
       setSalvando(false);
     }

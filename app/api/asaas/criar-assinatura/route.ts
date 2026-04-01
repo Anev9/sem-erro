@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { criarAssinaturaSchema } from '@/lib/schemas'
+import { logger } from '@/lib/logger'
 
 const ASAAS_URL = process.env.ASAAS_API_URL || 'https://api.asaas.com/api/v3'
 const ASAAS_KEY = process.env.ASAAS_API_KEY!
@@ -24,13 +26,12 @@ async function asaas(path: string, method: string, body?: object) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { nome, email, telefone, cnpj, nomeEmpresa, plano } = await request.json()
-
-    if (!nome || !email || !telefone) {
-      return NextResponse.json({ error: 'Nome, email e telefone são obrigatórios' }, { status: 400 })
+    const parsed = criarAssinaturaSchema.safeParse(await request.json())
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
     }
-
-    const planoInfo = planoValores[plano] || planoValores.growth
+    const { nome, email, telefone, cnpj, nomeEmpresa, plano } = parsed.data
+    const planoInfo = planoValores[plano ?? 'growth']
 
     // 1. Criar cliente no ASAAS
     const clientePayload: Record<string, string> = {
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno'
-    console.error('[asaas/criar-assinatura]', message)
+    logger.error('asaas/criar-assinatura', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

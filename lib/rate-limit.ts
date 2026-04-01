@@ -6,7 +6,9 @@ const MAX_ATTEMPTS = 10
 type RateLimitEntry = { count: number; resetAt: number }
 const store = new Map<string, RateLimitEntry>()
 
-export function checkRateLimit(ip: string): { allowed: boolean; retryAfterSec: number } {
+export function checkRateLimit(ip: string | null): { allowed: boolean; retryAfterSec: number } {
+  // Bloquear requisições sem IP identificável
+  if (!ip) return { allowed: false, retryAfterSec: 60 }
   const now = Date.now()
   const entry = store.get(ip)
 
@@ -24,8 +26,11 @@ export function checkRateLimit(ip: string): { allowed: boolean; retryAfterSec: n
   return { allowed: true, retryAfterSec: 0 }
 }
 
-export function getClientIp(request: Request): string {
-  const forwarded = (request.headers as Headers).get('x-forwarded-for')
+export function getClientIp(request: Request): string | null {
+  const headers = request.headers as Headers
+  const cf = headers.get('cf-connecting-ip')
+  if (cf) return cf.trim()
+  const forwarded = headers.get('x-forwarded-for')
   if (forwarded) return forwarded.split(',')[0].trim()
-  return 'unknown'
+  return null
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface AcaoCorretiva {
   id: string;
@@ -39,6 +40,7 @@ export default function ListaAcoes() {
   const [ordenacao, setOrdenacao] = useState<'loja' | 'data'>('data');
   const [empresas, setEmpresas] = useState<{ id: string; nome_fantasia: string }[]>([]);
   const [alunoId, setAlunoId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'lista' | 'kanban'>('lista');
 
   useEffect(() => {
     verificarAutenticacao();
@@ -79,7 +81,7 @@ export default function ListaAcoes() {
 
     const response = await fetch(`/api/aluno/acoes?id=${id}&aluno_id=${alunoId}`, { method: 'DELETE' });
     if (!response.ok) {
-      alert('Erro ao excluir ação.');
+      toast.error('Erro ao excluir ação.');
       return;
     }
     setAcoes(prev => prev.filter(a => a.id !== id));
@@ -201,7 +203,17 @@ export default function ListaAcoes() {
 
           {/* Título e Botão Criar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#37474f', margin: 0 }}>Lista de ações</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#37474f', margin: 0 }}>Ações</h2>
+              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '0.5rem', padding: '3px' }}>
+                <button onClick={() => setViewMode('lista')} style={{ padding: '0.375rem 0.875rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', background: viewMode === 'lista' ? 'white' : 'transparent', color: viewMode === 'lista' ? '#2196F3' : '#64748b', boxShadow: viewMode === 'lista' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
+                  ☰ Lista
+                </button>
+                <button onClick={() => setViewMode('kanban')} style={{ padding: '0.375rem 0.875rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', background: viewMode === 'kanban' ? 'white' : 'transparent', color: viewMode === 'kanban' ? '#2196F3' : '#64748b', boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
+                  ⊞ Kanban
+                </button>
+              </div>
+            </div>
             <button
               onClick={() => router.push('/acoes/criar-acao')}
               style={{
@@ -216,6 +228,45 @@ export default function ListaAcoes() {
               Criar nova ação
             </button>
           </div>
+
+          {/* Visão Kanban */}
+          {viewMode === 'kanban' && (() => {
+            const colunas: Array<{ key: AcaoCorretiva['status']; label: string; cor: string; bg: string }> = [
+              { key: 'aguardando', label: '🕐 Aguardando', cor: '#E65100', bg: '#FFF3E0' },
+              { key: 'em_andamento', label: '🔄 Em Andamento', cor: '#1565C0', bg: '#E3F2FD' },
+              { key: 'atrasada', label: '⚠️ Atrasada', cor: '#C62828', bg: '#FFEBEE' },
+              { key: 'concluida', label: '✅ Concluída', cor: '#2E7D32', bg: '#E8F5E9' },
+            ]
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                {colunas.map(col => {
+                  const itens = acoesFiltradas.filter(a => a.status === col.key)
+                  return (
+                    <div key={col.key} style={{ background: col.bg, borderRadius: '0.75rem', padding: '1rem', minHeight: '200px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
+                        <h3 style={{ fontSize: '0.875rem', fontWeight: '700', color: col.cor, margin: 0 }}>{col.label}</h3>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: col.cor, background: 'white', borderRadius: '999px', padding: '0.125rem 0.5rem', border: `1px solid ${col.cor}` }}>{itens.length}</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                        {itens.length === 0 && (
+                          <p style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', padding: '1rem 0', margin: 0 }}>Nenhuma ação</p>
+                        )}
+                        {itens.map(acao => (
+                          <div key={acao.id} style={{ background: 'white', borderRadius: '0.5rem', padding: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: `4px solid ${acao.urgente ? '#ef5350' : acao.prioridade === 'alta' ? '#FF9800' : '#4CAF50'}` }}>
+                            <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1f2937', margin: '0 0 0.375rem', lineHeight: '1.3' }}>{acao.titulo}</p>
+                            {acao.empresas && <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 0.25rem' }}>🏢 {acao.empresas.nome_fantasia}</p>}
+                            {acao.responsavel && <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 0.25rem' }}>👤 {acao.responsavel}</p>}
+                            {acao.prazo && <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>📅 {new Date(acao.prazo).toLocaleDateString('pt-BR')}</p>}
+                            {acao.urgente && <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#C62828' }}>🔴 URGENTE</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
 
           {/* Filtros */}
           <div style={{ marginBottom: '2rem' }}>
@@ -292,7 +343,7 @@ export default function ListaAcoes() {
           </div>
 
           {/* Lista */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {viewMode === 'lista' && <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {acoesFiltradas.map((acao) => {
               const statusStyle = getStatusColor(acao.status);
               const prioridadeCor = getPrioridadeColor(acao.prioridade);
@@ -427,7 +478,7 @@ export default function ListaAcoes() {
                 </p>
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </div>
     </div>

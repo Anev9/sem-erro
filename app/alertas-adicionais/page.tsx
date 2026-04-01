@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { 
+import { toast } from 'sonner'
+import {
   ArrowLeft,
   Bell,
   Plus,
@@ -46,12 +47,12 @@ export default function AlertasAdicionais() {
 
   const handleSubmit = async () => {
     if (!checklistFuturo || !usuario || !empresa) {
-      alert('Por favor, preencha todos os campos obrigatórios')
+      toast.warning('Por favor, preencha todos os campos obrigatórios')
       return
     }
 
     if (!aoCriar && !aoFinalizar && !problemasCriticos) {
-      alert('Selecione pelo menos um tipo de notificação')
+      toast.warning('Selecione pelo menos um tipo de notificação')
       return
     }
 

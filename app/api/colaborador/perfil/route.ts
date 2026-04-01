@@ -18,7 +18,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { nome, celular } = body
+  const { nome, celular, foto_url } = body
 
   if (!nome?.trim()) {
     return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 })
@@ -28,7 +28,11 @@ export async function PATCH(request: NextRequest) {
 
   const { error } = await supabase
     .from('colaboradores')
-    .update({ nome: nome.trim(), celular: celular?.trim() || null })
+    .update({
+      nome: nome.trim(),
+      celular: celular?.trim() || null,
+      ...(foto_url !== undefined && { foto_url }),
+    })
     .eq('id', colaboradorId)
 
   if (error) {

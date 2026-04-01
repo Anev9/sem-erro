@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
@@ -9,8 +9,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('remembered-email')
+    if (saved) {
+      setEmail(saved)
+      setRememberMe(true)
+    }
+  }, []);
 
   async function fetchComTimeout(url: string, options: RequestInit, ms = 15000): Promise<Response> {
     const controller = new AbortController();
@@ -47,6 +56,12 @@ export default function LoginPage() {
     if (!newErrors.email && !newErrors.password) {
       setLoading(true);
 
+      if (rememberMe) {
+        localStorage.setItem('remembered-email', email)
+      } else {
+        localStorage.removeItem('remembered-email')
+      }
+
       try {
         // TENTATIVA 1: Login como ADMIN
         const adminRes = await fetchComTimeout('/api/auth/login-admin', {
@@ -55,7 +70,6 @@ export default function LoginPage() {
           body: JSON.stringify({ email, password }),
         });
         const adminData = await adminRes.json();
-        console.log('[LOGIN] admin:', adminRes.status, adminData);
 
         if (adminRes.ok && adminData.isAdmin) {
           const profile = adminData.profile || { email, full_name: 'Administrador', role: 'admin' };
@@ -69,20 +83,17 @@ export default function LoginPage() {
         }
 
         // TENTATIVA 2: Login como COLABORADOR
-        console.log('[LOGIN] tentando colaborador...');
         const colabRes = await fetchComTimeout('/api/auth/login-colaborador', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
         const colabData = await colabRes.json();
-        console.log('[LOGIN] colaborador:', colabRes.status, colabData);
 
         if (colabRes.ok && colabData.isColaborador && colabData.profile) {
           const perfil = { ...colabData.profile, role: 'colaborador' };
           localStorage.setItem('user', JSON.stringify(perfil));
           localStorage.setItem('userType', 'colaborador');
-          console.log('[LOGIN] redirecionando para dashboard-funcionario...');
           window.location.href = '/dashboard-funcionario';
           return;
         }
@@ -92,14 +103,12 @@ export default function LoginPage() {
         }
 
         // TENTATIVA 3: Login como ALUNO
-        console.log('[LOGIN] tentando aluno...');
         const alunoRes = await fetchComTimeout('/api/auth/login-aluno', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
         const alunoData = alunoRes.ok ? await alunoRes.json() : await alunoRes.json().catch(() => ({}));
-        console.log('[LOGIN] aluno:', alunoRes.status, alunoData);
 
         if (alunoRes.ok) {
           localStorage.setItem('user', JSON.stringify(alunoData));
@@ -111,7 +120,6 @@ export default function LoginPage() {
 
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : 'E-mail ou senha incorretos';
-        console.error('[LOGIN] erro final:', msg);
         setErrors({ ...newErrors, password: msg });
         setLoading(false);
       }
@@ -376,15 +384,17 @@ export default function LoginPage() {
                   color: '#4b5563',
                   opacity: loading ? 0.6 : 1
                 }}>
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                     disabled={loading}
-                    style={{ 
+                    style={{
                       cursor: loading ? 'not-allowed' : 'pointer',
                       width: '1rem',
                       height: '1rem',
                       accentColor: '#f97316'
-                    }} 
+                    }}
                   />
                   Lembrar-me
                 </label>

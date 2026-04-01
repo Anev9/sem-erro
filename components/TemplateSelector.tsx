@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { Loader2, FileText, CheckCircle2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 // Inicializar Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -44,25 +45,27 @@ export default function TemplateSelector({
 
       if (templatesError) throw templatesError
 
-      // Buscar contagem de ações para cada template
-      const templatesComAcoes = await Promise.all(
-        (templatesData || []).map(async (template) => {
-          const { count } = await supabase
-            .from('actions')
-            .select('*', { count: 'exact', head: true })
-            .eq('checklist_id', template.id)
+      // Buscar contagem de ações em uma única query
+      const templateIds = (templatesData || []).map((t) => t.id)
+      const { data: acoes } = await supabase
+        .from('actions')
+        .select('checklist_id')
+        .in('checklist_id', templateIds)
 
-          return {
-            ...template,
-            totalAcoes: count || 0
-          }
-        })
-      )
+      const contagemPorTemplate: Record<string, number> = {}
+      for (const acao of acoes || []) {
+        contagemPorTemplate[acao.checklist_id] = (contagemPorTemplate[acao.checklist_id] || 0) + 1
+      }
+
+      const templatesComAcoes = (templatesData || []).map((template) => ({
+        ...template,
+        totalAcoes: contagemPorTemplate[template.id] || 0,
+      }))
 
       setTemplates(templatesComAcoes)
     } catch (error) {
       console.error('Erro ao buscar templates:', error)
-      alert('Erro ao carregar templates. Verifique o console.')
+      toast.error('Erro ao carregar templates. Verifique o console.')
     } finally {
       setLoading(false)
     }

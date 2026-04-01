@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Building2, User, Mail, Phone, MapPin, Lock, Tag, CheckSquare } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 const estados = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
@@ -98,7 +99,7 @@ export default function CriarEmpresaPage() {
       router.push('/organizacao/grupos-empresa')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao salvar'
-      alert('Erro: ' + msg)
+      toast.error('Erro: ' + msg)
     } finally {
       setSaving(false)
     }

@@ -2,6 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import {
+  Building2,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Info,
+  ArrowLeft,
+  CheckCircle,
+  X,
+  Camera,
+  Loader2
+} from 'lucide-react'
+
 interface Empresa {
   id: string
   nome_fantasia: string
@@ -12,18 +27,8 @@ interface Empresa {
   estado?: string
   telefone?: string
   ativo: boolean
+  logo_url?: string | null
 }
-import { 
-  Building2,
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Info,
-  ArrowLeft,
-  CheckCircle,
-  X
-} from 'lucide-react'
 
 export default function MinhasEmpresas() {
   const router = useRouter()
@@ -33,6 +38,7 @@ export default function MinhasEmpresas() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [clienteId, setClienteId] = useState<string | null>(null)
+  const [uploadingLogoId, setUploadingLogoId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     nome_fantasia: '',
     razao_social: '',
@@ -75,7 +81,7 @@ export default function MinhasEmpresas() {
       setEmpresas(data || [])
     } catch (error) {
       console.error('Erro ao carregar empresas:', error)
-      alert('Erro ao carregar empresas: ' + (error as Error).message)
+      toast.error('Erro ao carregar empresas: ' + (error as Error).message)
     } finally {
       setLoading(false)
     }
@@ -83,12 +89,12 @@ export default function MinhasEmpresas() {
 
   const handleSubmit = async () => {
     if (!formData.nome_fantasia || !formData.cnpj) {
-      alert('Preencha os campos obrigatórios: Nome Fantasia e CNPJ')
+      toast.warning('Preencha os campos obrigatórios: Nome Fantasia e CNPJ')
       return
     }
 
     if (!clienteId) {
-      alert('Erro: Cliente não identificado. Recarregue a página.')
+      toast.error('Erro: Cliente não identificado. Recarregue a página.')
       return
     }
 
@@ -116,7 +122,7 @@ export default function MinhasEmpresas() {
           const err = await res.json()
           throw new Error(err.error || 'Erro ao atualizar')
         }
-        alert('Empresa atualizada com sucesso!')
+        toast.success('Empresa atualizada com sucesso!')
 
       } else {
         const res = await fetch('/api/aluno/empresas', {
@@ -128,7 +134,7 @@ export default function MinhasEmpresas() {
           const err = await res.json()
           throw new Error(err.error || 'Erro ao cadastrar')
         }
-        alert('Empresa cadastrada com sucesso!')
+        toast.success('Empresa cadastrada com sucesso!')
       }
 
       setShowAddModal(false)
@@ -137,7 +143,7 @@ export default function MinhasEmpresas() {
 
     } catch (error: any) {
       console.error('Erro ao salvar empresa:', error)
-      alert('Erro ao salvar empresa: ' + error.message)
+      toast.error('Erro ao salvar empresa: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -169,7 +175,7 @@ export default function MinhasEmpresas() {
       await carregarEmpresas()
     } catch (error) {
       console.error('Erro ao atualizar status:', error)
-      alert('Erro ao atualizar status')
+      toast.error('Erro ao atualizar status')
     }
   }
 
@@ -181,11 +187,42 @@ export default function MinhasEmpresas() {
     try {
       const res = await fetch(`/api/aluno/empresas?id=${id}&aluno_id=${clienteId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Erro ao excluir')
-      alert('Empresa excluída com sucesso!')
+      toast.success('Empresa excluída com sucesso!')
       await carregarEmpresas()
     } catch (error) {
       console.error('Erro ao excluir empresa:', error)
-      alert('Erro ao excluir empresa')
+      toast.error('Erro ao excluir empresa')
+    }
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>, empresa: Empresa) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingLogoId(empresa.id)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('path', `empresas/${empresa.id}/logo`)
+
+      const res = await fetch('/api/upload-foto', { method: 'POST', body: form })
+      if (!res.ok) throw new Error('Erro ao enviar logo')
+      const { publicUrl } = await res.json()
+
+      const putRes = await fetch('/api/aluno/empresas', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: empresa.id, aluno_id: clienteId, logo_url: publicUrl }),
+      })
+      if (!putRes.ok) throw new Error('Erro ao salvar logo')
+
+      setEmpresas(prev => prev.map(emp => emp.id === empresa.id ? { ...emp, logo_url: publicUrl } : emp))
+      toast.success('Logo atualizado com sucesso!')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar logo')
+    } finally {
+      setUploadingLogoId(null)
+      e.target.value = ''
     }
   }
 
@@ -240,6 +277,7 @@ export default function MinhasEmpresas() {
         }
         .table-row { transition: all 0.2s ease; }
         .table-row:hover { background-color: #f8fafc; }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       {/* Header */}
@@ -505,6 +543,7 @@ export default function MinhasEmpresas() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                    <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151', width: '5rem' }}>Logo</th>
                     <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Nome Fantasia</th>
                     <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>CNPJ</th>
                     <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Cidade/Estado</th>
@@ -515,6 +554,37 @@ export default function MinhasEmpresas() {
                 <tbody>
                   {filteredEmpresas.map((empresa) => (
                     <tr key={empresa.id} className="table-row" style={{ borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '1rem', textAlign: 'center' }}>
+                        <div
+                          style={{ position: 'relative', display: 'inline-block', cursor: 'pointer' }}
+                          onClick={() => document.getElementById(`logo-input-${empresa.id}`)?.click()}
+                          title="Clique para alterar o logo"
+                        >
+                          {empresa.logo_url ? (
+                            <img
+                              src={empresa.logo_url}
+                              alt={empresa.nome_fantasia}
+                              style={{ width: '3rem', height: '3rem', borderRadius: '0.5rem', objectFit: 'cover', border: '2px solid #e5e7eb' }}
+                            />
+                          ) : (
+                            <div style={{ width: '3rem', height: '3rem', backgroundColor: '#ede9fe', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Building2 size={20} style={{ color: '#8b5cf6' }} />
+                            </div>
+                          )}
+                          <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', backgroundColor: '#8b5cf6', borderRadius: '50%', width: '1.2rem', height: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white' }}>
+                            {uploadingLogoId === empresa.id
+                              ? <Loader2 size={8} style={{ color: 'white', animation: 'spin 1s linear infinite' }} />
+                              : <Camera size={8} style={{ color: 'white' }} />}
+                          </div>
+                        </div>
+                        <input
+                          id={`logo-input-${empresa.id}`}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          style={{ display: 'none' }}
+                          onChange={(e) => handleLogoUpload(e, empresa)}
+                        />
+                      </td>
                       <td style={{ padding: '1rem' }}>
                         <div style={{ fontWeight: '600', color: '#1f2937' }}>{empresa.nome_fantasia}</div>
                         {empresa.razao_social && (

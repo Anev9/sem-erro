@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Save, Plus, Trash2, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 type ItemEdit = {
   id?: string
@@ -29,6 +30,7 @@ export default function EditarChecklistPage() {
   const [proximaExecucao, setProximaExecucao] = useState('')
   const [recorrencia, setRecorrencia] = useState<'nenhuma' | 'diaria' | 'semanal' | 'mensal'>('nenhuma')
   const [diasTolerancia, setDiasTolerancia] = useState(0)
+  const [prazoAlerta, setPrazoAlerta] = useState('')
   const [tipoNegocio, setTipoNegocio] = useState('')
   const [empresaId, setEmpresaId] = useState('')
   const [colaboradorId, setColaboradorId] = useState('')
@@ -58,7 +60,7 @@ export default function EditarChecklistPage() {
         .single()
 
       if (error || !checklist) {
-        alert('Checklist não encontrado ou sem permissão.')
+        toast.error('Checklist não encontrado ou sem permissão.')
         router.push('/checklists-futuros')
         return
       }
@@ -68,6 +70,7 @@ export default function EditarChecklistPage() {
       setProximaExecucao(checklist.proxima_execucao?.split('T')[0] || '')
       setRecorrencia(checklist.recorrencia || 'nenhuma')
       setDiasTolerancia(checklist.dias_tolerancia || 0)
+      setPrazoAlerta(checklist.prazo_alerta?.split('T')[0] || '')
       setTipoNegocio(checklist.tipo_negocio || '')
       setEmpresaId(checklist.empresa_id || '')
       setColaboradorId(checklist.colaborador_id || '')
@@ -139,11 +142,11 @@ export default function EditarChecklistPage() {
   function removerItem(index: number) {
     const item = itens[index]
     if (item.temRespostas) {
-      alert('Este item já tem respostas registradas e não pode ser removido.')
+      toast.warning('Este item já tem respostas registradas e não pode ser removido.')
       return
     }
     if (itens.length === 1) {
-      alert('O checklist precisa ter pelo menos 1 item.')
+      toast.warning('O checklist precisa ter pelo menos 1 item.')
       return
     }
     if (item.id) {
@@ -162,16 +165,19 @@ export default function EditarChecklistPage() {
 
   async function handleSalvar(e: React.FormEvent) {
     e.preventDefault()
-    if (!nome.trim()) { alert('Digite o nome do checklist'); return }
-    if (!proximaExecucao) { alert('Selecione a data de execução'); return }
+    if (!nome.trim()) { toast.warning('Digite o nome do checklist'); return }
+    if (!proximaExecucao) { toast.warning('Selecione a data de execução'); return }
 
     const itensValidos = itens.filter(i => i.titulo.trim())
-    if (itensValidos.length === 0) { alert('Adicione pelo menos 1 item com título'); return }
+    if (itensValidos.length === 0) { toast.warning('Adicione pelo menos 1 item com título'); return }
 
     setSalvando(true)
     setMensagem('⏳ Salvando...')
 
     try {
+      // 0. Salvar snapshot da versão anterior
+      await fetch(`/api/aluno/checklists-criados/${id}/versoes`, { method: 'POST' })
+
       // 1. Atualizar dados do checklist
       const { error: errChecklist } = await supabase
         .from('checklists_futuros')
@@ -184,6 +190,7 @@ export default function EditarChecklistPage() {
           tipo_negocio: tipoNegocio,
           empresa_id: empresaId || null,
           colaborador_id: colaboradorId || null,
+          prazo_alerta: prazoAlerta || null,
         })
         .eq('id', id)
 
@@ -356,6 +363,27 @@ export default function EditarChecklistPage() {
                   <option value="outro">Outro</option>
                 </select>
               </div>
+            </div>
+
+            {/* Prazo de alerta */}
+            <div style={{ marginBottom: '1.75rem', padding: '1.25rem', backgroundColor: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: '0.75rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.375rem', fontWeight: '600', color: '#92400e', fontSize: '0.95rem' }}>
+                Prazo de alerta (opcional)
+              </label>
+              <p style={{ fontSize: '0.8rem', color: '#a16207', margin: '0 0 0.75rem' }}>
+                Defina uma data limite. O checklist aparecerá em destaque vermelho quando vencer ou amarelo quando faltar 3 dias.
+              </p>
+              <input
+                type="date"
+                value={prazoAlerta}
+                onChange={(e) => setPrazoAlerta(e.target.value)}
+                style={{ padding: '0.75rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '1rem', outline: 'none', backgroundColor: 'white' }}
+              />
+              {prazoAlerta && (
+                <button type="button" onClick={() => setPrazoAlerta('')} style={{ marginLeft: '0.75rem', fontSize: '0.8rem', color: '#92400e', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                  Remover prazo
+                </button>
+              )}
             </div>
 
             {/* Empresa e Colaborador */}

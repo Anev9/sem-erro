@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Calendar, CheckCircle, XCircle, MinusCircle, Clock, AlertCircle, PlayCircle, ClipboardList, Building2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 interface ChecklistFuturo {
   id: string
@@ -82,7 +83,7 @@ export default function DetalhesChecklistFuturoPage() {
         .single()
 
       if (checklistError || !checklistData) {
-        alert('Checklist não encontrado ou sem permissão de acesso.')
+        toast.error('Checklist não encontrado ou sem permissão de acesso.')
         router.push('/checklists-futuros')
         return
       }
@@ -119,7 +120,7 @@ export default function DetalhesChecklistFuturoPage() {
       setRespostas(mapaRespostas)
     } catch (error) {
       console.error('Erro ao carregar checklist:', error)
-      alert('Erro ao carregar checklist.')
+      toast.error('Erro ao carregar checklist.')
     } finally {
       setLoading(false)
     }
