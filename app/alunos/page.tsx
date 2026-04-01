@@ -6,9 +6,9 @@ import { supabase } from '@/lib/supabase'
 interface Aluno {
   id: number
   programa: string
-  cliente: string
-  email: string
-  telefone: string
+  clientes: string | null
+  'e-mail': string | null
+  telefone: string | null
   created_at: string
 }
 
@@ -25,7 +25,7 @@ export default function AlunosPage() {
       const { data, error } = await supabase
         .from('alunos')
         .select('*')
-        .order('cliente', { ascending: true })
+        .order('clientes', { ascending: true })
 
       if (error) {
         console.error('Erro ao buscar alunos:', error)
@@ -65,8 +65,8 @@ export default function AlunosPage() {
               <tr key={aluno.id}>
                 <td className="border px-4 py-2">{aluno.id}</td>
                 <td className="border px-4 py-2">{aluno.programa}</td>
-                <td className="border px-4 py-2">{aluno.cliente}</td>
-                <td className="border px-4 py-2">{aluno.email}</td>
+                <td className="border px-4 py-2">{aluno.clientes}</td>
+                <td className="border px-4 py-2">{aluno['e-mail']}</td>
                 <td className="border px-4 py-2">{aluno.telefone}</td>
               </tr>
             ))}
