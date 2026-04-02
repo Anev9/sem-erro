@@ -259,6 +259,55 @@ export type Database = {
           },
         ]
       }
+      checklist_item_comentarios: {
+        Row: {
+          autor: string
+          checklist_id: string
+          created_at: string | null
+          id: string
+          item_id: string
+          texto: string
+        }
+        Insert: {
+          autor?: string
+          checklist_id: string
+          created_at?: string | null
+          id?: string
+          item_id: string
+          texto: string
+        }
+        Update: {
+          autor?: string
+          checklist_id?: string
+          created_at?: string | null
+          id?: string
+          item_id?: string
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_item_comentarios_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "checklists_futuros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_item_comentarios_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "vw_checklists_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_item_comentarios_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_futuro_itens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checklist_respostas: {
         Row: {
           checklist_futuro_id: string | null
@@ -395,6 +444,51 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      checklist_versoes: {
+        Row: {
+          checklist_id: string
+          created_at: string | null
+          descricao: string | null
+          id: string
+          itens: Json
+          titulo: string
+          versao: number
+        }
+        Insert: {
+          checklist_id: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          itens?: Json
+          titulo: string
+          versao?: number
+        }
+        Update: {
+          checklist_id?: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          itens?: Json
+          titulo?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_versoes_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "checklists_futuros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_versoes_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "vw_checklists_pendentes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       checklists: {
         Row: {
