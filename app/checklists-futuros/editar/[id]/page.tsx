@@ -68,7 +68,7 @@ export default function EditarChecklistPage() {
       setNome(checklist.nome || '')
       setDescricao(checklist.descricao || '')
       setProximaExecucao(checklist.proxima_execucao?.split('T')[0] || '')
-      setRecorrencia(checklist.recorrencia || 'nenhuma')
+      setRecorrencia((checklist.recorrencia as 'diaria' | 'semanal' | 'mensal' | 'nenhuma') || 'nenhuma')
       setDiasTolerancia(checklist.dias_tolerancia || 0)
       setPrazoAlerta(checklist.prazo_alerta?.split('T')[0] || '')
       setTipoNegocio(checklist.tipo_negocio || '')
