@@ -245,7 +245,7 @@ export default function CriarChecklistFuturoPage() {
     const { data: checklistFuturo, error: errorChecklist } = await supabase
       .from('checklists_futuros')
       .insert({
-        titulo: nomeChecklist,
+        nome: nomeChecklist,
         descricao: descricao || null,
         tipo_negocio: tipoNegocio,
         proxima_execucao: proximaExecucao,
@@ -304,7 +304,7 @@ export default function CriarChecklistFuturoPage() {
     const { data: checklistFuturo, error: errorChecklist } = await supabase
       .from('checklists_futuros')
       .insert({
-        titulo: nomeChecklist,
+        nome: nomeChecklist,
         descricao: descricao || null,
         tipo_negocio: tipoNegocio,
         proxima_execucao: proximaExecucao,
@@ -371,7 +371,7 @@ export default function CriarChecklistFuturoPage() {
     const { data: novoChecklist, error: errorChecklist } = await supabase
       .from('checklists_futuros')
       .insert({
-        titulo: nomeChecklist || checklistOriginal.titulo,
+        nome: nomeChecklist || checklistOriginal.nome,
         descricao: descricao || checklistOriginal.descricao,
         tipo_negocio: tipoNegocio || checklistOriginal.tipo_negocio,
         proxima_execucao: proximaExecucao,
