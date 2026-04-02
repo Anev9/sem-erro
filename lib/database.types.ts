@@ -472,6 +472,7 @@ export type Database = {
           empresa_id: string | null
           id: string
           nome: string
+          prazo_alerta: string | null
           progresso_percentual: number | null
           proxima_execucao: string
           recorrencia: string | null
@@ -500,6 +501,7 @@ export type Database = {
           empresa_id?: string | null
           id?: string
           nome: string
+          prazo_alerta?: string | null
           progresso_percentual?: number | null
           proxima_execucao: string
           recorrencia?: string | null
@@ -528,6 +530,7 @@ export type Database = {
           empresa_id?: string | null
           id?: string
           nome?: string
+          prazo_alerta?: string | null
           progresso_percentual?: number | null
           proxima_execucao?: string
           recorrencia?: string | null
