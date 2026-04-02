@@ -245,13 +245,13 @@ export default function CriarChecklistFuturoPage() {
     const { data: checklistFuturo, error: errorChecklist } = await supabase
       .from('checklists_futuros')
       .insert({
-        nome: nomeChecklist,
+        titulo: nomeChecklist,
         descricao: descricao || null,
         tipo_negocio: tipoNegocio,
         proxima_execucao: proximaExecucao,
         recorrencia,
         dias_tolerancia: diasTolerancia,
-        aluno_id: userId,
+        aluno_id: Number(userId),
         empresa_id: empresaId || null,
         colaborador_id: colaboradorId || null,
         ativo: true
@@ -304,14 +304,14 @@ export default function CriarChecklistFuturoPage() {
     const { data: checklistFuturo, error: errorChecklist } = await supabase
       .from('checklists_futuros')
       .insert({
-        nome: nomeChecklist,
+        titulo: nomeChecklist,
         descricao: descricao || null,
         tipo_negocio: tipoNegocio,
         proxima_execucao: proximaExecucao,
         recorrencia,
         dias_tolerancia: diasTolerancia,
         template_id: templateSelecionado,
-        aluno_id: userId,
+        aluno_id: Number(userId),
         empresa_id: empresaId || null,
         colaborador_id: colaboradorId || null,
         ativo: true
@@ -371,13 +371,13 @@ export default function CriarChecklistFuturoPage() {
     const { data: novoChecklist, error: errorChecklist } = await supabase
       .from('checklists_futuros')
       .insert({
-        nome: nomeChecklist || checklistOriginal.nome,
+        titulo: nomeChecklist || checklistOriginal.titulo,
         descricao: descricao || checklistOriginal.descricao,
         tipo_negocio: tipoNegocio || checklistOriginal.tipo_negocio,
         proxima_execucao: proximaExecucao,
         recorrencia,
         dias_tolerancia: diasTolerancia,
-        aluno_id: userId,
+        aluno_id: Number(userId),
         empresa_id: empresaId || null,
         colaborador_id: colaboradorId || null,
         ativo: true
