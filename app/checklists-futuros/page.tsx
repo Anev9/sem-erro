@@ -10,10 +10,10 @@ type ChecklistFuturo = {
   id: string
   nome: string
   descricao: string | null
-  tipo_negocio: string
-  proxima_execucao: string
-  status: string
-  progresso_percentual: number
+  tipo_negocio: string | null
+  proxima_execucao: string | null
+  status: string | null
+  progresso_percentual: number | null
   departamento: string | null
   empresa_id: string | null
   total_itens?: number
