@@ -28,15 +28,15 @@ interface ChecklistFuturo {
 interface Item {
   id: string
   titulo: string
-  descricao?: string
+  descricao?: string | null
   ordem: number
 }
 
 interface Resposta {
   item_id: string
   resposta: 'sim' | 'nao' | 'na' | null
-  observacao?: string
-  foto_url?: string
+  observacao?: string | null
+  foto_url?: string | null
 }
 
 export default function DetalhesChecklistFuturoPage() {
@@ -101,7 +101,7 @@ export default function DetalhesChecklistFuturoPage() {
 
       if (itensError) throw itensError
 
-      const listaItens: Item[] = itensData || []
+      const listaItens: Item[] = (itensData || []) as unknown as Item[]
       setItens(listaItens)
 
       // Buscar respostas do funcionário (se houver)
