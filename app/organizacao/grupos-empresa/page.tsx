@@ -7,16 +7,16 @@ import { supabase } from '@/lib/supabase'
 
 interface Aluno {
   id: number
-  programa: string
-  clientes: string
-  'e-mail': string
-  telefone: string
-  tipo: string
-  ativo: boolean
-  cidade: string
-  estado: string
-  cnpj: string
-  created_at: string
+  programa: string | null
+  clientes: string | null
+  'e-mail': string | null
+  telefone: string | null
+  tipo: string | null
+  ativo: boolean | null
+  cidade: string | null
+  estado: string | null
+  cnpj: string | null
+  created_at: string | null
 }
 
 export default function GruposEmpresaPage() {
@@ -69,7 +69,7 @@ export default function GruposEmpresaPage() {
     const copia = [...lista]
     if (ordenacao === 'nome') return copia.sort((a, b) => (a.clientes || '').localeCompare(b.clientes || ''))
     if (ordenacao === 'programa') return copia.sort((a, b) => (a.programa || '').localeCompare(b.programa || ''))
-    return copia.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    return copia.sort((a, b) => new Date(b.created_at ?? '').getTime() - new Date(a.created_at ?? '').getTime())
   }
 
   const alunosFiltrados = aplicarOrdenacao(

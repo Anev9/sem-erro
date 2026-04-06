@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 export default function EditarEmpresaPage() {
   const router = useRouter()
   const params = useParams()
-  const id = params.id as string
+  const id = Number(params.id)
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -48,7 +48,21 @@ export default function EditarEmpresaPage() {
         .single()
 
       if (error) throw error
-      if (data) setEmpresa(data)
+      if (data) setEmpresa({
+        clientes: data.clientes ?? '',
+        cnpj: data.cnpj ?? '',
+        tipo_empresa: data.tipo_empresa ?? '',
+        ativo: data.ativo ?? true,
+        auditor_atribui_acao: data.auditor_atribui_acao ?? false,
+        endereco: (data as Record<string, unknown>).endereco as string ?? '',
+        estado: data.estado ?? '',
+        cidade: data.cidade ?? '',
+        programa: data.programa ?? '',
+        'e-mail': data['e-mail'] ?? '',
+        telefone: data.telefone ?? '',
+        senha: (data as Record<string, unknown>).senha as string ?? '',
+        tipo: (data as Record<string, unknown>).tipo as string ?? 'aluno',
+      })
     } catch (error) {
       console.error('Erro ao buscar empresa:', error)
       toast.error('Erro ao carregar dados')

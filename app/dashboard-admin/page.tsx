@@ -9,10 +9,10 @@ import { LanguageToggle } from '../../components/LanguageToggle'
 
 interface Aluno {
   id: number
-  clientes: string
-  'e-mail': string
-  programa: string
-  ativo: boolean
+  clientes: string | null
+  'e-mail': string | null
+  programa: string | null
+  ativo: boolean | null
 }
 
 interface AtividadeRecente {
@@ -80,7 +80,7 @@ export default function DashboardAdmin() {
         lista.push({
           tipo: 'checklist',
           descricao: `Checklist "${cl.titulo}" — ${cl.status === 'concluido' ? 'concluído' : cl.status === 'em_andamento' ? 'em andamento' : 'pendente'}`,
-          data: cl.updated_at,
+          data: cl.updated_at ?? '',
           cliente: empresa,
         })
       }
@@ -90,7 +90,7 @@ export default function DashboardAdmin() {
         lista.push({
           tipo: 'acao',
           descricao: `Ação "${ac.titulo}" criada`,
-          data: ac.created_at,
+          data: ac.created_at ?? '',
           cliente: empresa,
         })
       }
