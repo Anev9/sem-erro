@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Building2, User, Mail, Phone, MapPin, Lock, Tag, CheckSquare } from 'lucide-react'
+import { ArrowLeft, Save, Building2, Mail, MapPin, Lock, CheckSquare } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -94,7 +94,9 @@ export default function CriarEmpresaPage() {
     if (!validar()) return
     setSaving(true)
     try {
-      const { error } = await supabase.from('alunos').insert([form])
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { celular, ...dadosParaSalvar } = form
+      const { error } = await supabase.from('alunos').insert([dadosParaSalvar])
       if (error) throw error
       router.push('/organizacao/grupos-empresa')
     } catch (err: unknown) {
