@@ -425,7 +425,7 @@ export default function ChecklistsFuturosPage() {
                       {(checklist.dias_tolerancia ?? 0) > 0 && (
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6b7280' }}>
                           🕐 Janela: {(() => {
-                            const j = calcularJanela(checklist.proxima_execucao, checklist.dias_tolerancia!)
+                            const j = calcularJanela(checklist.proxima_execucao ?? '', checklist.dias_tolerancia!)
                             return `${j.inicio} – ${j.fim}`
                           })()}
                         </span>
