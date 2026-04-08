@@ -26,6 +26,20 @@ interface AcaoCorretiva {
   checklist_futuro_itens?: { titulo: string };
 }
 
+interface EditForm {
+  titulo: string;
+  descricao: string;
+  responsavel: string;
+  prazo: string;
+  status: AcaoCorretiva['status'];
+  prioridade: AcaoCorretiva['prioridade'];
+  categoria: string;
+  orcamento: string;
+  valor_pago: string;
+  observacoes: string;
+  urgente: boolean;
+}
+
 export default function ListaAcoes() {
   const router = useRouter();
   const [acoes, setAcoes] = useState<AcaoCorretiva[]>([]);
@@ -41,6 +55,9 @@ export default function ListaAcoes() {
   const [empresas, setEmpresas] = useState<{ id: string; nome_fantasia: string }[]>([]);
   const [alunoId, setAlunoId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'lista' | 'kanban'>('lista');
+  const [acaoEditando, setAcaoEditando] = useState<AcaoCorretiva | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   useEffect(() => {
     verificarAutenticacao();
@@ -76,15 +93,91 @@ export default function ListaAcoes() {
     }
   }
 
+  function abrirEdicao(acao: AcaoCorretiva) {
+    setAcaoEditando(acao);
+    setEditForm({
+      titulo: acao.titulo,
+      descricao: acao.descricao || '',
+      responsavel: acao.responsavel || '',
+      prazo: acao.prazo ? acao.prazo.split('T')[0] : '',
+      status: acao.status,
+      prioridade: acao.prioridade,
+      categoria: acao.categoria || '',
+      orcamento: acao.orcamento != null ? String(acao.orcamento) : '',
+      valor_pago: acao.valor_pago != null ? String(acao.valor_pago) : '',
+      observacoes: acao.observacoes || '',
+      urgente: acao.urgente,
+    });
+  }
+
+  async function salvarEdicao() {
+    if (!acaoEditando || !editForm) return;
+    setSalvandoEdicao(true);
+    try {
+      const body = {
+        titulo: editForm.titulo,
+        descricao: editForm.descricao || null,
+        responsavel: editForm.responsavel || null,
+        prazo: editForm.prazo || null,
+        status: editForm.status,
+        prioridade: editForm.prioridade,
+        categoria: editForm.categoria || null,
+        orcamento: editForm.orcamento !== '' ? parseFloat(editForm.orcamento) : null,
+        valor_pago: editForm.valor_pago !== '' ? parseFloat(editForm.valor_pago) : null,
+        observacoes: editForm.observacoes || null,
+        urgente: editForm.urgente,
+      };
+      const res = await fetch(`/api/aluno/acoes?id=${acaoEditando.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) { toast.error('Erro ao salvar alterações.'); return; }
+      const atualizada = await res.json();
+      setAcoes(prev => prev.map(a => a.id === atualizada.id ? atualizada : a));
+      setAcaoEditando(null);
+      setEditForm(null);
+      toast.success('Ação atualizada!');
+    } catch {
+      toast.error('Erro ao salvar alterações.');
+    } finally {
+      setSalvandoEdicao(false);
+    }
+  }
+
+  async function duplicarAcao(acao: AcaoCorretiva) {
+    if (!alunoId) return;
+    try {
+      const { id, created_at, empresas, checklists_futuros, checklist_futuro_itens, ...resto } = acao;
+      const novaAcao = { ...resto, titulo: `${acao.titulo} (cópia)`, status: 'aguardando' as const };
+      const response = await fetch('/api/aluno/acoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(novaAcao),
+      });
+      if (!response.ok) { toast.error('Erro ao duplicar ação.'); return; }
+      const criada = await response.json();
+      setAcoes(prev => [criada, ...prev]);
+      toast.success('Ação duplicada com sucesso!');
+    } catch {
+      toast.error('Erro ao duplicar ação.');
+    }
+  }
+
   async function excluirAcao(id: string) {
+    if (!alunoId) return;
     if (!confirm('Tem certeza que deseja excluir esta ação?')) return;
 
-    const response = await fetch(`/api/aluno/acoes?id=${id}&aluno_id=${alunoId}`, { method: 'DELETE' });
-    if (!response.ok) {
+    try {
+      const response = await fetch(`/api/aluno/acoes?id=${id}&aluno_id=${alunoId}`, { method: 'DELETE' });
+      if (!response.ok) {
+        toast.error('Erro ao excluir ação.');
+        return;
+      }
+      setAcoes(prev => prev.filter(a => a.id !== id));
+    } catch {
       toast.error('Erro ao excluir ação.');
-      return;
     }
-    setAcoes(prev => prev.filter(a => a.id !== id));
   }
 
   const acoesFiltradas = acoes
@@ -134,7 +227,19 @@ export default function ListaAcoes() {
 
   const formatarData = (data: string | null) => {
     if (!data) return '—';
-    return new Date(data).toLocaleDateString('pt-BR');
+    const d = data.includes('T') ? new Date(data) : new Date(data + 'T00:00:00');
+    return d.toLocaleDateString('pt-BR');
+  };
+
+  const getPrazoAlerta = (prazo: string | null, status: string) => {
+    if (!prazo || status === 'concluida') return null;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const dataPrazo = new Date(prazo.includes('T') ? prazo : prazo + 'T00:00:00');
+    const diffDias = Math.ceil((dataPrazo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDias < 0) return { tipo: 'vencido', label: `Venceu há ${Math.abs(diffDias)} dia(s)`, cor: '#dc2626', bg: '#fef2f2' };
+    if (diffDias <= 3) return { tipo: 'urgente', label: diffDias === 0 ? 'Vence hoje!' : `Vence em ${diffDias} dia(s)`, cor: '#d97706', bg: '#fffbeb' };
+    return null;
   };
 
   if (loading) {
@@ -256,7 +361,7 @@ export default function ListaAcoes() {
                             <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1f2937', margin: '0 0 0.375rem', lineHeight: '1.3' }}>{acao.titulo}</p>
                             {acao.empresas && <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 0.25rem' }}>🏢 {acao.empresas.nome_fantasia}</p>}
                             {acao.responsavel && <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 0.25rem' }}>👤 {acao.responsavel}</p>}
-                            {acao.prazo && <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>📅 {new Date(acao.prazo).toLocaleDateString('pt-BR')}</p>}
+                            {acao.prazo && <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>📅 {new Date(acao.prazo.includes('T') ? acao.prazo : acao.prazo + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
                             {acao.urgente && <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#C62828' }}>🔴 URGENTE</span>}
                           </div>
                         ))}
@@ -347,13 +452,15 @@ export default function ListaAcoes() {
             {acoesFiltradas.map((acao) => {
               const statusStyle = getStatusColor(acao.status);
               const prioridadeCor = getPrioridadeColor(acao.prioridade);
+              const prazoAlerta = getPrazoAlerta(acao.prazo, acao.status);
 
               return (
                 <div
                   key={acao.id}
                   style={{
-                    border: '2px solid #e0e0e0', borderRadius: '0.75rem',
-                    padding: '1.5rem', transition: 'all 0.2s'
+                    border: `2px solid ${prazoAlerta ? prazoAlerta.cor : '#e0e0e0'}`, borderRadius: '0.75rem',
+                    padding: '1.5rem', transition: 'all 0.2s',
+                    background: prazoAlerta ? prazoAlerta.bg : 'white',
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#2196F3'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(33,150,243,0.15)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e0e0e0'; e.currentTarget.style.boxShadow = 'none'; }}
@@ -361,6 +468,11 @@ export default function ListaAcoes() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                     {/* Lado Esquerdo */}
                     <div style={{ flex: 1, minWidth: '300px' }}>
+                      {prazoAlerta && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.625rem', padding: '0.25rem 0.75rem', borderRadius: '0.375rem', background: prazoAlerta.cor, color: 'white', fontSize: '0.75rem', fontWeight: '700' }}>
+                          ⏰ {prazoAlerta.label}
+                        </div>
+                      )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                         {acao.urgente && (
                           <span style={{
@@ -451,6 +563,30 @@ export default function ListaAcoes() {
                         </div>
                       )}
                       <button
+                        onClick={() => abrirEdicao(acao)}
+                        style={{
+                          background: '#F3E5F5', color: '#6A1B9A', border: '2px solid #CE93D8',
+                          borderRadius: '0.5rem', padding: '0.5rem 1rem',
+                          fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#6A1B9A'; e.currentTarget.style.color = 'white'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#F3E5F5'; e.currentTarget.style.color = '#6A1B9A'; }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => duplicarAcao(acao)}
+                        style={{
+                          background: '#E3F2FD', color: '#1565C0', border: '2px solid #90CAF9',
+                          borderRadius: '0.5rem', padding: '0.5rem 1rem',
+                          fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#1565C0'; e.currentTarget.style.color = 'white'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#E3F2FD'; e.currentTarget.style.color = '#1565C0'; }}
+                      >
+                        Duplicar
+                      </button>
+                      <button
                         onClick={() => excluirAcao(acao.id)}
                         style={{
                           background: '#FFEBEE', color: '#C62828', border: '2px solid #E57373',
@@ -481,6 +617,118 @@ export default function ListaAcoes() {
           </div>}
         </div>
       </div>
+
+      {/* Modal de Edição */}
+      {acaoEditando && editForm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setAcaoEditando(null); setEditForm(null); } }}>
+          <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#37474f', margin: 0 }}>Editar Ação</h2>
+              <button onClick={() => { setAcaoEditando(null); setEditForm(null); }}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#666', lineHeight: 1 }}>×</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Título *</label>
+                <input value={editForm.titulo} onChange={e => setEditForm({ ...editForm, titulo: e.target.value })}
+                  style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem', boxSizing: 'border-box' as const }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Descrição</label>
+                <textarea value={editForm.descricao} onChange={e => setEditForm({ ...editForm, descricao: e.target.value })} rows={3}
+                  style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem', resize: 'vertical', boxSizing: 'border-box' as const }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Status</label>
+                  <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value as AcaoCorretiva['status'] })}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', border: `1.5px solid ${editForm.status === 'concluida' && acaoEditando?.checklist_id ? '#f59e0b' : '#e0e0e0'}`, borderRadius: '0.5rem', fontSize: '0.9rem' }}>
+                    <option value="aguardando">Aguardando</option>
+                    <option value="em_andamento">Em Andamento</option>
+                    <option value="concluida">Concluída</option>
+                    <option value="atrasada">Atrasada</option>
+                  </select>
+                  {editForm.status === 'concluida' && acaoEditando?.checklist_id && (
+                    <div style={{ marginTop: '0.375rem', padding: '0.5rem 0.75rem', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '0.375rem', fontSize: '0.75rem', color: '#92400e', display: 'flex', gap: '0.375rem', alignItems: 'flex-start' }}>
+                      <span>⚠️</span>
+                      <span>Esta ação está vinculada ao checklist <strong>{acaoEditando.checklists_futuros?.titulo || 'vinculado'}</strong>. Confirme que o checklist foi executado antes de concluir.</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Prioridade</label>
+                  <select value={editForm.prioridade} onChange={e => setEditForm({ ...editForm, prioridade: e.target.value as AcaoCorretiva['prioridade'] })}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem' }}>
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Responsável</label>
+                  <input value={editForm.responsavel} onChange={e => setEditForm({ ...editForm, responsavel: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem', boxSizing: 'border-box' as const }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Prazo</label>
+                  <input type="date" value={editForm.prazo} onChange={e => setEditForm({ ...editForm, prazo: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem', boxSizing: 'border-box' as const }} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Categoria</label>
+                <input value={editForm.categoria} onChange={e => setEditForm({ ...editForm, categoria: e.target.value })}
+                  placeholder="Ex: Higiene, Segurança, Estoque..."
+                  style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem', boxSizing: 'border-box' as const }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Orçamento (R$)</label>
+                  <input type="number" value={editForm.orcamento} onChange={e => setEditForm({ ...editForm, orcamento: e.target.value })} min="0" step="0.01"
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem', boxSizing: 'border-box' as const }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Valor Pago (R$)</label>
+                  <input type="number" value={editForm.valor_pago} onChange={e => setEditForm({ ...editForm, valor_pago: e.target.value })} min="0" step="0.01"
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem', boxSizing: 'border-box' as const }} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Observações</label>
+                <textarea value={editForm.observacoes} onChange={e => setEditForm({ ...editForm, observacoes: e.target.value })} rows={2}
+                  style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem', resize: 'vertical', boxSizing: 'border-box' as const }} />
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer' }}>
+                <input type="checkbox" checked={editForm.urgente} onChange={e => setEditForm({ ...editForm, urgente: e.target.checked })}
+                  style={{ width: '18px', height: '18px' }} />
+                <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#C62828' }}>Marcar como Urgente</span>
+              </label>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button onClick={() => { setAcaoEditando(null); setEditForm(null); }} disabled={salvandoEdicao}
+                  style={{ flex: 1, padding: '0.75rem', background: 'white', border: '2px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', color: '#555' }}>
+                  Cancelar
+                </button>
+                <button onClick={salvarEdicao} disabled={salvandoEdicao || !editForm.titulo.trim()}
+                  style={{ flex: 2, padding: '0.75rem', background: salvandoEdicao ? '#9ca3af' : '#6A1B9A', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.9rem', fontWeight: '700', cursor: salvandoEdicao ? 'not-allowed' : 'pointer' }}>
+                  {salvandoEdicao ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

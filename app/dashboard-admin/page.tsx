@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Building2, CheckCircle, XCircle, Users, Search, Activity, Clock } from 'lucide-react'
+import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Building2, CheckCircle, XCircle, Users, Search, Activity, Clock, AlertTriangle, BarChart2, TrendingUp, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { ThemeToggle } from '../../components/ThemeToggle'
 import { LanguageToggle } from '../../components/LanguageToggle'
@@ -22,6 +22,20 @@ interface AtividadeRecente {
   cliente?: string
 }
 
+interface UsoMensal {
+  aluno_id: number
+  nome: string
+  checklists: number
+  acoes: number
+  total: number
+}
+
+interface Alerta {
+  tipo: 'atrasada' | 'sem_atividade'
+  nome: string
+  detalhe: string
+}
+
 export default function DashboardAdmin() {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -34,6 +48,14 @@ export default function DashboardAdmin() {
   const [busca, setBusca] = useState('')
   const [atividades, setAtividades] = useState<AtividadeRecente[]>([])
   const [loadingAtividades, setLoadingAtividades] = useState(true)
+  const [usoMensal, setUsoMensal] = useState<UsoMensal[]>([])
+  const [alertas, setAlertas] = useState<Alerta[]>([])
+  const [loadingStats, setLoadingStats] = useState(true)
+  const [evolucao, setEvolucao] = useState<{ label: string; checklists: number; acoes: number; novosClientes: number }[]>([])
+  const [loadingEvolucao, setLoadingEvolucao] = useState(true)
+  const [filtroStatus, setFiltroStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos')
+  const [enviandoEmail, setEnviandoEmail] = useState(false)
+  const [emailResultado, setEmailResultado] = useState<string | null>(null)
 
   async function carregarAlunos() {
     const { data } = await supabase
@@ -49,6 +71,29 @@ export default function DashboardAdmin() {
       .from('colaboradores')
       .select('*', { count: 'exact', head: true })
     setTotalColaboradores(count ?? 0)
+  }
+
+  async function carregarEvolucao() {
+    setLoadingEvolucao(true)
+    try {
+      const res = await fetch('/api/admin/evolucao-mensal')
+      if (res.ok) setEvolucao(await res.json())
+    } catch { } finally { setLoadingEvolucao(false) }
+  }
+
+  async function carregarStats() {
+    setLoadingStats(true)
+    try {
+      const res = await fetch('/api/admin/stats')
+      if (!res.ok) return
+      const { usoMensal: uso, alertas: als } = await res.json()
+      setUsoMensal(uso || [])
+      setAlertas(als || [])
+    } catch {
+      // silencioso
+    } finally {
+      setLoadingStats(false)
+    }
   }
 
   async function carregarAtividades() {
@@ -113,6 +158,17 @@ export default function DashboardAdmin() {
       .eq('id', aluno.id)
     if (!error) {
       setAlunos((prev) => prev.map((a) => (a.id === aluno.id ? { ...a, ativo: novoStatus } : a)))
+      // Registrar no histórico de alterações (silencioso se tabela não existir)
+      fetch('/api/admin/log-alteracoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          aluno_id: aluno.id,
+          aluno_nome: aluno.clientes || aluno['e-mail'],
+          acao: novoStatus ? 'ativado' : 'desativado',
+          detalhe: `Cliente ${novoStatus ? 'ativado' : 'desativado'} pelo administrador`,
+        }),
+      }).catch(() => {})
     }
     setToggling(null)
   }
@@ -136,6 +192,8 @@ export default function DashboardAdmin() {
     carregarAlunos()
     carregarColaboradores()
     carregarAtividades()
+    carregarStats()
+    carregarEvolucao()
   }, [router])
 
   const menuItems = [
@@ -165,6 +223,8 @@ export default function DashboardAdmin() {
   }
 
   const alunosFiltrados = alunos.filter((a) => {
+    if (filtroStatus === 'ativo' && !a.ativo) return false
+    if (filtroStatus === 'inativo' && a.ativo) return false
     if (!busca.trim()) return true
     const q = busca.toLowerCase()
     return (
@@ -324,6 +384,133 @@ export default function DashboardAdmin() {
             ))}
           </div>
 
+          {/* Gráfico de uso mensal + Alertas */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+
+            {/* Gráfico de uso por cliente */}
+            <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+              <div style={{ background: 'linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%)', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <BarChart2 size={20} style={{ color: 'white' }} />
+                <h2 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0, color: 'white' }}>Uso no Mês — Top Clientes Ativos</h2>
+              </div>
+              <div style={{ padding: '1.25rem' }}>
+                {loadingStats ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9ca3af', fontSize: '0.875rem' }}>
+                    <div style={{ width: '18px', height: '18px', border: '2px solid #e5e7eb', borderTopColor: '#1d4ed8', borderRadius: '50%', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                    Carregando...
+                  </div>
+                ) : usoMensal.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#9ca3af' }}>
+                    <TrendingUp size={32} style={{ margin: '0 auto 0.5rem', opacity: 0.35 }} />
+                    <p style={{ margin: 0, fontSize: '0.875rem' }}>Nenhuma atividade este mês</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {(() => {
+                      const maxTotal = Math.max(...usoMensal.map(u => u.total), 1)
+                      return usoMensal.map((item) => (
+                        <div key={item.aluno_id}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nome}</span>
+                            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                              <span style={{ color: '#1d4ed8', fontWeight: '600' }}>{item.checklists}</span> cl. +{' '}
+                              <span style={{ color: '#7c3aed', fontWeight: '600' }}>{item.acoes}</span> ações
+                            </span>
+                          </div>
+                          <div style={{ height: '8px', borderRadius: '999px', background: '#f1f5f9', overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', height: '100%' }}>
+                              <div style={{ width: `${(item.checklists / maxTotal) * 100}%`, background: '#3b82f6', transition: 'width 0.4s ease' }} />
+                              <div style={{ width: `${(item.acoes / maxTotal) * 100}%`, background: '#8b5cf6', transition: 'width 0.4s ease' }} />
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    })()}
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.25rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#3b82f6' }} /> Checklists
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#8b5cf6' }} /> Ações
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Card de Alertas */}
+            <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+              <div style={{ background: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <AlertTriangle size={20} style={{ color: 'white' }} />
+                  <h2 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0, color: 'white' }}>Alertas</h2>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {!loadingStats && alertas.length > 0 && (
+                    <span style={{ background: '#ef4444', color: 'white', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700', padding: '0.125rem 0.625rem' }}>{alertas.length}</span>
+                  )}
+                  <button
+                    onClick={async () => {
+                      setEnviandoEmail(true)
+                      setEmailResultado(null)
+                      try {
+                        const res = await fetch('/api/admin/enviar-alertas', { method: 'POST' })
+                        const data = await res.json()
+                        setEmailResultado(data.mensagem || 'E-mails processados.')
+                      } catch {
+                        setEmailResultado('Erro ao enviar e-mails.')
+                      } finally {
+                        setEnviandoEmail(false)
+                      }
+                    }}
+                    disabled={enviandoEmail}
+                    style={{ padding: '0.2rem 0.625rem', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '0.375rem', color: 'white', cursor: enviandoEmail ? 'not-allowed' : 'pointer', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}
+                  >
+                    {enviandoEmail ? '...' : '✉️ Notificar'}
+                  </button>
+                </div>
+              </div>
+              <div style={{ padding: '1.25rem' }}>
+                {emailResultado && (
+                  <div style={{ marginBottom: '0.75rem', padding: '0.5rem 0.75rem', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '0.375rem', fontSize: '0.8rem', color: '#92400e' }}>
+                    {emailResultado}
+                  </div>
+                )}
+                {loadingStats ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9ca3af', fontSize: '0.875rem' }}>
+                    <div style={{ width: '18px', height: '18px', border: '2px solid #e5e7eb', borderTopColor: '#d97706', borderRadius: '50%', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                    Carregando...
+                  </div>
+                ) : alertas.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#9ca3af' }}>
+                    <CheckCircle size={32} style={{ margin: '0 auto 0.5rem', color: '#10b981', opacity: 0.7 }} />
+                    <p style={{ margin: 0, fontSize: '0.875rem' }}>Nenhum alerta no momento</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', maxHeight: '280px', overflowY: 'auto' }}>
+                    {alertas.map((alerta, idx) => (
+                      <div key={idx} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: '0.625rem',
+                        padding: '0.625rem 0.75rem', borderRadius: '0.5rem',
+                        background: alerta.tipo === 'atrasada' ? '#fef2f2' : '#fffbeb',
+                        border: `1px solid ${alerta.tipo === 'atrasada' ? '#fecaca' : '#fde68a'}`,
+                      }}>
+                        <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: '1px' }}>
+                          {alerta.tipo === 'atrasada' ? '🔴' : '⚠️'}
+                        </span>
+                        <div>
+                          <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: '600', color: '#1f2937' }}>{alerta.nome}</p>
+                          <p style={{ margin: '0.125rem 0 0', fontSize: '0.75rem', color: alerta.tipo === 'atrasada' ? '#dc2626' : '#92400e' }}>{alerta.detalhe}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Lista de clientes */}
           <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
             <div style={{ background: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
@@ -332,6 +519,24 @@ export default function DashboardAdmin() {
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0, color: 'white' }}>Clientes / Grupos de Empresa</h2>
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* Filtro ativo/inativo */}
+                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.1)', borderRadius: '0.375rem', padding: '2px', gap: '2px' }}>
+                  {(['todos', 'ativo', 'inativo'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setFiltroStatus(f)}
+                      style={{
+                        padding: '0.25rem 0.625rem', border: 'none', borderRadius: '0.25rem', cursor: 'pointer',
+                        fontSize: '0.78rem', fontWeight: '600', whiteSpace: 'nowrap',
+                        background: filtroStatus === f ? 'white' : 'transparent',
+                        color: filtroStatus === f ? '#334155' : 'rgba(255,255,255,0.75)',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {f === 'todos' ? 'Todos' : f === 'ativo' ? 'Ativos' : 'Inativos'}
+                    </button>
+                  ))}
+                </div>
                 {/* Busca */}
                 <div style={{ position: 'relative' }}>
                   <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.5)', pointerEvents: 'none' }} />
@@ -349,6 +554,12 @@ export default function DashboardAdmin() {
                     onBlur={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
                   />
                 </div>
+                <button
+                  onClick={() => router.push('/dashboard-admin/novo-cliente')}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap', fontWeight: '600' }}
+                >
+                  <UserPlus size={14} /> Novo
+                </button>
                 <button
                   onClick={() => router.push('/organizacao/grupos-empresa')}
                   style={{ padding: '0.375rem 0.875rem', backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
@@ -380,7 +591,7 @@ export default function DashboardAdmin() {
                       backgroundColor: aluno.ativo ? '#f0fdf4' : '#fef2f2',
                       flexWrap: 'wrap', cursor: 'pointer', transition: 'all 0.15s',
                     }}
-                    onClick={() => router.push(`/organizacao/grupos-empresa/editar/${aluno.id}`)}
+                    onClick={() => router.push(`/dashboard-admin/cliente/${aluno.id}`)}
                     onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateX(3px)' }}
                     onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateX(0)' }}
                   >
@@ -462,6 +673,52 @@ export default function DashboardAdmin() {
             )}
           </div>
 
+          {/* Gráfico de evolução mensal */}
+          <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', padding: '1.5rem', marginTop: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <TrendingUp size={20} style={{ color: '#334155' }} />
+              <h2 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>Evolução dos Últimos 6 Meses</h2>
+            </div>
+            {loadingEvolucao ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9ca3af', fontSize: '0.875rem' }}>
+                <div style={{ width: '18px', height: '18px', border: '2px solid #e5e7eb', borderTopColor: '#334155', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                Carregando...
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', height: '160px', paddingBottom: '0.5rem' }}>
+                  {(() => {
+                    const maxVal = Math.max(...evolucao.flatMap(e => [e.checklists, e.acoes]), 1)
+                    return evolucao.map((mes, idx) => (
+                      <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'flex-end' }}>
+                        <div style={{ width: '100%', display: 'flex', gap: '3px', alignItems: 'flex-end', justifyContent: 'center' }}>
+                          <div title={`${mes.checklists} checklists`} style={{ flex: 1, background: '#3b82f6', borderRadius: '3px 3px 0 0', height: `${Math.max((mes.checklists / maxVal) * 130, mes.checklists > 0 ? 4 : 0)}px`, transition: 'height 0.4s ease', minWidth: '8px' }} />
+                          <div title={`${mes.acoes} ações`} style={{ flex: 1, background: '#8b5cf6', borderRadius: '3px 3px 0 0', height: `${Math.max((mes.acoes / maxVal) * 130, mes.acoes > 0 ? 4 : 0)}px`, transition: 'height 0.4s ease', minWidth: '8px' }} />
+                        </div>
+                        {mes.novosClientes > 0 && (
+                          <span style={{ fontSize: '0.6rem', color: '#10b981', fontWeight: '700' }}>+{mes.novosClientes}</span>
+                        )}
+                        <span style={{ fontSize: '0.7rem', color: '#6b7280', whiteSpace: 'nowrap' }}>{mes.label}</span>
+                      </div>
+                    ))
+                  })()}
+                </div>
+                <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                  {[
+                    { cor: '#3b82f6', label: 'Checklists', total: evolucao.reduce((s, e) => s + e.checklists, 0) },
+                    { cor: '#8b5cf6', label: 'Ações', total: evolucao.reduce((s, e) => s + e.acoes, 0) },
+                    { cor: '#10b981', label: 'Novos clientes', total: evolucao.reduce((s, e) => s + e.novosClientes, 0) },
+                  ].map(item => (
+                    <span key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: item.cor }} />
+                      {item.label}: <strong style={{ color: item.cor }}>{item.total}</strong>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Cards de ações rápidas */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
             <div
@@ -483,6 +740,16 @@ export default function DashboardAdmin() {
               <FileText size={32} style={{ color: '#3b82f6', marginBottom: '0.75rem' }} />
               <h3 style={{ fontWeight: '600', color: '#1f2937', margin: '0 0 0.375rem' }}>Relatórios</h3>
               <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Performance e relatórios gerais</p>
+            </div>
+            <div
+              onClick={() => router.push('/dashboard-admin/auditoria')}
+              style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', cursor: 'pointer', border: '2px solid transparent', transition: 'all 0.2s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              <Activity size={32} style={{ color: '#7c3aed', marginBottom: '0.75rem' }} />
+              <h3 style={{ fontWeight: '600', color: '#1f2937', margin: '0 0 0.375rem' }}>Auditoria</h3>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Registro completo de atividades do sistema</p>
             </div>
           </div>
         </main>

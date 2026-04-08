@@ -65,6 +65,9 @@ export async function POST(request: NextRequest) {
       await supabase.from('alunos').update({ senha: hash }).eq('id', aluno.id)
     }
 
+    // Registrar último login (ignora silenciosamente se a coluna não existir)
+    await supabase.from('alunos').update({ ultimo_login: new Date().toISOString() }).eq('id', aluno.id)
+
     // Sincronizar com Supabase Auth para centralizar autenticação
     const emailNorm = email.toLowerCase().trim()
     let authId: string | null = aluno['auth_id'] ?? null
@@ -127,6 +130,7 @@ export async function POST(request: NextRequest) {
       programa: aluno['programa'],
       ativo: aluno['ativo'],
       created_at: aluno['created_at'],
+      foto_url: aluno['foto_url'] || null,
     }
 
     const isProd = process.env.NODE_ENV === 'production'

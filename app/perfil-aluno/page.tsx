@@ -54,11 +54,15 @@ export default function PerfilAlunoPage() {
       if (!res.ok) throw new Error('Erro ao enviar foto')
       const { publicUrl } = await res.json()
 
-      await fetch('/api/aluno/perfil', {
+      const patchRes = await fetch('/api/aluno/perfil', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ foto_url: publicUrl }),
       })
+      if (!patchRes.ok) {
+        const err = await patchRes.json().catch(() => ({}))
+        throw new Error(err.error || 'Erro ao salvar foto no perfil')
+      }
 
       setAluno(prev => prev ? { ...prev, foto_url: publicUrl } : prev)
       try {

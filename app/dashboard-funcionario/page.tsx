@@ -49,6 +49,19 @@ export default function DashboardColaborador() {
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [loading, setLoading] = useState(true)
   const [erroChecklists, setErroChecklists] = useState(false)
+  const [deferredInstall, setDeferredInstall] = useState<Event | null>(null)
+  const [appInstalado, setAppInstalado] = useState(false)
+  const [checklistsNovos, setChecklistsNovos] = useState<string[]>([])
+  const [notifDescartada, setNotifDescartada] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); setDeferredInstall(e) }
+    window.addEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', () => setAppInstalado(true))
+    // Detectar se já está instalado (standalone)
+    if (window.matchMedia('(display-mode: standalone)').matches) setAppInstalado(true)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
 
   useEffect(() => {
     console.log('[DASH] useEffect disparado')
@@ -149,6 +162,18 @@ export default function DashboardColaborador() {
 
         return { ...checklist, status, total_perguntas: totalPerguntas, respostas_count: respostasCount }
       })
+
+      // Detectar checklists novos desde a última visita
+      const chaveVisita = `lastVisit_func_${colaboradorId}`
+      const ultimaVisita = localStorage.getItem(chaveVisita)
+      const agora = new Date().toISOString()
+      if (ultimaVisita) {
+        const novos = checklistsData
+          .filter(c => c.created_at > ultimaVisita)
+          .map(c => c.id)
+        setChecklistsNovos(novos)
+      }
+      localStorage.setItem(chaveVisita, agora)
 
       setChecklists(checklistsComStatus as Checklist[])
     } catch (error) {
@@ -282,6 +307,29 @@ export default function DashboardColaborador() {
               Meu Perfil
             </button>
 
+            {deferredInstall && !appInstalado && (
+              <button
+                onClick={async () => {
+                  const prompt = deferredInstall as any
+                  prompt.prompt()
+                  const { outcome } = await prompt.userChoice
+                  if (outcome === 'accepted') setAppInstalado(true)
+                  setDeferredInstall(null)
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem', color: '#1e293b', backgroundColor: '#fbbf24', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '700' }}
+              >
+                📲 Instalar App
+              </button>
+            )}
+
+            <button
+              onClick={() => router.push('/historico-funcionario')}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}
+            >
+              <Clock size={18} />
+              Histórico
+            </button>
+
             <button
               onClick={handleLogout}
               style={{
@@ -307,6 +355,24 @@ export default function DashboardColaborador() {
 
       {/* Content */}
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
+
+        {/* Banner de novos checklists */}
+        {!notifDescartada && checklistsNovos.length > 0 && (
+          <div className="fade-in" style={{ background: '#eff6ff', border: '2px solid #3b82f6', borderRadius: '0.875rem', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>🔔</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: '700', color: '#1d4ed8', fontSize: '0.95rem' }}>
+                  {checklistsNovos.length === 1 ? 'Você tem 1 novo checklist atribuído!' : `Você tem ${checklistsNovos.length} novos checklists atribuídos!`}
+                </p>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#3b82f6' }}>Confira abaixo os checklists marcados com 🔔 NOVO.</p>
+              </div>
+            </div>
+            <button onClick={() => setNotifDescartada(true)}
+              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '1.25rem', lineHeight: 1, flexShrink: 0 }}>×</button>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="fade-in" style={{
           display: 'grid',
@@ -483,20 +549,27 @@ export default function DashboardColaborador() {
                         border: '2px solid #fef3c7'
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem', gap: '0.5rem' }}>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0, flex: 1 }}>
                           {checklist.nome}
                         </h3>
-                        <span style={{
-                          padding: '0.375rem 0.75rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          backgroundColor: '#fef3c7',
-                          color: '#92400e'
-                        }}>
-                          Pendente
-                        </span>
+                        <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, flexDirection: 'column', alignItems: 'flex-end' }}>
+                          {checklistsNovos.includes(checklist.id) && (
+                            <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#3b82f6', color: 'white', whiteSpace: 'nowrap' }}>
+                              🔔 NOVO
+                            </span>
+                          )}
+                          <span style={{
+                            padding: '0.375rem 0.75rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            backgroundColor: '#fef3c7',
+                            color: '#92400e'
+                          }}>
+                            Pendente
+                          </span>
+                        </div>
                       </div>
                       {checklist.descricao && (
                         <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>

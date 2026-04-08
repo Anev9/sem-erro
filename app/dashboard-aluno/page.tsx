@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Calendar, TrendingUp, Building2, Activity } from 'lucide-react'
+import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Calendar, TrendingUp, Building2, Activity, Clock } from 'lucide-react'
 import { ThemeToggle } from '../../components/ThemeToggle'
 import { LanguageToggle } from '../../components/LanguageToggle'
 import { useLang } from '../../contexts/LanguageContext'
@@ -39,6 +39,12 @@ export default function DashboardAluno() {
   const [feed, setFeed] = useState<Array<{ tipo: string; descricao: string; data: string; checklist?: string }>>([])
   const [loadingFeed, setLoadingFeed] = useState(false)
   const [notifPermissao, setNotifPermissao] = useState<NotificationPermission | 'unsupported'>('default')
+  const [resumoSemanal, setResumoSemanal] = useState({ checklistsConcluidos: 0, acoesConcluidas: 0, pendentes: 0, atrasadas: 0 })
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
+  const [buscaQuery, setBuscaQuery] = useState('')
+  const [buscaResultados, setBuscaResultados] = useState<{ checklists: Array<{ id: string; titulo: string; empresas?: { nome_fantasia: string }; created_at: string }>; acoes: Array<{ id: string; titulo: string; status: string; empresas?: { nome_fantasia: string } }> } | null>(null)
+  const [buscandoGlobal, setBuscandoGlobal] = useState(false)
+  const [buscaAberta, setBuscaAberta] = useState(false)
 
   const menuItems = [
     {
@@ -91,10 +97,22 @@ export default function DashboardAluno() {
 
     setUserName(user.full_name || user.email)
     setAlunoId(user.aluno_id)
-    
+    if (user.foto_url) setFotoUrl(user.foto_url)
+
     // Buscar dados reais se tiver aluno_id
     if (user.aluno_id) {
       buscarDadosReais(user.aluno_id)
+      // Buscar foto atualizada do servidor
+      fetch('/api/aluno/perfil').then(r => r.ok ? r.json() : null).then(d => {
+        if (d?.foto_url) {
+          setFotoUrl(d.foto_url)
+          // Atualizar localStorage com a foto mais recente
+          try {
+            const s = localStorage.getItem('user')
+            if (s) localStorage.setItem('user', JSON.stringify({ ...JSON.parse(s), foto_url: d.foto_url }))
+          } catch {}
+        }
+      }).catch(() => {})
     } else {
       setLoading(false)
     }
@@ -171,6 +189,14 @@ export default function DashboardAluno() {
       if (feedRes.ok) setFeed(await feedRes.json())
       setLoadingFeed(false)
 
+      // Calcular resumo semanal a partir dos dados carregados
+      const inicioSemana = new Date()
+      inicioSemana.setDate(inicioSemana.getDate() - 7)
+      inicioSemana.setHours(0, 0, 0, 0)
+      const clConcluidos = checklistsFormatados.filter((c: Checklist) => c.status === 'concluido' && new Date(c.created_at) >= inicioSemana).length
+      const clPendentes = checklistsFormatados.filter((c: Checklist) => c.status !== 'concluido').length
+      setResumoSemanal({ checklistsConcluidos: clConcluidos, acoesConcluidas: 0, pendentes: clPendentes, atrasadas: 0 })
+
       // Verificar permissão de notificações
       if (typeof window !== 'undefined' && 'Notification' in window) {
         setNotifPermissao(Notification.permission)
@@ -182,6 +208,17 @@ export default function DashboardAluno() {
       console.error('❌ Erro geral:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function buscarGlobal(q: string) {
+    if (q.length < 2) { setBuscaResultados(null); return }
+    setBuscandoGlobal(true)
+    try {
+      const res = await fetch(`/api/aluno/busca?q=${encodeURIComponent(q)}`)
+      if (res.ok) setBuscaResultados(await res.json())
+    } finally {
+      setBuscandoGlobal(false)
     }
   }
 
@@ -307,9 +344,13 @@ export default function DashboardAluno() {
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginLeft: '1rem', paddingLeft: '1rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
                   <LanguageToggle />
                   <ThemeToggle />
-                  <button onClick={() => router.push('/perfil-aluno')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: 'transparent', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
-                    <User size={18} />
-                    {t.nav.perfil}
+                  <button onClick={() => router.push('/perfil-aluno')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.875rem', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.25)', borderRadius: '2rem', cursor: 'pointer' }}>
+                    {fotoUrl ? (
+                      <img src={fotoUrl} alt="Perfil" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.5)', flexShrink: 0 }} />
+                    ) : (
+                      <User size={18} />
+                    )}
+                    <span style={{ fontSize: '0.875rem' }}>{t.nav.perfil}</span>
                   </button>
                   <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
                     <LogOut size={18} />
@@ -346,7 +387,10 @@ export default function DashboardAluno() {
                 <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '0.5rem', padding: '1rem 1rem 0', alignItems: 'center' }}>
                   <LanguageToggle />
                   <ThemeToggle />
-                  <button onClick={() => router.push('/perfil-aluno')} style={{ flex: 1, padding: '0.5rem', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
+                  <button onClick={() => router.push('/perfil-aluno')} style={{ flex: 1, padding: '0.5rem', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    {fotoUrl ? (
+                      <img src={fotoUrl} alt="Perfil" style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(255,255,255,0.5)' }} />
+                    ) : null}
                     {t.nav.perfil}
                   </button>
                   <button onClick={handleLogout} style={{ flex: 1, padding: '0.5rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
@@ -364,7 +408,67 @@ export default function DashboardAluno() {
             <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
               {t.dashboard.welcome}, {userName}!
             </h1>
-            <p style={{ color: '#6b7280' }}>Painel do Cliente</p>
+            <p style={{ color: '#6b7280', marginBottom: '1.25rem' }}>Painel do Cliente</p>
+
+            {/* Busca Global */}
+            <div style={{ position: 'relative', maxWidth: '500px' }}>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', color: '#9ca3af', pointerEvents: 'none' }}>🔍</span>
+                <input
+                  type="text"
+                  value={buscaQuery}
+                  placeholder="Buscar checklists, ações..."
+                  onChange={e => { setBuscaQuery(e.target.value); setBuscaAberta(true); buscarGlobal(e.target.value) }}
+                  onFocus={() => setBuscaAberta(true)}
+                  onBlur={() => setTimeout(() => setBuscaAberta(false), 200)}
+                  style={{ width: '100%', padding: '0.75rem 0.875rem 0.75rem 2.5rem', border: '2px solid #e5e7eb', borderRadius: '0.75rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' as const, background: 'white', transition: 'border-color 0.15s' }}
+                  onFocusCapture={e => e.currentTarget.style.borderColor = '#6d28d9'}
+                  onBlurCapture={e => { e.currentTarget.style.borderColor = '#e5e7eb'; setTimeout(() => setBuscaAberta(false), 200) }}
+                />
+                {buscandoGlobal && (
+                  <span style={{ position: 'absolute', right: '0.875rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: '#9ca3af' }}>...</span>
+                )}
+              </div>
+
+              {buscaAberta && buscaResultados && (buscaResultados.checklists.length > 0 || buscaResultados.acoes.length > 0) && (
+                <div style={{ position: 'absolute', top: '110%', left: 0, right: 0, background: 'white', borderRadius: '0.75rem', boxShadow: '0 8px 30px rgba(0,0,0,0.15)', border: '1.5px solid #e5e7eb', zIndex: 500, overflow: 'hidden', maxHeight: '360px', overflowY: 'auto' }}>
+                  {buscaResultados.checklists.length > 0 && (
+                    <div>
+                      <div style={{ padding: '0.5rem 0.875rem', fontSize: '0.7rem', fontWeight: '700', color: '#7c3aed', background: '#f5f3ff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Checklists</div>
+                      {buscaResultados.checklists.map(cl => (
+                        <button key={cl.id} onClick={() => { router.push(`/checklists-futuros`); setBuscaAberta(false); setBuscaQuery('') }}
+                          style={{ width: '100%', padding: '0.75rem 1rem', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.125rem', borderBottom: '1px solid #f3f4f6' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                          <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1f2937' }}>{cl.titulo}</span>
+                          {cl.empresas && <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>🏢 {cl.empresas.nome_fantasia}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {buscaResultados.acoes.length > 0 && (
+                    <div>
+                      <div style={{ padding: '0.5rem 0.875rem', fontSize: '0.7rem', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ações Corretivas</div>
+                      {buscaResultados.acoes.map(ac => (
+                        <button key={ac.id} onClick={() => { router.push(`/acoes`); setBuscaAberta(false); setBuscaQuery('') }}
+                          style={{ width: '100%', padding: '0.75rem 1rem', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.125rem', borderBottom: '1px solid #f3f4f6' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                          <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1f2937' }}>{ac.titulo}</span>
+                          {ac.empresas && <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>🏢 {ac.empresas.nome_fantasia} · {ac.status}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {buscaAberta && buscaQuery.length >= 2 && !buscandoGlobal && buscaResultados && buscaResultados.checklists.length === 0 && buscaResultados.acoes.length === 0 && (
+                <div style={{ position: 'absolute', top: '110%', left: 0, right: 0, background: 'white', borderRadius: '0.75rem', boxShadow: '0 8px 30px rgba(0,0,0,0.15)', border: '1.5px solid #e5e7eb', zIndex: 500, padding: '1.25rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
+                  Nenhum resultado encontrado.
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Banner de notificações push */}
@@ -385,8 +489,40 @@ export default function DashboardAluno() {
             </div>
           )}
 
+          {/* Resumo Semanal */}
+          {!loading && (
+            <div style={{ background: 'white', borderRadius: '1rem', padding: '1.25rem 1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.625rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <TrendingUp size={18} style={{ color: '#334155' }} />
+                  <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: '#1f2937' }}>Resumo dos Últimos 7 Dias</h2>
+                </div>
+                <button
+                  onClick={() => router.push('/dashboard-empresa')}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  🏢 Dashboard por Empresa
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                {[
+                  { label: 'Checklists concluídos', value: resumoSemanal.checklistsConcluidos, color: '#10b981', bg: '#f0fdf4', icon: '✅' },
+                  { label: 'Checklists pendentes', value: resumoSemanal.pendentes, color: resumoSemanal.pendentes > 0 ? '#f59e0b' : '#10b981', bg: resumoSemanal.pendentes > 0 ? '#fffbeb' : '#f0fdf4', icon: '📋' },
+                ].map(item => (
+                  <div key={item.label} style={{ background: item.bg, borderRadius: '0.75rem', padding: '0.875rem 1rem', border: `1px solid ${item.color}25` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: '0.875rem' }}>{item.icon}</span>
+                      <span style={{ fontSize: '0.75rem', color: item.color, fontWeight: '600' }}>{item.label}</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: '800', color: item.color }}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-            
+
             {/* Card: Checklists dos Últimos 30 Dias */}
             <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
               <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', padding: '1.5rem', color: 'white' }}>
