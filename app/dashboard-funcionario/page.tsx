@@ -153,7 +153,10 @@ export default function DashboardColaborador() {
           status = 'em_andamento'
         }
 
-        if (status !== 'concluido' && checklist.proxima_execucao) {
+        // Para recorrentes (diaria/semanal/mensal), o prazo é o fim do período atual,
+        // então nunca marcamos como 'atrasado' com base no proxima_execucao original.
+        // Apenas checklists sem recorrência usam proxima_execucao + tolerância para atraso.
+        if (status !== 'concluido' && checklist.proxima_execucao && (!checklist.recorrencia || checklist.recorrencia === 'nenhuma')) {
           const dataLimite = new Date(checklist.proxima_execucao)
           dataLimite.setDate(dataLimite.getDate() + (checklist.dias_tolerancia || 0))
           dataLimite.setHours(23, 59, 59, 999)
