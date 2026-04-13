@@ -11,7 +11,10 @@
       "Bash(node scripts/test-login.js \"admin@semerro.com\" \"123mudar\")",
       "Bash(node scripts/test-login.js \"supermercadomdasilvaltda@gmail.com\" \"123mudar\")",
       "Bash(npx tsc --noEmit)",
-      "Bash(xargs wc -l)"
+      "Bash(xargs wc -l)",
+      "Bash(curl -s 'https://apinewintegracao.bomcontrole.com.br/integracao/Servico/Pesquisar?nome=Plano' --header 'Authorization: ApiKey Z0EjZPzTOb9I36pPHOIejC0k3xHidGWQC6YrlAZlMaFjnhglaJ9Jpai2KxqHmuhOynsbTrCaUm22BLeI6PJrr-OhNRbJWdFkkeN9kx32iS_6swYKTbB--pnrY44htiJFvQwjRqQO3zzcl-BfdcUzhA..')",
+      "Bash(curl -s 'https://apinewintegracao.bomcontrole.com.br/integracao/Servico/Pesquisar?nome=Performe' --header 'Authorization: ApiKey Z0EjZPzTOb9I36pPHOIejC0k3xHidGWQC6YrlAZlMaFjnhglaJ9Jpai2KxqHmuhOynsbTrCaUm22BLeI6PJrr-OhNRbJWdFkkeN9kx32iS_6swYKTbB--pnrY44htiJFvQwjRqQO3zzcl-BfdcUzhA..')",
+      "Bash(curl -s 'https://apinewintegracao.bomcontrole.com.br/integracao/Servico/Pesquisar?nome=Starter' --header 'Authorization: ApiKey Z0EjZPzTOb9I36pPHOIejC0k3xHidGWQC6YrlAZlMaFjnhglaJ9Jpai2KxqHmuhOynsbTrCaUm22BLeI6PJrr-OhNRbJWdFkkeN9kx32iS_6swYKTbB--pnrY44htiJFvQwjRqQO3zzcl-BfdcUzhA..')"
     ]
   }
 }

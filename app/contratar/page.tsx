@@ -4,12 +4,6 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Check, ArrowLeft, Send, Building2, User, Mail, Phone, MapPin, ShoppingBag } from 'lucide-react'
 
-const LINKS_ASAAS: Record<string, string> = {
-  starter: 'https://www.asaas.com/c/ehzwyhmn8e8omoyl',
-  // growth: 'https://www.asaas.com/c/...',
-  // scale: 'https://www.asaas.com/c/...',
-  // enterprise: 'https://www.asaas.com/c/...',
-}
 
 const PLANOS = {
   starter: {
@@ -100,15 +94,8 @@ function ContratarForm() {
     setEnviando(true)
     setErroEnvio('')
 
-    // Se o plano tem link direto do ASAAS, redireciona sem precisar de API
-    const linkAsaas = LINKS_ASAAS[planoKey]
-    if (linkAsaas) {
-      window.location.href = linkAsaas
-      return
-    }
-
     try {
-      const res = await fetch('/api/asaas/criar-assinatura', {
+      const res = await fetch('/api/bomcontrole/criar-venda', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,17 +111,13 @@ function ContratarForm() {
       const data = await res.json()
 
       if (!res.ok || !data.ok) {
-        setErroEnvio(data.error || 'Erro ao processar pagamento. Tente novamente.')
+        setErroEnvio(data.error || 'Erro ao processar solicitação. Tente novamente.')
         setEnviando(false)
         return
       }
 
-      if (data.invoiceUrl) {
-        window.location.href = data.invoiceUrl
-      } else {
-        setEnviado(true)
-        setEnviando(false)
-      }
+      setEnviado(true)
+      setEnviando(false)
     } catch {
       setErroEnvio('Erro de conexão. Verifique sua internet e tente novamente.')
       setEnviando(false)
@@ -350,7 +333,7 @@ function ContratarForm() {
               }}
             >
               <Send size={18} />
-              {enviando ? 'Processando pagamento...' : 'Quero contratar agora'}
+              {enviando ? 'Enviando solicitação...' : 'Quero contratar agora'}
             </button>
             <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.8rem', margin: 0 }}>
               Sem compromisso. Nossa equipe entrará em contato para esclarecer tudo.
