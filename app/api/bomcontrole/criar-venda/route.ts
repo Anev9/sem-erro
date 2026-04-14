@@ -43,26 +43,14 @@ export async function POST(request: NextRequest) {
     const planoInfo = planoValores[plano] ?? planoValores.growth
 
     // 1. Criar cliente no BomControle
-    const clienteBody = cnpj
-      ? {
-          PessoaJuridica: {
-            Documento: cnpj.replace(/\D/g, ''),
-            NomeFantasia: nomeEmpresa || nome,
-            RazaoSocial: nomeEmpresa || nome,
-            IsentoInscricaoEstadual: true,
-          },
-          PessoaFisica: null,
-          Contatos: [
-            { Nome: nome, Email: email, Telefone: telefone.replace(/\D/g, ''), Padrao: true, Cobranca: true },
-          ],
-        }
-      : {
-          PessoaFisica: { Nome: nome, Documento: '', },
-          PessoaJuridica: null,
-          Contatos: [
-            { Nome: nome, Email: email, Telefone: telefone.replace(/\D/g, ''), Padrao: true, Cobranca: true },
-          ],
-        }
+    // Sempre como PessoaFisica — BomControle valida CNPJ estritamente e o campo é opcional no formulário
+    const clienteBody = {
+      PessoaFisica: { Nome: nomeEmpresa || nome, Documento: '' },
+      PessoaJuridica: null,
+      Contatos: [
+        { Nome: nome, Email: email, Telefone: telefone.replace(/\D/g, ''), Padrao: true, Cobranca: true },
+      ],
+    }
 
     const cliente = await bomcontrole('/Cliente/Criar', 'POST', clienteBody)
 
