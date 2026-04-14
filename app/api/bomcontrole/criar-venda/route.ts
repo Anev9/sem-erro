@@ -27,7 +27,9 @@ async function bomcontrole(path: string, method: string, body?: object) {
     body: body ? JSON.stringify(body) : undefined,
   })
   if (res.status === 204) return null
-  return res.json()
+  const text = await res.text()
+  logger.error('bomcontrole/raw', `${method} ${path} → ${res.status}: ${text}`)
+  try { return JSON.parse(text) } catch { return text }
 }
 
 export async function POST(request: NextRequest) {
