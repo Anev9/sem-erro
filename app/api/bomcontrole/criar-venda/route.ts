@@ -64,12 +64,13 @@ export async function POST(request: NextRequest) {
 
     const cliente = await bomcontrole('/Cliente/Criar', 'POST', clienteBody)
 
-    if (!cliente || (!cliente.Id && !cliente.id)) {
+    // A API retorna o Id diretamente como número inteiro
+    const idCliente = typeof cliente === 'number' ? cliente : (cliente?.Id ?? cliente?.id)
+
+    if (!idCliente) {
       logger.error('bomcontrole/criar-venda', `Erro ao criar cliente: ${JSON.stringify(cliente)}`)
       return NextResponse.json({ error: 'Erro ao cadastrar cliente no BomControle.' }, { status: 400 })
     }
-
-    const idCliente = cliente.Id ?? cliente.id
 
     // 2. Criar venda no BomControle
     const hoje = new Date()
