@@ -11,6 +11,7 @@ const PUBLIC_API_PATHS = [
   '/api/auth/check-admin',
   '/api/sw',
   '/api/asaas/criar-assinatura',
+  '/api/bomcontrole/criar-venda',
 ]
 
 function isPublic(pathname: string): boolean {
