@@ -177,7 +177,8 @@ export default function CriarChecklistFuturoPage() {
         return {
           titulo: partes[0]?.trim() || '',
           descricao: partes[1]?.trim() || '',
-          ordem: i + 1
+          ordem: i + 1,
+          foto_obrigatoria: false
         }
       }).filter(item => item.titulo)
       if (novosItens.length === 0) {
