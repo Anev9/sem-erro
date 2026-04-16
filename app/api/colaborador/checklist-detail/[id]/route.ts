@@ -44,11 +44,40 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: itensError.message }, { status: 500 })
   }
 
-  const { data: respostas } = await supabase
+  // Para checklists recorrentes, só carrega respostas do período atual
+  function inicioPeriodo(recorrencia: string | null): string | null {
+    const agora = new Date()
+    if (recorrencia === 'diaria') {
+      agora.setHours(0, 0, 0, 0)
+      return agora.toISOString()
+    }
+    if (recorrencia === 'semanal') {
+      const dia = agora.getDay()
+      agora.setDate(agora.getDate() - dia)
+      agora.setHours(0, 0, 0, 0)
+      return agora.toISOString()
+    }
+    if (recorrencia === 'mensal') {
+      agora.setDate(1)
+      agora.setHours(0, 0, 0, 0)
+      return agora.toISOString()
+    }
+    return null
+  }
+
+  const periodoInicio = inicioPeriodo(checklist.recorrencia ?? null)
+
+  let queryRespostas = supabase
     .from('checklist_respostas')
     .select('*')
     .eq('checklist_futuro_id', checklistId)
     .eq('colaborador_id', colaboradorId)
+
+  if (periodoInicio) {
+    queryRespostas = queryRespostas.gte('created_at', periodoInicio)
+  }
+
+  const { data: respostas } = await queryRespostas
 
   return NextResponse.json({
     checklist,

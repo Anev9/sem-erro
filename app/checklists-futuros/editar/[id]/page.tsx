@@ -11,6 +11,7 @@ type ItemEdit = {
   titulo: string
   descricao: string
   ordem: number
+  foto_obrigatoria: boolean
   temRespostas?: boolean
   isNovo?: boolean
 }
@@ -78,7 +79,7 @@ export default function EditarChecklistPage() {
       // Carregar itens e verificar quais têm respostas
       const { data: itensData } = await supabase
         .from('checklist_futuro_itens')
-        .select('id, titulo, descricao, ordem')
+        .select('id, titulo, descricao, ordem, foto_obrigatoria')
         .eq('checklist_futuro_id', id)
         .order('ordem')
 
@@ -93,6 +94,7 @@ export default function EditarChecklistPage() {
             titulo: item.titulo,
             descricao: item.descricao || '',
             ordem: item.ordem,
+            foto_obrigatoria: item.foto_obrigatoria ?? false,
             temRespostas: (count || 0) > 0,
           }
         })
@@ -136,7 +138,7 @@ export default function EditarChecklistPage() {
   }
 
   function adicionarItem() {
-    setItens([...itens, { titulo: '', descricao: '', ordem: itens.length + 1, isNovo: true }])
+    setItens([...itens, { titulo: '', descricao: '', ordem: itens.length + 1, foto_obrigatoria: false, isNovo: true }])
   }
 
   function removerItem(index: number) {
@@ -160,6 +162,12 @@ export default function EditarChecklistPage() {
   function atualizarItem(index: number, campo: 'titulo' | 'descricao', valor: string) {
     const novos = [...itens]
     novos[index][campo] = valor
+    setItens(novos)
+  }
+
+  function toggleFotoObrigatoria(index: number) {
+    const novos = [...itens]
+    novos[index].foto_obrigatoria = !novos[index].foto_obrigatoria
     setItens(novos)
   }
 
@@ -210,7 +218,7 @@ export default function EditarChecklistPage() {
         if (item.id) {
           await supabase
             .from('checklist_futuro_itens')
-            .update({ titulo: item.titulo, descricao: item.descricao || null, ordem: item.ordem })
+            .update({ titulo: item.titulo, descricao: item.descricao || null, ordem: item.ordem, foto_obrigatoria: item.foto_obrigatoria })
             .eq('id', item.id)
         } else {
           await supabase
@@ -220,6 +228,7 @@ export default function EditarChecklistPage() {
               titulo: item.titulo,
               descricao: item.descricao || null,
               ordem: item.ordem,
+              foto_obrigatoria: item.foto_obrigatoria,
             })
         }
       }
@@ -483,6 +492,16 @@ export default function EditarChecklistPage() {
                       onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
                       onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
                     />
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={item.foto_obrigatoria}
+                        onChange={() => toggleFotoObrigatoria(index)}
+                        style={{ width: '1rem', height: '1rem', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontSize: '0.875rem', color: '#374151' }}>Foto obrigatória</span>
+                    </label>
                   </div>
                 ))}
               </div>

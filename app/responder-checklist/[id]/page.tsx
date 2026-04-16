@@ -43,6 +43,7 @@ interface Item {
   titulo: string
   descricao?: string
   ordem: number
+  foto_obrigatoria?: boolean
 }
 
 interface Resposta {
@@ -341,6 +342,11 @@ export default function ResponderChecklistPage() {
   function selecionarResposta(valor: 'sim' | 'nao' | 'na') {
     const item = itens[itemAtual]
     if (!item) return
+
+    if (item.foto_obrigatoria && !fotoUrls[item.id]) {
+      toast.warning('Este item exige uma foto antes de responder.')
+      return
+    }
 
     const observacaoAtual = respostas[item.id]?.observacao || ''
 
@@ -731,10 +737,10 @@ export default function ResponderChecklistPage() {
             </div>
 
             {/* Foto */}
-            <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.25rem', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', marginBottom: '1.5rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: '#374151', marginBottom: '0.75rem' }}>
-                <Camera size={16} style={{ color: '#6b7280' }} />
-                Foto (opcional)
+            <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.25rem', boxShadow: itemAtualDados.foto_obrigatoria && !fotoUrls[itemAtualDados.id] ? '0 2px 6px rgba(239,68,68,0.2)' : '0 2px 6px rgba(0,0,0,0.05)', marginBottom: '1.5rem', border: itemAtualDados.foto_obrigatoria && !fotoUrls[itemAtualDados.id] ? '1px solid #fca5a5' : '1px solid transparent' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: itemAtualDados.foto_obrigatoria ? '#dc2626' : '#374151', marginBottom: '0.75rem' }}>
+                <Camera size={16} style={{ color: itemAtualDados.foto_obrigatoria ? '#dc2626' : '#6b7280' }} />
+                {itemAtualDados.foto_obrigatoria ? 'Foto obrigatória *' : 'Foto (opcional)'}
               </label>
 
               {fotos[itemAtualDados.id] ? (

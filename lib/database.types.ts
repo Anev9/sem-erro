@@ -222,6 +222,7 @@ export type Database = {
           checklist_futuro_id: string
           created_at: string | null
           descricao: string | null
+          foto_obrigatoria: boolean
           id: string
           ordem: number
           titulo: string
@@ -230,6 +231,7 @@ export type Database = {
           checklist_futuro_id: string
           created_at?: string | null
           descricao?: string | null
+          foto_obrigatoria?: boolean
           id?: string
           ordem: number
           titulo: string
@@ -238,6 +240,7 @@ export type Database = {
           checklist_futuro_id?: string
           created_at?: string | null
           descricao?: string | null
+          foto_obrigatoria?: boolean
           id?: string
           ordem?: number
           titulo?: string

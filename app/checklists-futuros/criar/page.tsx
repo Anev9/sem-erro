@@ -18,6 +18,7 @@ type ItemChecklist = {
   titulo: string
   descricao: string
   ordem: number
+  foto_obrigatoria: boolean
 }
 
 export default function CriarChecklistFuturoPage() {
@@ -38,7 +39,7 @@ export default function CriarChecklistFuturoPage() {
   const [templateExpandido, setTemplateExpandido] = useState<string | null>(null)
   
   const [itens, setItens] = useState<ItemChecklist[]>([
-    { titulo: '', descricao: '', ordem: 1 }
+    { titulo: '', descricao: '', ordem: 1, foto_obrigatoria: false }
   ])
   
   const [chaveCompartilhamento, setChaveCompartilhamento] = useState('')
@@ -191,7 +192,7 @@ export default function CriarChecklistFuturoPage() {
   }
 
   function adicionarItem() {
-    setItens([...itens, { titulo: '', descricao: '', ordem: itens.length + 1 }])
+    setItens([...itens, { titulo: '', descricao: '', ordem: itens.length + 1, foto_obrigatoria: false }])
   }
 
   function removerItem(index: number) {
@@ -207,6 +208,12 @@ export default function CriarChecklistFuturoPage() {
   function atualizarItem(index: number, campo: 'titulo' | 'descricao', valor: string) {
     const novosItens = [...itens]
     novosItens[index][campo] = valor
+    setItens(novosItens)
+  }
+
+  function toggleFotoObrigatoria(index: number) {
+    const novosItens = [...itens]
+    novosItens[index].foto_obrigatoria = !novosItens[index].foto_obrigatoria
     setItens(novosItens)
   }
 
@@ -267,7 +274,8 @@ export default function CriarChecklistFuturoPage() {
       checklist_futuro_id: checklistFuturo.id,
       titulo: item.titulo,
       descricao: item.descricao || null,
-      ordem: item.ordem
+      ordem: item.ordem,
+      foto_obrigatoria: item.foto_obrigatoria ?? false
     }))
 
     const { error: errorItens } = await supabase
@@ -327,7 +335,8 @@ export default function CriarChecklistFuturoPage() {
       checklist_futuro_id: checklistFuturo.id,
       titulo: item.titulo,
       descricao: item.descricao || null,
-      ordem: item.ordem
+      ordem: item.ordem,
+      foto_obrigatoria: item.foto_obrigatoria ?? false
     }))
 
     const { error: errorItensInserir } = await supabase
@@ -391,7 +400,8 @@ export default function CriarChecklistFuturoPage() {
       checklist_futuro_id: novoChecklist.id,
       titulo: item.titulo,
       descricao: item.descricao,
-      ordem: item.ordem
+      ordem: item.ordem,
+      foto_obrigatoria: item.foto_obrigatoria ?? false
     }))
 
     const { error: errorItens } = await supabase
@@ -831,6 +841,16 @@ export default function CriarChecklistFuturoPage() {
                         onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
                         onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
                       />
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={item.foto_obrigatoria}
+                          onChange={() => toggleFotoObrigatoria(index)}
+                          style={{ width: '1rem', height: '1rem', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '0.875rem', color: '#374151' }}>Foto obrigatória</span>
+                      </label>
                     </div>
                   ))}
                 </div>
