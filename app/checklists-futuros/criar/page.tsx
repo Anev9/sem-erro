@@ -172,7 +172,7 @@ export default function CriarChecklistFuturoPage() {
       const linhas = text.split(/\r?\n/).filter(l => l.trim())
       // Ignora cabeçalho se começar com "Título" ou "titulo"
       const inicio = linhas[0]?.toLowerCase().startsWith('título') || linhas[0]?.toLowerCase().startsWith('titulo') ? 1 : 0
-      const novosItens: ItemChecklist[] = linhas.slice(inicio).map((linha, i) => {
+      const novosItens: ItemChecklist[] = linhas.slice(inicio).map((linha, i): ItemChecklist => {
         const partes = linha.split(/[;,\t]/)
         return {
           titulo: partes[0]?.trim() || '',
