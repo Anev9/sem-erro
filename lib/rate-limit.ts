@@ -6,14 +6,15 @@ const MAX_ATTEMPTS = 10
 type RateLimitEntry = { count: number; resetAt: number }
 const store = new Map<string, RateLimitEntry>()
 
-export function checkRateLimit(ip: string | null): { allowed: boolean; retryAfterSec: number } {
+export function checkRateLimit(ip: string | null, namespace = 'login'): { allowed: boolean; retryAfterSec: number } {
   // Bloquear requisições sem IP identificável
   if (!ip) return { allowed: false, retryAfterSec: 60 }
   const now = Date.now()
-  const entry = store.get(ip)
+  const key = `${namespace}:${ip}`
+  const entry = store.get(key)
 
   if (!entry || now >= entry.resetAt) {
-    store.set(ip, { count: 1, resetAt: now + WINDOW_MS })
+    store.set(key, { count: 1, resetAt: now + WINDOW_MS })
     return { allowed: true, retryAfterSec: 0 }
   }
 

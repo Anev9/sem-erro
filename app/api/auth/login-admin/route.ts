@@ -22,7 +22,7 @@ function getAdminEmails(): string[] {
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request)
-    const { allowed, retryAfterSec } = checkRateLimit(ip)
+    const { allowed, retryAfterSec } = checkRateLimit(ip, 'admin')
     if (!allowed) {
       return NextResponse.json(
         { error: `Muitas tentativas. Tente novamente em ${retryAfterSec} segundos.` },

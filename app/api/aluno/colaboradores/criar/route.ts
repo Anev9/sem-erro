@@ -40,12 +40,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sem permissão para adicionar colaborador nesta empresa' }, { status: 403 })
     }
 
-    // Verificar se o colaborador já está cadastrado nesta empresa específica
+    // Verificar se o colaborador já está cadastrado e ativo nesta empresa específica
     const { data: existingColab } = await supabase
       .from('colaboradores')
       .select('id')
       .eq('email', email)
       .eq('empresa_id', empresa_id)
+      .eq('ativo', true)
       .maybeSingle()
 
     if (existingColab) {

@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger'
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request)
-    const { allowed, retryAfterSec } = checkRateLimit(ip)
+    const { allowed, retryAfterSec } = checkRateLimit(ip, 'aluno')
     if (!allowed) {
       return NextResponse.json(
         { error: `Muitas tentativas. Tente novamente em ${retryAfterSec} segundos.` },

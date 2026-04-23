@@ -116,6 +116,11 @@ function ContratarForm() {
         return
       }
 
+      if (data.asaasUrl) {
+        window.location.href = data.asaasUrl
+        return
+      }
+
       setEnviado(true)
       setEnviando(false)
     } catch {

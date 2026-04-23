@@ -56,6 +56,10 @@ export default function ColaboradoresPage() {
     try {
       setLoading(true)
       const res = await fetch(`/api/aluno/colaboradores?aluno_id=${alunoId}`)
+      if (res.status === 401) {
+        router.push('/login')
+        return
+      }
       if (!res.ok) throw new Error('Erro ao carregar')
       setColaboradores(await res.json())
     } catch (error) {
