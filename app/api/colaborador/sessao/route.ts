@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
     .from('colaboradores')
     .select('*, empresas(nome_fantasia)')
     .eq('id', colaboradorId)
-    .neq('ativo', false)
+    .or('ativo.is.null,ativo.eq.true')
     .maybeSingle()
 
   if (error || !colaborador) {
-    return NextResponse.json({ error: 'Colaborador não encontrado' }, { status: 401 })
+    return NextResponse.json({ error: 'Sessão inválida ou colaborador inativo' }, { status: 401 })
   }
 
   return NextResponse.json({
@@ -39,18 +39,18 @@ export async function GET(request: NextRequest) {
     empresa_id: colaborador.empresa_id,
     empresa_nome: colaborador.empresas?.nome_fantasia,
     cargo: colaborador.cargo,
+    foto_url: colaborador.foto_url ?? null,
+    celular: colaborador.celular ?? null,
     created_at: colaborador.created_at,
   })
 }
 
-// POST /api/colaborador/sessao — limpa o cookie (logout)
+// POST /api/colaborador/sessao — limpa os cookies (logout)
 export async function POST() {
   const response = NextResponse.json({ ok: true })
-  response.cookies.set('semerro-colaborador-id', '', {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 0,
-  })
+  const cookieOpts = { httpOnly: true, sameSite: 'lax' as const, path: '/', maxAge: 0 }
+  response.cookies.set('semerro-colaborador-id', '', cookieOpts)
+  response.cookies.set('sem-erro-token', '', cookieOpts)
+  response.cookies.set('sem-erro-refresh-token', '', cookieOpts)
   return response
 }

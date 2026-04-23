@@ -25,6 +25,7 @@ interface Colaborador {
   empresa_id: string
   auth_id: string
   ativo: boolean
+  foto_url?: string | null
   empresas?: Empresa
 }
 
@@ -70,45 +71,50 @@ export default function DashboardColaborador() {
 
   async function verificarAutenticacao() {
     try {
-      console.log('[DASH] iniciando verificação')
-      let user = null
+      // Sempre verifica a sessão no servidor para garantir dados frescos e cookie válido
+      const res = await fetch('/api/colaborador/sessao')
 
-      // 1. Tentar localStorage primeiro
-      try {
-        const userType = localStorage.getItem('userType')
-        const userStr = localStorage.getItem('user')
-        console.log('[DASH] userType:', userType, '| user:', userStr ? 'encontrado' : 'VAZIO')
-        if (userStr) {
-          const parsed = JSON.parse(userStr)
-          console.log('[DASH] role:', parsed.role, '| empresa_id:', parsed.empresa_id)
-          // Aceita: role explícito, flag userType, ou perfil com empresa_id (compat versões antigas)
-          if (
-            parsed.role === 'colaborador' ||
-            userType === 'colaborador' ||
-            (parsed.empresa_id && parsed.id && !parsed.aluno_id)
-          ) {
-            user = { ...parsed, role: 'colaborador' }
+      if (res.status === 401) {
+        // Sessão inválida ou expirada — limpa dados locais e redireciona
+        localStorage.removeItem('user')
+        localStorage.removeItem('userType')
+        window.location.href = '/login'
+        return
+      }
+
+      if (!res.ok) {
+        // Erro de servidor ou rede — tenta usar cache local como fallback
+        try {
+          const userStr = localStorage.getItem('user')
+          const userType = localStorage.getItem('userType')
+          if (userStr) {
+            const parsed = JSON.parse(userStr)
+            if (parsed.role === 'colaborador' || userType === 'colaborador') {
+              setColaborador({
+                id: parsed.id,
+                auth_id: parsed.auth_id,
+                nome: parsed.nome,
+                email: parsed.email,
+                cargo: parsed.cargo,
+                empresa_id: parsed.empresa_id,
+                ativo: true,
+                foto_url: parsed.foto_url ?? null,
+                empresas: parsed.empresa_nome ? { nome_fantasia: parsed.empresa_nome } : undefined
+              })
+              await carregarChecklists(parsed.id)
+              return
+            }
           }
-        }
-      } catch (lsErr) {
-        console.warn('[DASH] erro ao ler localStorage:', lsErr)
+        } catch { /* ignora erro de localStorage */ }
+        setErroChecklists(true)
+        setLoading(false)
+        return
       }
 
-      // 2. Fallback: verificar pelo cookie no servidor (sempre tenta para ter dados frescos)
-      if (!user) {
-        console.log('[DASH] buscando via cookie...')
-        const res = await fetch('/api/colaborador/sessao')
-        console.log('[DASH] sessao status:', res.status)
-        if (!res.ok) {
-          console.log('[DASH] → sem sessão válida, redirecionando para login')
-          window.location.href = '/login'
-          return
-        }
-        user = await res.json()
-        localStorage.setItem('user', JSON.stringify(user))
-      }
+      const user = await res.json()
+      localStorage.setItem('user', JSON.stringify({ ...user, role: 'colaborador' }))
+      localStorage.setItem('userType', 'colaborador')
 
-      console.log('[DASH] ✓ autenticado como', user.nome)
       setColaborador({
         id: user.id,
         auth_id: user.auth_id,
@@ -117,13 +123,13 @@ export default function DashboardColaborador() {
         cargo: user.cargo,
         empresa_id: user.empresa_id,
         ativo: true,
+        foto_url: user.foto_url ?? null,
         empresas: user.empresa_nome ? { nome_fantasia: user.empresa_nome } : undefined
       })
 
       await carregarChecklists(user.id)
     } catch (error) {
       console.error('[DASH] ERRO inesperado:', error)
-      // Não redireciona automaticamente — mostra erro e deixa o usuário decidir
       setErroChecklists(true)
       setLoading(false)
     }
@@ -187,9 +193,10 @@ export default function DashboardColaborador() {
     }
   }
 
-  function handleLogout() {
+  async function handleLogout() {
     localStorage.removeItem('user')
-    fetch('/api/colaborador/sessao', { method: 'POST' }) // limpar cookie
+    localStorage.removeItem('userType')
+    await fetch('/api/colaborador/sessao', { method: 'POST' }).catch(() => {})
     router.push('/login')
   }
 
@@ -254,17 +261,34 @@ export default function DashboardColaborador() {
           gap: '1.5rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <div style={{
-              width: '4rem',
-              height: '4rem',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <User size={32} style={{ color: 'white' }} />
-            </div>
+            {colaborador?.foto_url ? (
+              <img
+                src={colaborador.foto_url}
+                alt={colaborador.nome}
+                style={{
+                  width: '4rem',
+                  height: '4rem',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '3px solid rgba(255, 255, 255, 0.4)',
+                  cursor: 'pointer'
+                }}
+                onClick={() => router.push('/perfil')}
+              />
+            ) : (
+              <div style={{
+                width: '4rem',
+                height: '4rem',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }} onClick={() => router.push('/perfil')}>
+                <User size={32} style={{ color: 'white' }} />
+              </div>
+            )}
             <div>
               <h1 style={{
                 fontSize: '1.75rem',

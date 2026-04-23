@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       .from('colaboradores')
       .select('*, empresas(nome_fantasia)')
       .ilike('email', emailNorm)
-      .neq('ativo', false)
+      .or('ativo.is.null,ativo.eq.true')
       .maybeSingle()
 
     if (findError || !colaborador) {
@@ -199,6 +199,8 @@ export async function POST(request: NextRequest) {
       empresa_id: colaborador.empresa_id,
       empresa_nome: colaborador.empresas?.nome_fantasia,
       cargo: colaborador.cargo,
+      foto_url: colaborador.foto_url ?? null,
+      celular: colaborador.celular ?? null,
       created_at: colaborador.created_at,
     }
 

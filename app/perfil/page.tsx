@@ -46,33 +46,26 @@ export default function PerfilPage() {
 
   async function carregarPerfil() {
     try {
-      let user = null
+      // Sempre verifica sessão no servidor para garantir dados frescos (incluindo foto_url)
+      const res = await fetch('/api/colaborador/sessao')
 
-      // 1. Tentar localStorage primeiro
-      try {
-        const userType = localStorage.getItem('userType')
-        const userStr = localStorage.getItem('user')
-        if (userStr) {
-          const parsed = JSON.parse(userStr)
-          if (
-            parsed.role === 'colaborador' ||
-            userType === 'colaborador' ||
-            (parsed.empresa_id && parsed.id && !parsed.aluno_id)
-          ) {
-            user = { ...parsed, role: 'colaborador' }
-          }
-        }
-      } catch {}
+      if (res.status === 401) {
+        localStorage.removeItem('user')
+        localStorage.removeItem('userType')
+        window.location.href = '/login'
+        return
+      }
 
-      // 2. Fallback: verificar cookie de sessão
-      if (!user) {
-        const res = await fetch('/api/colaborador/sessao')
-        if (!res.ok) {
-          window.location.href = '/login'
-          return
-        }
+      let user
+      if (res.ok) {
         user = await res.json()
-        localStorage.setItem('user', JSON.stringify(user))
+        localStorage.setItem('user', JSON.stringify({ ...user, role: 'colaborador' }))
+        localStorage.setItem('userType', 'colaborador')
+      } else {
+        // Fallback para localStorage em caso de erro de rede/servidor
+        const userStr = localStorage.getItem('user')
+        if (!userStr) { window.location.href = '/login'; return }
+        user = JSON.parse(userStr)
       }
 
       setColaborador({
@@ -83,7 +76,7 @@ export default function PerfilPage() {
         cargo: user.cargo,
         empresa_id: user.empresa_id,
         empresa_nome: user.empresa_nome,
-        foto_url: user.foto_url || null,
+        foto_url: user.foto_url ?? null,
       })
       setFormData({
         nome: user.nome,
