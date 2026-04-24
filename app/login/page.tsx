@@ -69,7 +69,8 @@ export default function LoginPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
-        const adminData = await adminRes.json();
+        let adminData: Record<string, unknown> = {};
+        try { adminData = await adminRes.json() } catch { /* resposta não-JSON */ }
 
         if (adminRes.ok && adminData.isAdmin) {
           const profile = adminData.profile || { email, full_name: 'Administrador', role: 'admin' };
@@ -78,8 +79,9 @@ export default function LoginPage() {
           return;
         }
 
-        if (!adminRes.ok) {
-          throw new Error(adminData.error || 'E-mail ou senha incorretos');
+        // Bloqueia apenas rate limit — erros 4xx/5xx do admin não impedem tentar colaborador/aluno
+        if (adminRes.status === 429) {
+          throw new Error(String(adminData.error || 'Muitas tentativas. Tente novamente mais tarde.'));
         }
 
         // TENTATIVA 2: Login como COLABORADOR

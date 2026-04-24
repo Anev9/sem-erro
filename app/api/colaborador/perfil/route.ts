@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest) {
       celular: celular?.trim() || null,
       ...(foto_url !== undefined && { foto_url }),
     })
-    .eq('id', colaboradorId)
+    .eq('id', Number(colaboradorId))
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

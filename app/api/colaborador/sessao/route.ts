@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const { data: colaborador, error } = await supabase
     .from('colaboradores')
     .select('*, empresas(nome_fantasia)')
-    .eq('id', colaboradorId)
+    .eq('id', Number(colaboradorId))
     .or('ativo.is.null,ativo.eq.true')
     .maybeSingle()
 
