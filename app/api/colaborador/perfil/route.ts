@@ -9,7 +9,7 @@ function db() {
   )
 }
 
-// PATCH /api/colaborador/perfil — atualiza nome e celular
+// PATCH /api/colaborador/perfil — atualiza nome, celular e/ou foto_url (parcial)
 export async function PATCH(request: NextRequest) {
   const colaboradorId = request.cookies.get('semerro-colaborador-id')?.value
 
@@ -20,19 +20,24 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json()
   const { nome, celular, foto_url } = body
 
-  if (!nome?.trim()) {
+  if (nome !== undefined && !nome?.trim()) {
     return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 })
+  }
+
+  const updates: Record<string, unknown> = {}
+  if (nome !== undefined) updates.nome = nome.trim()
+  if (celular !== undefined) updates.celular = celular?.trim() || null
+  if (foto_url !== undefined) updates.foto_url = foto_url
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'Nenhum campo para atualizar' }, { status: 400 })
   }
 
   const supabase = db()
 
   const { error } = await supabase
     .from('colaboradores')
-    .update({
-      nome: nome.trim(),
-      celular: celular?.trim() || null,
-      ...(foto_url !== undefined && { foto_url }),
-    })
+    .update(updates)
     .eq('id', Number(colaboradorId))
 
   if (error) {
