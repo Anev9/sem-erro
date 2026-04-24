@@ -23,11 +23,14 @@ export async function GET(request: NextRequest) {
     .from('colaboradores')
     .select('*, empresas(nome_fantasia)')
     .eq('id', Number(colaboradorId))
-    .or('ativo.is.null,ativo.eq.true')
     .maybeSingle()
 
   if (error || !colaborador) {
-    return NextResponse.json({ error: 'Sessão inválida ou colaborador inativo' }, { status: 401 })
+    return NextResponse.json({ error: 'Sessão inválida' }, { status: 401 })
+  }
+
+  if (colaborador.ativo === false) {
+    return NextResponse.json({ error: 'Conta desativada' }, { status: 401 })
   }
 
   return NextResponse.json({

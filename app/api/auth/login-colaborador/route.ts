@@ -39,11 +39,16 @@ export async function POST(request: NextRequest) {
       .from('colaboradores')
       .select('*, empresas(nome_fantasia)')
       .ilike('email', emailNorm)
-      .or('ativo.is.null,ativo.eq.true')
       .maybeSingle()
 
     if (findError || !colaborador) {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
+    }
+
+    // Bloquear apenas contas explicitamente desativadas (ativo = false)
+    // null = novo cadastro sem definição explícita = considerado ativo
+    if (colaborador.ativo === false) {
+      return NextResponse.json({ error: 'Conta desativada. Entre em contato com o administrador.' }, { status: 401 })
     }
 
     // 2. Tentar login direto no Supabase Auth
