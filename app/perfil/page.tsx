@@ -104,11 +104,15 @@ export default function PerfilPage() {
       if (!res.ok) throw new Error('Erro ao enviar foto')
       const { publicUrl } = await res.json()
 
-      await fetch('/api/colaborador/perfil', {
+      const patchRes = await fetch('/api/colaborador/perfil', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: colaborador.nome, celular: colaborador.celular, foto_url: publicUrl }),
+        body: JSON.stringify({ nome: colaborador.nome, celular: colaborador.celular || '', foto_url: publicUrl }),
       })
+      if (!patchRes.ok) {
+        const err = await patchRes.json().catch(() => ({}))
+        throw new Error(err.error || 'Erro ao salvar foto no perfil')
+      }
 
       setColaborador(prev => prev ? { ...prev, foto_url: publicUrl } : prev)
       try {
