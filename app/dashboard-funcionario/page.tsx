@@ -71,49 +71,35 @@ export default function DashboardColaborador() {
 
   async function verificarAutenticacao() {
     try {
-      // Sempre verifica a sessão no servidor para garantir dados frescos e cookie válido
-      const res = await fetch('/api/colaborador/sessao')
+      let user = null
 
-      if (res.status === 401) {
-        // Sessão inválida ou expirada — limpa dados locais e redireciona
-        localStorage.removeItem('user')
-        localStorage.removeItem('userType')
-        window.location.href = '/login'
-        return
-      }
-
-      if (!res.ok) {
-        // Erro de servidor ou rede — tenta usar cache local como fallback
-        try {
-          const userStr = localStorage.getItem('user')
-          const userType = localStorage.getItem('userType')
-          if (userStr) {
-            const parsed = JSON.parse(userStr)
-            if (parsed.role === 'colaborador' || userType === 'colaborador') {
-              setColaborador({
-                id: parsed.id,
-                auth_id: parsed.auth_id,
-                nome: parsed.nome,
-                email: parsed.email,
-                cargo: parsed.cargo,
-                empresa_id: parsed.empresa_id,
-                ativo: true,
-                foto_url: parsed.foto_url ?? null,
-                empresas: parsed.empresa_nome ? { nome_fantasia: parsed.empresa_nome } : undefined
-              })
-              await carregarChecklists(parsed.id)
-              return
-            }
+      // 1. Tentar localStorage primeiro (rápido, sem chamada de rede)
+      try {
+        const userType = localStorage.getItem('userType')
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          const parsed = JSON.parse(userStr)
+          if (
+            parsed.role === 'colaborador' ||
+            userType === 'colaborador' ||
+            (parsed.empresa_id && parsed.id && !parsed.aluno_id)
+          ) {
+            user = { ...parsed, role: 'colaborador' }
           }
-        } catch { /* ignora erro de localStorage */ }
-        setErroChecklists(true)
-        setLoading(false)
-        return
-      }
+        }
+      } catch { /* ignora erro de localStorage */ }
 
-      const user = await res.json()
-      localStorage.setItem('user', JSON.stringify({ ...user, role: 'colaborador' }))
-      localStorage.setItem('userType', 'colaborador')
+      // 2. Fallback: verificar sessão no servidor quando localStorage vazio
+      if (!user) {
+        const res = await fetch('/api/colaborador/sessao')
+        if (!res.ok) {
+          window.location.href = '/login'
+          return
+        }
+        user = await res.json()
+        localStorage.setItem('user', JSON.stringify({ ...user, role: 'colaborador' }))
+        localStorage.setItem('userType', 'colaborador')
+      }
 
       setColaborador({
         id: user.id,

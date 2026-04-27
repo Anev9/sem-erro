@@ -47,26 +47,30 @@ export default function PerfilPage() {
 
   async function carregarPerfil() {
     try {
-      // Sempre verifica sessão no servidor para garantir dados frescos (incluindo foto_url)
-      const res = await fetch('/api/colaborador/sessao')
+      let user = null
 
-      if (res.status === 401) {
-        localStorage.removeItem('user')
-        localStorage.removeItem('userType')
-        window.location.href = '/login'
-        return
-      }
+      // 1. Tentar localStorage primeiro
+      try {
+        const userType = localStorage.getItem('userType')
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          const parsed = JSON.parse(userStr)
+          if (parsed.role === 'colaborador' || userType === 'colaborador' || (parsed.empresa_id && parsed.id && !parsed.aluno_id)) {
+            user = { ...parsed, role: 'colaborador' }
+          }
+        }
+      } catch { /* ignora */ }
 
-      let user
-      if (res.ok) {
+      // 2. Fallback: verificar pelo servidor
+      if (!user) {
+        const res = await fetch('/api/colaborador/sessao')
+        if (!res.ok) {
+          window.location.href = '/login'
+          return
+        }
         user = await res.json()
         localStorage.setItem('user', JSON.stringify({ ...user, role: 'colaborador' }))
         localStorage.setItem('userType', 'colaborador')
-      } else {
-        // Fallback para localStorage em caso de erro de rede/servidor
-        const userStr = localStorage.getItem('user')
-        if (!userStr) { window.location.href = '/login'; return }
-        user = JSON.parse(userStr)
       }
 
       setColaborador({
