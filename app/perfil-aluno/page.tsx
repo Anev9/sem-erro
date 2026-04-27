@@ -48,7 +48,7 @@ export default function PerfilAlunoPage() {
     try {
       const form = new FormData()
       form.append('file', file)
-      form.append('path', `alunos/${aluno.id}/avatar`)
+      form.append('path', `alunos/${aluno.id}/avatar-${Date.now()}`)
 
       const res = await fetch('/api/upload-foto', { method: 'POST', body: form })
       if (!res.ok) throw new Error('Erro ao enviar foto')

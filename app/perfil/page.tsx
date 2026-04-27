@@ -98,7 +98,7 @@ export default function PerfilPage() {
     try {
       const form = new FormData()
       form.append('file', file)
-      form.append('path', `colaboradores/${colaborador.id}/avatar`)
+      form.append('path', `colaboradores/${colaborador.id}/avatar-${Date.now()}`)
 
       const res = await fetch('/api/upload-foto', { method: 'POST', body: form })
       if (!res.ok) {

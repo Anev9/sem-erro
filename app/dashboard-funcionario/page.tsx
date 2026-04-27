@@ -274,6 +274,7 @@ export default function DashboardColaborador() {
                   cursor: 'pointer'
                 }}
                 onClick={() => router.push('/perfil')}
+                onError={(e) => { e.currentTarget.style.display = 'none' }}
               />
             ) : (
               <div style={{
