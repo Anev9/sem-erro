@@ -35,6 +35,7 @@ export default function PerfilPage() {
   const [salvando, setSalvando] = useState(false)
   const [sucesso, setSucesso] = useState(false)
   const [uploadingFoto, setUploadingFoto] = useState(false)
+  const [erroFoto, setErroFoto] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     nome: '',
     celular: ''
@@ -95,26 +96,29 @@ export default function PerfilPage() {
     if (!file || !colaborador) return
 
     setUploadingFoto(true)
+    setErroFoto(null)
     try {
+      // 1. Enviar arquivo para o storage
       const form = new FormData()
       form.append('file', file)
       form.append('path', `colaboradores/${colaborador.id}/avatar-${Date.now()}`)
 
-      const res = await fetch('/api/upload-foto', { method: 'POST', body: form })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Erro ao enviar foto')
+      const uploadRes = await fetch('/api/upload-foto', { method: 'POST', body: form })
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}))
+        throw new Error(`Upload falhou: ${err.error || uploadRes.status}`)
       }
-      const { publicUrl } = await res.json()
+      const { publicUrl } = await uploadRes.json()
 
-      const patchRes = await fetch('/api/colaborador/perfil', {
-        method: 'PATCH',
+      // 2. Salvar URL no banco via endpoint dedicado
+      const saveRes = await fetch('/api/colaborador/foto', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ foto_url: publicUrl }),
       })
-      if (!patchRes.ok) {
-        const err = await patchRes.json().catch(() => ({}))
-        throw new Error(err.error || 'Erro ao salvar foto no perfil')
+      if (!saveRes.ok) {
+        const err = await saveRes.json().catch(() => ({}))
+        throw new Error(`Salvar no banco falhou: ${err.error || saveRes.status}`)
       }
 
       setColaborador(prev => prev ? { ...prev, foto_url: publicUrl } : prev)
@@ -124,7 +128,9 @@ export default function PerfilPage() {
       } catch {}
       toast.success('Foto atualizada com sucesso!')
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Erro ao atualizar foto')
+      const msg = err instanceof Error ? err.message : 'Erro ao atualizar foto'
+      setErroFoto(msg)
+      toast.error(msg)
     } finally {
       setUploadingFoto(false)
       e.target.value = ''
@@ -248,6 +254,11 @@ export default function PerfilPage() {
               <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'white', margin: 0 }}>
                 {colaborador.nome}
               </h1>
+              {erroFoto && (
+                <p style={{ fontSize: '0.75rem', color: '#fca5a5', margin: '0.25rem 0 0', maxWidth: '280px' }}>
+                  ⚠️ {erroFoto}
+                </p>
+              )}
               <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', margin: '0.25rem 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Building2 size={14} />
                 {colaborador.empresa_nome}
