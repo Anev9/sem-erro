@@ -35,23 +35,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json([])
   }
 
-  // Calcula o início do período atual para checklists recorrentes
+  // Calcula o início do período atual ajustado para o Brasil (UTC-3)
+  // O servidor roda em UTC; sem ajuste, meia-noite seria 03:00 horário de Brasília
   function inicioPeriodo(recorrencia: string | null): string | null {
+    const BRAZIL_OFFSET_MS = 3 * 60 * 60 * 1000 // UTC-3 em milissegundos
     const agora = new Date()
+    // Converte para horário local do Brasil
+    const local = new Date(agora.getTime() - BRAZIL_OFFSET_MS)
+
     if (recorrencia === 'diaria') {
-      agora.setHours(0, 0, 0, 0)
-      return agora.toISOString()
+      local.setUTCHours(0, 0, 0, 0)
+      return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
     }
     if (recorrencia === 'semanal') {
-      const dia = agora.getDay()
-      agora.setDate(agora.getDate() - dia)
-      agora.setHours(0, 0, 0, 0)
-      return agora.toISOString()
+      local.setUTCDate(local.getUTCDate() - local.getUTCDay())
+      local.setUTCHours(0, 0, 0, 0)
+      return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
     }
     if (recorrencia === 'mensal') {
-      agora.setDate(1)
-      agora.setHours(0, 0, 0, 0)
-      return agora.toISOString()
+      local.setUTCDate(1)
+      local.setUTCHours(0, 0, 0, 0)
+      return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
     }
     return null
   }

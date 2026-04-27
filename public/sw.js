@@ -4,7 +4,7 @@
  * Background Sync para respostas salvas offline.
  */
 
-const CACHE_NAME = 'performe-v1'
+const CACHE_NAME = 'performe-v2'
 const SYNC_TAG = 'sync-respostas'
 
 // Assets que serão cacheados na instalação

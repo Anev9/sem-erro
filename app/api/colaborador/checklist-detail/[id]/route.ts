@@ -44,23 +44,25 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: itensError.message }, { status: 500 })
   }
 
-  // Para checklists recorrentes, só carrega respostas do período atual
+  // Para checklists recorrentes, só carrega respostas do período atual (ajustado UTC-3 Brasil)
   function inicioPeriodo(recorrencia: string | null): string | null {
+    const BRAZIL_OFFSET_MS = 3 * 60 * 60 * 1000
     const agora = new Date()
+    const local = new Date(agora.getTime() - BRAZIL_OFFSET_MS)
+
     if (recorrencia === 'diaria') {
-      agora.setHours(0, 0, 0, 0)
-      return agora.toISOString()
+      local.setUTCHours(0, 0, 0, 0)
+      return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
     }
     if (recorrencia === 'semanal') {
-      const dia = agora.getDay()
-      agora.setDate(agora.getDate() - dia)
-      agora.setHours(0, 0, 0, 0)
-      return agora.toISOString()
+      local.setUTCDate(local.getUTCDate() - local.getUTCDay())
+      local.setUTCHours(0, 0, 0, 0)
+      return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
     }
     if (recorrencia === 'mensal') {
-      agora.setDate(1)
-      agora.setHours(0, 0, 0, 0)
-      return agora.toISOString()
+      local.setUTCDate(1)
+      local.setUTCHours(0, 0, 0, 0)
+      return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
     }
     return null
   }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 const SW_CONTENT = `
-const CACHE_NAME = 'performe-v1'
+const CACHE_NAME = 'performe-v2'
 const SYNC_TAG = 'sync-respostas'
 
 const ASSETS_PARA_CACHE = [
