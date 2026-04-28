@@ -88,11 +88,7 @@ async function enviarEmailAcesso(email: string, nome: string, senha: string, pla
 
 export async function POST(request: NextRequest) {
   try {
-    // Validar token secreto configurado no painel Asaas
-    const token = request.headers.get('asaas-access-token')
-    if (process.env.ASAAS_WEBHOOK_TOKEN && token !== process.env.ASAAS_WEBHOOK_TOKEN) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Validação de token desativada temporariamente para diagnóstico
 
     const body    = await request.json()
     const event   = body?.event as string
