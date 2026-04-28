@@ -136,6 +136,15 @@ export async function POST(request: NextRequest) {
       logger.error('asaas/criar-venda', asaasErr instanceof Error ? asaasErr.message : String(asaasErr))
     }
 
+    // Se Asaas não gerou o link, o cliente não consegue pagar — retornar erro
+    if (!asaasPaymentId) {
+      logger.error('bomcontrole/criar-venda', `Asaas não gerou link de pagamento para venda BomControle ${venda.IdVenda}`)
+      return NextResponse.json(
+        { error: 'Erro ao gerar link de pagamento. Tente novamente ou entre em contato com o suporte.' },
+        { status: 500 }
+      )
+    }
+
     // 4. Salvar venda pendente no Supabase (para liberar acesso após pagamento)
     if (asaasPaymentId) {
       const { error: dbErr } = await db()

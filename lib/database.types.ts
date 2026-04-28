@@ -173,6 +173,7 @@ export type Database = {
           id: number
           programa: string
           senha: string | null
+          senha_temporaria: boolean
           telefone: string | null
           tipo: string | null
           tipo_empresa: string | null
@@ -192,6 +193,7 @@ export type Database = {
           id?: number
           programa: string
           senha?: string | null
+          senha_temporaria?: boolean
           telefone?: string | null
           tipo?: string | null
           tipo_empresa?: string | null
@@ -211,6 +213,7 @@ export type Database = {
           id?: number
           programa?: string
           senha?: string | null
+          senha_temporaria?: boolean
           telefone?: string | null
           tipo?: string | null
           tipo_empresa?: string | null

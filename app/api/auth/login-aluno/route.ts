@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
       ativo: aluno['ativo'],
       created_at: aluno['created_at'],
       foto_url: aluno['foto_url'] || null,
+      senha_temporaria: aluno['senha_temporaria'] ?? false,
     }
 
     const isProd = process.env.NODE_ENV === 'production'

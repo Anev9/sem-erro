@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft, Mail } from 'lucide-react'
 
-export default function AlterarSenha() {
+function AlterarSenhaInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const primeroAcesso = searchParams.get('primeiro_acesso') === 'true'
   // 'loading' enquanto verifica sessão, 'change' se logado, 'forgot' se não logado
   const [mode, setMode] = useState<'loading' | 'change' | 'forgot'>('loading')
   const [email, setEmail] = useState('')
@@ -64,12 +66,21 @@ export default function AlterarSenha() {
 
     setLoading(true)
     try {
+      // Atualiza no Supabase Auth
       const { error } = await supabase.auth.updateUser({ password: novaSenha })
       if (error) throw error
+
+      // Sincroniza senha e limpa flag senha_temporaria no banco alunos
+      await fetch('/api/auth/alterar-senha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ novaSenha }),
+      })
+
       setMessage({ type: 'success', text: 'Senha alterada com sucesso! Redirecionando...' })
       setNovaSenha('')
       setConfirmarSenha('')
-      setTimeout(() => router.push('/login'), 2000)
+      setTimeout(() => router.push(primeroAcesso ? '/dashboard-aluno' : '/login'), 2000)
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Erro ao alterar senha. Tente novamente.' })
     } finally {
@@ -171,12 +182,14 @@ export default function AlterarSenha() {
                 marginBottom: '0.5rem',
                 letterSpacing: '-0.02em'
               }}>
-                {mode === 'forgot' ? 'Esqueci minha senha' : 'Alterar Senha'}
+                {mode === 'forgot' ? 'Esqueci minha senha' : primeroAcesso ? 'Defina sua senha' : 'Alterar Senha'}
               </h1>
               <p style={{ color: '#6b7280', fontSize: '1rem' }}>
                 {mode === 'forgot'
                   ? 'Informe seu e-mail para receber o link de recuperação'
-                  : 'Defina uma nova senha para sua conta'}
+                  : primeroAcesso
+                    ? 'Primeiro acesso: crie uma senha pessoal para entrar no sistema'
+                    : 'Defina uma nova senha para sua conta'}
               </p>
             </div>
 
@@ -462,8 +475,9 @@ export default function AlterarSenha() {
                 {loading ? 'Alterando...' : 'Alterar Senha'}
               </button>
 
-              {/* Botão Voltar */}
-              <button 
+              {/* Botão Voltar — oculto no primeiro acesso (troca de senha obrigatória) */}
+              {!primeroAcesso && (
+              <button
                 type="button"
                 onClick={() => router.push('/login')}
                 style={{
@@ -496,11 +510,20 @@ export default function AlterarSenha() {
                 <ArrowLeft size={16} />
                 Voltar
               </button>
+              )}
             </form>
             )}
           </div>
         </div>
       </div>
     </>
+  )
+}
+
+export default function AlterarSenha() {
+  return (
+    <Suspense>
+      <AlterarSenhaInner />
+    </Suspense>
   )
 }

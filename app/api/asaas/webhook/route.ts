@@ -137,12 +137,13 @@ export async function POST(request: NextRequest) {
       const { error: insertErr } = await supabase
         .from('alunos')
         .insert({
-          clientes: venda.nome_empresa || venda.nome,
-          'e-mail': venda.email,
-          senha:    hash,
-          programa: venda.plano,
-          ativo:    true,
-          tipo:     'aluno',
+          clientes:          venda.nome_empresa || venda.nome,
+          'e-mail':          venda.email,
+          senha:             hash,
+          programa:          venda.plano,
+          ativo:             true,
+          tipo:              'aluno',
+          senha_temporaria:  true,
         })
 
       if (insertErr) {
@@ -151,7 +152,7 @@ export async function POST(request: NextRequest) {
       }
 
       await enviarEmailAcesso(venda.email, venda.nome_empresa || venda.nome, senha, venda.plano)
-      logger.error('webhook/acesso-liberado', `Acesso liberado para ${venda.email} — plano ${venda.plano}`)
+      logger.info('webhook/acesso-liberado', `Acesso liberado para ${venda.email} — plano ${venda.plano}`)
     }
 
     // Marcar como processado para não duplicar em caso de reentrega

@@ -114,7 +114,11 @@ export default function LoginPage() {
 
         if (alunoRes.ok) {
           localStorage.setItem('user', JSON.stringify(alunoData));
-          window.location.href = '/dashboard-aluno';
+          if (alunoData.senha_temporaria) {
+            window.location.href = '/alterar-senha?primeiro_acesso=true';
+          } else {
+            window.location.href = '/dashboard-aluno';
+          }
           return;
         }
 
