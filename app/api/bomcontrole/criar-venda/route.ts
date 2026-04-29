@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 
       const idClienteAsaas = clienteAsaas.data?.id
       if (!idClienteAsaas) {
-        logger.error('asaas/criar-cliente', JSON.stringify(clienteAsaas.data))
+        logger.error('asaas/criar-cliente', `status=${clienteAsaas.status} key_prefix=${ASAAS_API_KEY?.slice(0,10)} data=${JSON.stringify(clienteAsaas.data)}`)
       } else {
         const cobranca = await asaas('/payments', 'POST', {
           customer: idClienteAsaas,
