@@ -3,7 +3,8 @@
     "allow": [
       "Bash(find:*)",
       "Bash(node scripts/inserir-template-rota-gerente.js:*)",
-      "PowerShell($response = Invoke-WebRequest -Method POST -Uri \"https://performeseumercado.com.br/api/asaas/webhook\" -ContentType \"application/json\" -Body \"{}\" -UseBasicParsing; $response.StatusCode)"
+      "PowerShell($response = Invoke-WebRequest -Method POST -Uri \"https://performeseumercado.com.br/api/asaas/webhook\" -ContentType \"application/json\" -Body \"{}\" -UseBasicParsing; $response.StatusCode)",
+      "Read(//c/Deisiane/Projetos/SemErro/**)"
     ]
   }
 }
