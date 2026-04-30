@@ -52,6 +52,22 @@ async function asaas(path: string, method: string, body?: object) {
   catch { return { ok: res.ok, status: res.status, data: text } }
 }
 
+async function criarCobranca(idCliente: string, billingType: 'PIX' | 'BOLETO', valor: number, dueDate: string, descricao: string, idVenda: string) {
+  const res = await asaas('/payments', 'POST', {
+    customer: idCliente,
+    billingType,
+    value: valor,
+    dueDate,
+    description: descricao,
+    externalReference: idVenda,
+  })
+  return {
+    id:  res.data?.id  ?? null,
+    url: res.data?.invoiceUrl ?? null,
+    ok:  !!res.data?.id,
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { nome, email, telefone, cnpj, nomeEmpresa, plano } = await request.json()
@@ -78,10 +94,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Criar venda no BomControle
-    const hoje  = new Date()
+    const hoje   = new Date()
     const amanha = new Date(hoje)
     amanha.setDate(amanha.getDate() + 1)
-    const toBC = (d: Date) => d.toISOString().slice(0, 10) + ' 00:00:00'
+    const toBC    = (d: Date) => d.toISOString().slice(0, 10) + ' 00:00:00'
+    const dueDate = amanha.toISOString().slice(0, 10)
 
     const venda = await bomcontrole('/Venda/Criar', 'POST', {
       IdCliente: idCliente,
@@ -99,70 +116,72 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao registrar venda no BomControle.' }, { status: 400 })
     }
 
-    // 3. Criar cliente + cobrança no Asaas
-    let asaasUrl: string | null = null
-    let asaasPaymentId: string | null = null
+    // 3. Criar cliente no Asaas
+    let pixUrl:    string | null = null
+    let boletoUrl: string | null = null
 
     try {
       const clienteAsaas = await asaas('/customers', 'POST', {
-        name: nomeEmpresa || nome,
-        cpfCnpj: cnpj?.replace(/\D/g, '') || undefined,
+        name:                nomeEmpresa || nome,
+        cpfCnpj:             cnpj?.replace(/\D/g, '') || undefined,
         email,
-        mobilePhone: telefone.replace(/\D/g, ''),
+        mobilePhone:         telefone.replace(/\D/g, ''),
         notificationDisabled: false,
       })
 
       const idClienteAsaas = clienteAsaas.data?.id
       if (!idClienteAsaas) {
-        logger.error('asaas/criar-cliente', `status=${clienteAsaas.status} key_len=${ASAAS_API_KEY?.length} key_prefix=${ASAAS_API_KEY?.slice(0,20)} data=${JSON.stringify(clienteAsaas.data)}`)
+        logger.error('asaas/criar-cliente', `status=${clienteAsaas.status} data=${JSON.stringify(clienteAsaas.data)}`)
       } else {
-        const cobranca = await asaas('/payments', 'POST', {
-          customer: idClienteAsaas,
-          billingType: 'UNDEFINED',
-          value: planoInfo.valor,
-          dueDate: amanha.toISOString().slice(0, 10),
-          description: `Performe seu Mercado - Plano ${planoInfo.nome}`,
-          externalReference: String(venda.IdVenda),
-        })
+        const descricao = `Performe seu Mercado - Plano ${planoInfo.nome}`
+        const idVendaStr = String(venda.IdVenda)
 
-        asaasPaymentId = cobranca.data?.id ?? null
-        asaasUrl       = cobranca.data?.invoiceUrl ?? null
+        // 4. Criar cobranças PIX e Boleto em paralelo
+        const [pix, boleto] = await Promise.all([
+          criarCobranca(idClienteAsaas, 'PIX',    planoInfo.valor, dueDate, descricao, idVendaStr),
+          criarCobranca(idClienteAsaas, 'BOLETO', planoInfo.valor, dueDate, descricao, idVendaStr),
+        ])
 
-        if (!asaasPaymentId) {
-          logger.error('asaas/criar-cobranca', JSON.stringify(cobranca.data))
+        pixUrl    = pix.url
+        boletoUrl = boleto.url
+
+        if (!pix.ok)    logger.error('asaas/criar-pix',    JSON.stringify(pix))
+        if (!boleto.ok) logger.error('asaas/criar-boleto', JSON.stringify(boleto))
+
+        // 5. Salvar cada pagamento gerado em vendas_pendentes
+        const supabase = db()
+        const baseVenda = {
+          bomcontrole_venda_id: idVendaStr,
+          nome,
+          email:       email.toLowerCase().trim(),
+          telefone,
+          nome_empresa: nomeEmpresa || null,
+          plano,
+        }
+
+        const rows = [
+          pix.id    ? { ...baseVenda, asaas_payment_id: pix.id }    : null,
+          boleto.id ? { ...baseVenda, asaas_payment_id: boleto.id } : null,
+        ].filter(Boolean)
+
+        if (rows.length > 0) {
+          const { error: dbErr } = await supabase.from('vendas_pendentes').insert(rows)
+          if (dbErr) logger.error('supabase/vendas_pendentes', dbErr.message)
         }
       }
     } catch (asaasErr) {
       logger.error('asaas/criar-venda', asaasErr instanceof Error ? asaasErr.message : String(asaasErr))
     }
 
-    // Se Asaas não gerou o link, o cliente não consegue pagar — retornar erro
-    if (!asaasPaymentId) {
-      logger.error('bomcontrole/criar-venda', `Asaas não gerou link de pagamento para venda BomControle ${venda.IdVenda}`)
+    if (!pixUrl && !boletoUrl) {
+      logger.error('bomcontrole/criar-venda', `Nenhum link de pagamento gerado para venda ${venda.IdVenda}`)
       return NextResponse.json(
         { error: 'Erro ao gerar link de pagamento. Tente novamente ou entre em contato com o suporte.' },
         { status: 500 }
       )
     }
 
-    // 4. Salvar venda pendente no Supabase (para liberar acesso após pagamento)
-    if (asaasPaymentId) {
-      const { error: dbErr } = await db()
-        .from('vendas_pendentes')
-        .insert({
-          asaas_payment_id:     asaasPaymentId,
-          bomcontrole_venda_id: String(venda.IdVenda),
-          nome,
-          email:                email.toLowerCase().trim(),
-          telefone,
-          nome_empresa:         nomeEmpresa || null,
-          plano,
-        })
-
-      if (dbErr) logger.error('supabase/vendas_pendentes', dbErr.message)
-    }
-
-    return NextResponse.json({ ok: true, idVenda: venda.IdVenda, idFatura: venda.IdFatura, asaasUrl })
+    return NextResponse.json({ ok: true, idVenda: venda.IdVenda, pixUrl, boletoUrl })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno'
     logger.error('bomcontrole/criar-venda', message)

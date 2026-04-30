@@ -116,8 +116,11 @@ function ContratarForm() {
         return
       }
 
-      if (data.asaasUrl) {
-        window.location.href = data.asaasUrl
+      if (data.pixUrl || data.boletoUrl) {
+        sessionStorage.setItem('pix_url',    data.pixUrl    ?? '')
+        sessionStorage.setItem('boleto_url', data.boletoUrl ?? '')
+        sessionStorage.setItem('plano_nome', plano.nome)
+        window.location.href = '/pagar'
         return
       }
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const PUBLIC_PATHS = ['/', '/login', '/alterar-senha', '/contratar']
+const PUBLIC_PATHS = ['/', '/login', '/alterar-senha', '/contratar', '/pagar']
 const STATIC_PREFIXES = ['/_next/', '/favicon', '/logo', '/logo-semerro']
 const PUBLIC_API_PATHS = [
   '/api/auth/login-aluno',
