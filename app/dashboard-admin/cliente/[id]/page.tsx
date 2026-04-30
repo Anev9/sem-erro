@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, CheckSquare, AlertTriangle, TrendingUp, Calendar, User, Activity, History } from 'lucide-react'
+import { ArrowLeft, CheckSquare, AlertTriangle, TrendingUp, Calendar, User, Activity, History, FileText } from 'lucide-react'
 
 interface ClienteData {
   aluno_id: number
@@ -31,6 +31,9 @@ export default function AdminClienteDashboard() {
   const [atividades, setAtividades] = useState<AtividadeItem[]>([])
   const [loading, setLoading] = useState(true)
   const [logs, setLogs] = useState<{ acao: string; detalhe: string; created_at: string }[]>([])
+  const [observacoes, setObservacoes] = useState('')
+  const [salvandoObs, setSalvandoObs] = useState(false)
+  const [obsSalva, setObsSalva] = useState(false)
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -63,6 +66,12 @@ export default function AdminClienteDashboard() {
         const todosLogs = await logsRes.json()
         setLogs(todosLogs.filter((l: { aluno_id: number }) => String(l.aluno_id) === clienteId))
       }
+
+      const obsRes = await fetch(`/api/admin/clientes?id=${clienteId}`)
+      if (obsRes.ok) {
+        const obsData = await obsRes.json()
+        setObservacoes(obsData?.observacoes ?? '')
+      }
     } catch {
       // silencioso
     } finally {
@@ -73,6 +82,21 @@ export default function AdminClienteDashboard() {
   function formatarData(data: string | null) {
     if (!data) return '—'
     return new Date(data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
+  async function salvarObservacoes() {
+    setSalvandoObs(true)
+    try {
+      await fetch('/api/admin/clientes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: Number(clienteId), observacoes }),
+      })
+      setObsSalva(true)
+      setTimeout(() => setObsSalva(false), 3000)
+    } finally {
+      setSalvandoObs(false)
+    }
   }
 
   function calcPct(v: number, t: number) {
@@ -240,6 +264,51 @@ export default function AdminClienteDashboard() {
             </div>
           </div>
         )}
+        {/* Observações do admin */}
+        <div style={{ background: 'white', borderRadius: '1rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', overflow: 'hidden', marginTop: '1.5rem' }}>
+          <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <FileText size={18} style={{ color: '#334155' }} />
+            <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: '#1f2937' }}>Observações Internas</h2>
+            <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginLeft: 'auto' }}>Visível apenas para administradores</span>
+          </div>
+          <div style={{ padding: '1.25rem 1.5rem' }}>
+            <textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Anote aqui informações sobre o cliente: situação do contrato, pendências, histórico de suporte, observações importantes..."
+              rows={5}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '0.75rem 1rem',
+                border: '1.5px solid #e5e7eb', borderRadius: '0.5rem',
+                fontSize: '0.9rem', lineHeight: '1.6',
+                resize: 'vertical', outline: 'none',
+                fontFamily: 'inherit', color: '#374151',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = '#334155' }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb' }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', marginTop: '0.75rem' }}>
+              {obsSalva && (
+                <span style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: '600' }}>✓ Observação salva!</span>
+              )}
+              <button
+                onClick={salvarObservacoes}
+                disabled={salvandoObs}
+                style={{
+                  padding: '0.625rem 1.5rem',
+                  background: salvandoObs ? '#94a3b8' : '#334155',
+                  color: 'white', border: 'none', borderRadius: '0.5rem',
+                  cursor: salvandoObs ? 'not-allowed' : 'pointer',
+                  fontWeight: '600', fontSize: '0.875rem',
+                }}
+              >
+                {salvandoObs ? 'Salvando...' : 'Salvar observação'}
+              </button>
+            </div>
+          </div>
+        </div>
+
       </main>
     </div>
   )

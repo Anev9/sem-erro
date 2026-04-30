@@ -7,7 +7,7 @@ const API_KEY     = process.env.BOMCONTROLE_API_KEY!
 const ID_EMPRESA  = Number(process.env.BOMCONTROLE_ID_EMPRESA)
 const ID_SERVICO  = Number(process.env.BOMCONTROLE_ID_SERVICO)
 
-const ASAAS_API_URL = process.env.ASAAS_API_URL ?? 'https://api.asaas.com/api/v3'
+const ASAAS_API_URL = process.env.ASAAS_API_URL ?? 'https://api.asaas.com/v3'
 const ASAAS_API_KEY = process.env.ASAAS_API_KEY!
 
 const planoValores: Record<string, { valor: number; nome: string }> = {
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 
       const idClienteAsaas = clienteAsaas.data?.id
       if (!idClienteAsaas) {
-        logger.error('asaas/criar-cliente', `status=${clienteAsaas.status} key_prefix=${ASAAS_API_KEY?.slice(0,10)} data=${JSON.stringify(clienteAsaas.data)}`)
+        logger.error('asaas/criar-cliente', `status=${clienteAsaas.status} key_len=${ASAAS_API_KEY?.length} key_prefix=${ASAAS_API_KEY?.slice(0,20)} data=${JSON.stringify(clienteAsaas.data)}`)
       } else {
         const cobranca = await asaas('/payments', 'POST', {
           customer: idClienteAsaas,

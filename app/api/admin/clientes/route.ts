@@ -54,3 +54,35 @@ export async function POST(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
+
+export async function GET(request: NextRequest) {
+  if (!isAdmin(request)) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
+
+  const { data, error } = await db()
+    .from('alunos')
+    .select('id, observacoes')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!isAdmin(request)) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
+
+  const { id, observacoes } = await request.json()
+  if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
+
+  const { error } = await db()
+    .from('alunos')
+    .update({ observacoes: observacoes ?? null })
+    .eq('id', id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

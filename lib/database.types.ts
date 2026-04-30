@@ -171,6 +171,7 @@ export type Database = {
           estado: string | null
           foto_url: string | null
           id: number
+          observacoes: string | null
           programa: string
           senha: string | null
           senha_temporaria: boolean
@@ -191,6 +192,7 @@ export type Database = {
           estado?: string | null
           foto_url?: string | null
           id?: number
+          observacoes?: string | null
           programa: string
           senha?: string | null
           senha_temporaria?: boolean
@@ -211,6 +213,7 @@ export type Database = {
           estado?: string | null
           foto_url?: string | null
           id?: number
+          observacoes?: string | null
           programa?: string
           senha?: string | null
           senha_temporaria?: boolean

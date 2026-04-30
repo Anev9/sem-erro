@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { criarAssinaturaSchema } from '@/lib/schemas'
 import { logger } from '@/lib/logger'
 
-const ASAAS_URL = process.env.ASAAS_API_URL || 'https://api.asaas.com/api/v3'
+const ASAAS_URL = process.env.ASAAS_API_URL || 'https://api.asaas.com/v3'
 const ASAAS_KEY = process.env.ASAAS_API_KEY!
 
 const planoValores: Record<string, { valor: number; nome: string }> = {
