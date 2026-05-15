@@ -9,7 +9,10 @@
       "Bash(Select-Object -Property Name, PSIsContainer)",
       "Bash(Get-ChildItem -Path \"c:\\\\Deisiane\\\\Projetos\\\\SemErro\\\\sem-erro\" -Directory)",
       "Bash(Select-Object Name)",
-      "PowerShell(Get-ChildItem -Path \"c:\\\\Deisiane\\\\Projetos\\\\SemErro\\\\sem-erro\" | Format-Table Name, @{n='Type';e={if \\($_.PSIsContainer\\) {'Dir'} else {'File'}}})"
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Deisiane\\\\Projetos\\\\SemErro\\\\sem-erro\" | Format-Table Name, @{n='Type';e={if \\($_.PSIsContainer\\) {'Dir'} else {'File'}}})",
+      "Bash(node -e ' *)",
+      "Bash(node \"c:/Deisiane/Projetos/SemErro/sem-erro/_fix_csv.js\")",
+      "Bash(git checkout *)"
     ]
   }
 }

@@ -57,20 +57,34 @@ export default function GruposEmpresaPage() {
   }
 
   function exportarCSV() {
-    const headers = ['ID', 'Nome', 'Programa', 'Email', 'Telefone', 'Cidade', 'Estado', 'CNPJ', 'Ativo', 'Data de Saída']
+    // Aspas duplas em cada célula + escape interno (RFC 4180)
+    const cel = (v: string | number) => '"' + String(v).replace(/"/g, '""') + '"'
+
+    const headers = ['ID', 'Nome', 'Programa', 'Status', 'Email', 'Telefone', 'CNPJ', 'Tipo de Empresa', 'Cidade', 'Estado', 'Data de Cadastro', 'Data de Saída']
     const rows = alunosFiltrados.map((a) => [
-      a.id, a.clientes || '', a.programa || '', a['e-mail'] || '',
-      a.telefone || '', a.cidade || '', a.estado || '', a.cnpj || '',
-      a.ativo ? 'Sim' : 'Não',
-      a.data_saida ? new Date(a.data_saida).toLocaleDateString('pt-BR') : '',
+      cel(a.id),
+      cel(a.clientes || ''),
+      cel(a.programa || ''),
+      cel(a.ativo ? 'Ativo' : 'Inativo'),
+      cel(a['e-mail'] || ''),
+      cel(a.telefone || ''),
+      cel(a.cnpj || ''),
+      cel(a.tipo || ''),
+      cel(a.cidade || ''),
+      cel(a.estado || ''),
+      cel(a.created_at ? new Date(a.created_at).toLocaleDateString('pt-BR') : ''),
+      cel(a.data_saida ? new Date(a.data_saida).toLocaleDateString('pt-BR') : ''),
     ])
-    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n')
+
+    // Separador ponto-e-vírgula (padrão Excel pt-BR) + CRLF entre linhas
+    const csv = [headers.map(cel), ...rows].map((row) => row.join(';')).join('\r\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `grupos-empresa-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'grupos-empresa-' + new Date().toISOString().split('T')[0] + '.csv'
+    link.click()
+    window.URL.revokeObjectURL(url)
   }
 
   function aplicarOrdenacao(lista: Aluno[]) {
