@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Download, Plus, Search, CheckCircle, XCircle, Pencil, Building2 } from 'lucide-react'
+import { ArrowLeft, Download, Plus, Search, CheckCircle, XCircle, Pencil, Building2, CalendarX } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface Aluno {
@@ -17,6 +17,7 @@ interface Aluno {
   estado: string | null
   cnpj: string | null
   created_at: string | null
+  data_saida: string | null
 }
 
 export default function GruposEmpresaPage() {
@@ -28,7 +29,13 @@ export default function GruposEmpresaPage() {
   const [ativoFilter, setAtivoFilter] = useState('todas')
   const [ordenacao, setOrdenacao] = useState('nome')
 
-  useEffect(() => { buscarAlunos() }, [])
+  useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (!userData) { router.push('/login'); return }
+    const user = JSON.parse(userData)
+    if (user.role !== 'admin') { router.push('/login'); return }
+    buscarAlunos()
+  }, [router])
 
   async function buscarAlunos() {
     const { data, error } = await supabase
@@ -50,11 +57,12 @@ export default function GruposEmpresaPage() {
   }
 
   function exportarCSV() {
-    const headers = ['ID', 'Nome', 'Programa', 'Email', 'Telefone', 'Cidade', 'Estado', 'CNPJ', 'Ativo']
+    const headers = ['ID', 'Nome', 'Programa', 'Email', 'Telefone', 'Cidade', 'Estado', 'CNPJ', 'Ativo', 'Data de Saída']
     const rows = alunosFiltrados.map((a) => [
       a.id, a.clientes || '', a.programa || '', a['e-mail'] || '',
       a.telefone || '', a.cidade || '', a.estado || '', a.cnpj || '',
       a.ativo ? 'Sim' : 'Não',
+      a.data_saida ? new Date(a.data_saida).toLocaleDateString('pt-BR') : '',
     ])
     const csv = [headers, ...rows].map((row) => row.join(',')).join('\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -290,7 +298,7 @@ export default function GruposEmpresaPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                    {['Status', 'Nome', 'Programa', 'Email', 'Localização', 'Telefone', 'Ações'].map((h) => (
+                    {['Status', 'Nome', 'Programa', 'Email', 'Localização', 'Telefone', 'Data de Saída', 'Ações'].map((h) => (
                       <th key={h} style={{
                         padding: '0.75rem 1rem', textAlign: 'left',
                         fontSize: '0.75rem', fontWeight: '600',
@@ -350,6 +358,21 @@ export default function GruposEmpresaPage() {
                       </td>
                       <td style={{ padding: '0.875rem 1rem', color: '#6b7280', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                         {aluno.telefone || <span style={{ color: '#d1d5db' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', whiteSpace: 'nowrap' }}>
+                        {aluno.data_saida ? (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+                            padding: '0.25rem 0.625rem', borderRadius: '9999px',
+                            fontSize: '0.75rem', fontWeight: '600',
+                            backgroundColor: '#fef2f2', color: '#b91c1c'
+                          }}>
+                            <CalendarX size={12} />
+                            {new Date(aluno.data_saida).toLocaleDateString('pt-BR')}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#d1d5db', fontSize: '0.875rem' }}>—</span>
+                        )}
                       </td>
                       <td style={{ padding: '0.875rem 1rem', whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>

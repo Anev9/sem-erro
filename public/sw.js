@@ -4,7 +4,7 @@
  * Background Sync para respostas salvas offline.
  */
 
-const CACHE_NAME = 'performe-v2'
+const CACHE_NAME = 'performe-v3'
 const SYNC_TAG = 'sync-respostas'
 
 // Assets que serão cacheados na instalação
@@ -54,7 +54,13 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Assets estáticos e páginas: Cache-first
+  // Navegação (HTML de páginas): Network-first para nunca servir HTML cacheado desatualizado
+  if (event.request.mode === 'navigate') {
+    event.respondWith(networkFirst(event.request))
+    return
+  }
+
+  // Assets estáticos (JS, CSS, imagens): Cache-first
   event.respondWith(cacheFirst(event.request))
 })
 

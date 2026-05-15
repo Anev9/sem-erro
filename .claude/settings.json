@@ -4,7 +4,12 @@
       "Bash(find:*)",
       "Bash(node scripts/inserir-template-rota-gerente.js:*)",
       "PowerShell($response = Invoke-WebRequest -Method POST -Uri \"https://performeseumercado.com.br/api/asaas/webhook\" -ContentType \"application/json\" -Body \"{}\" -UseBasicParsing; $response.StatusCode)",
-      "Read(//c/Deisiane/Projetos/SemErro/**)"
+      "Read(//c/Deisiane/Projetos/SemErro/**)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Deisiane\\\\Projetos\\\\SemErro\\\\sem-erro\" -Force)",
+      "Bash(Select-Object -Property Name, PSIsContainer)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Deisiane\\\\Projetos\\\\SemErro\\\\sem-erro\" -Directory)",
+      "Bash(Select-Object Name)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Deisiane\\\\Projetos\\\\SemErro\\\\sem-erro\" | Format-Table Name, @{n='Type';e={if \\($_.PSIsContainer\\) {'Dir'} else {'File'}}})"
     ]
   }
 }

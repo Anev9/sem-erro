@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Building2, Mail, MapPin, Lock, CheckSquare } from 'lucide-react'
+import { ArrowLeft, Save, Building2, Mail, MapPin, Lock, CheckSquare, CalendarX } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -55,6 +55,13 @@ export default function CriarEmpresaPage() {
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (!userData) { router.push('/login'); return }
+    const user = JSON.parse(userData)
+    if (user.role !== 'admin') { router.push('/login') }
+  }, [router])
+
   const [form, setForm] = useState({
     clientes: '',
     cnpj: '',
@@ -70,6 +77,7 @@ export default function CriarEmpresaPage() {
     ativo: true,
     auditor_atribui_acao: false,
     tipo: 'aluno',
+    data_saida: '',
   })
 
   function set(field: string, value: string | boolean) {
@@ -96,7 +104,8 @@ export default function CriarEmpresaPage() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { celular, ...dadosParaSalvar } = form
-      const { error } = await supabase.from('alunos').insert([dadosParaSalvar])
+      const payload = { ...dadosParaSalvar, data_saida: dadosParaSalvar.data_saida || null }
+      const { error } = await supabase.from('alunos').insert([payload])
       if (error) throw error
       router.push('/organizacao/grupos-empresa')
     } catch (err: unknown) {
@@ -286,6 +295,22 @@ export default function CriarEmpresaPage() {
                 {errors.senha && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>{errors.senha}</p>}
               </Field>
             </div>
+          </div>
+
+          {/* Data de Saída */}
+          <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
+            <SectionTitle icon={<CalendarX size={18} style={{ color: '#ef4444' }} />} title="Data de Saída do App" />
+            <Field label="Data de saída (opcional)">
+              <input
+                type="date"
+                value={form.data_saida}
+                onChange={(e) => set('data_saida', e.target.value)}
+                {...inputProps('data_saida')}
+              />
+              <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
+                Preencha apenas se o cliente encerrou o uso do app
+              </p>
+            </Field>
           </div>
 
           {/* Configurações */}

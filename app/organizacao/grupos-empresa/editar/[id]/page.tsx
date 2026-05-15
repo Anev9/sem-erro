@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, Trash2, CalendarX } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -26,7 +26,8 @@ export default function EditarEmpresaPage() {
     'e-mail': '',
     telefone: '',
     senha: '',
-    tipo: 'aluno'
+    tipo: 'aluno',
+    data_saida: '',
   })
 
   const estados = [
@@ -36,8 +37,12 @@ export default function EditarEmpresaPage() {
   ]
 
   useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (!userData) { router.push('/login'); return }
+    const user = JSON.parse(userData)
+    if (user.role !== 'admin') { router.push('/login'); return }
     buscarEmpresa()
-  }, [id])
+  }, [id, router])
 
   async function buscarEmpresa() {
     try {
@@ -62,6 +67,7 @@ export default function EditarEmpresaPage() {
         telefone: data.telefone ?? '',
         senha: (data as Record<string, unknown>).senha as string ?? '',
         tipo: (data as Record<string, unknown>).tipo as string ?? 'aluno',
+        data_saida: data.data_saida ?? '',
       })
     } catch (error) {
       console.error('Erro ao buscar empresa:', error)
@@ -74,9 +80,10 @@ export default function EditarEmpresaPage() {
   async function salvar() {
     setSaving(true)
     try {
+      const payload = { ...empresa, data_saida: empresa.data_saida || null }
       const { error } = await supabase
         .from('alunos')
-        .update(empresa)
+        .update(payload)
         .eq('id', id)
 
       if (error) throw error
@@ -335,6 +342,32 @@ export default function EditarEmpresaPage() {
             </div>
 
             <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '0.5rem 0' }} />
+
+            {/* Data de Saída */}
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: '500', color: '#374151', fontSize: '0.95rem' }}>
+                <CalendarX size={16} style={{ color: '#ef4444' }} />
+                Data de Saída do App
+              </label>
+              <input
+                type="date"
+                value={empresa.data_saida}
+                onChange={(e) => setEmpresa({ ...empresa, data_saida: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '0.875rem 1rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  fontSize: '1rem',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#ef4444'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+              />
+              <p style={{ color: '#9ca3af', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
+                Preencha apenas se o cliente encerrou o uso do app. Deixe em branco para limpar.
+              </p>
+            </div>
 
             {/* Campos adicionais */}
             <div>

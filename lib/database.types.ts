@@ -166,6 +166,7 @@ export type Database = {
           clientes: string | null
           cnpj: string | null
           created_at: string | null
+          data_saida: string | null
           "e-mail": string | null
           endereco: string | null
           estado: string | null
@@ -187,6 +188,7 @@ export type Database = {
           clientes?: string | null
           cnpj?: string | null
           created_at?: string | null
+          data_saida?: string | null
           "e-mail"?: string | null
           endereco?: string | null
           estado?: string | null
@@ -208,6 +210,7 @@ export type Database = {
           clientes?: string | null
           cnpj?: string | null
           created_at?: string | null
+          data_saida?: string | null
           "e-mail"?: string | null
           endereco?: string | null
           estado?: string | null
