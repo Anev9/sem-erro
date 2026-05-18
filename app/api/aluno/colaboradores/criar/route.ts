@@ -40,20 +40,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sem permissão para adicionar colaborador nesta empresa' }, { status: 403 })
     }
 
-    // Verificar se o colaborador já está cadastrado e ativo nesta empresa específica
+    // Verificar se já existe colaborador com este email nesta empresa (ativo ou inativo)
     const { data: existingColab } = await supabase
       .from('colaboradores')
-      .select('id')
+      .select('id, ativo, auth_id')
       .eq('email', email)
       .eq('empresa_id', empresa_id)
-      .eq('ativo', true)
       .maybeSingle()
 
-    if (existingColab) {
-      return NextResponse.json({ error: 'Este colaborador já está cadastrado nesta empresa' }, { status: 400 })
-    }
+    // Resolver o auth_id (criar ou reutilizar conta existente no Supabase Auth)
+    let authUserId: string
+    let authCriado = false
 
-    // Criar usuário no Supabase Auth usando service role (sem precisar de confirmação de email)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password: senha,
@@ -61,11 +59,7 @@ export async function POST(request: NextRequest) {
       user_metadata: { nome, role: 'colaborador' }
     })
 
-    let authUserId: string
-    let authCriado = false
-
     if (authError) {
-      // Se o email já existe no Auth (cadastro anterior com falha de rollback ou outro papel)
       const jaRegistrado =
         authError.message.includes('already been registered') ||
         authError.message.includes('already registered')
@@ -74,15 +68,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: authError.message || 'Erro ao criar conta' }, { status: 400 })
       }
 
-      // Buscar o auth_id do usuário existente pelo email
+      // Email já existe no Auth — buscar o usuário e atualizar senha
       const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
       const existingAuthUser = listData?.users?.find((u) => u.email === email)
 
       if (!existingAuthUser) {
-        return NextResponse.json({ error: 'Email já registrado. Tente outro email.' }, { status: 400 })
+        return NextResponse.json({ error: 'Email já registrado em outro sistema. Tente outro email.' }, { status: 400 })
       }
 
-      // Atualizar a senha do usuário existente para a nova senha informada
       await supabase.auth.admin.updateUserById(existingAuthUser.id, {
         password: senha,
         user_metadata: { nome, role: 'colaborador' }
@@ -96,28 +89,22 @@ export async function POST(request: NextRequest) {
       authCriado = true
     }
 
-    // Verificar se já existe um registro sem auth_id para este email (cadastro antigo)
-    const { data: semAuthId } = await supabase
-      .from('colaboradores')
-      .select('id')
-      .eq('email', email)
-      .is('auth_id', null)
-      .maybeSingle()
-
-    if (semAuthId) {
-      // Atualizar o registro existente com o auth_id
+    // Se já existe registro nesta empresa (ativo ou inativo), reativar e atualizar dados
+    if (existingColab) {
       const { error: colabError } = await supabase
         .from('colaboradores')
-        .update({ auth_id: authUserId, nome, celular: celular || null, cargo, empresa_id, ativo: true })
-        .eq('id', semAuthId.id)
+        .update({ auth_id: authUserId, nome, celular: celular || null, cargo, ativo: true })
+        .eq('id', existingColab.id)
+
       if (colabError) {
         if (authCriado) await supabase.auth.admin.deleteUser(authUserId)
         return NextResponse.json({ error: colabError.message }, { status: 500 })
       }
+
       return NextResponse.json({ success: true })
     }
 
-    // Inserir na tabela colaboradores
+    // Inserir novo registro de colaborador
     const { error: colabError } = await supabase
       .from('colaboradores')
       .insert({
@@ -131,10 +118,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (colabError) {
-      // Rollback: remover usuário criado no Auth (somente se foi criado agora)
-      if (authCriado) {
-        await supabase.auth.admin.deleteUser(authUserId)
-      }
+      if (authCriado) await supabase.auth.admin.deleteUser(authUserId)
       return NextResponse.json({ error: colabError.message }, { status: 500 })
     }
 
