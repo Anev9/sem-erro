@@ -10,6 +10,28 @@ function db() {
   )
 }
 
+function inicioPeriodo(recorrencia: string | null): string | null {
+  const BRAZIL_OFFSET_MS = 3 * 60 * 60 * 1000
+  const agora = new Date()
+  const local = new Date(agora.getTime() - BRAZIL_OFFSET_MS)
+
+  if (recorrencia === 'diaria') {
+    local.setUTCHours(0, 0, 0, 0)
+    return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
+  }
+  if (recorrencia === 'semanal') {
+    local.setUTCDate(local.getUTCDate() - local.getUTCDay())
+    local.setUTCHours(0, 0, 0, 0)
+    return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
+  }
+  if (recorrencia === 'mensal') {
+    local.setUTCDate(1)
+    local.setUTCHours(0, 0, 0, 0)
+    return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
+  }
+  return null
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { checklist_futuro_id, colaborador_id, item_id, resposta, observacao, foto_url } = await request.json()
@@ -20,13 +42,30 @@ export async function POST(request: NextRequest) {
 
     const supabase = db()
 
-    const { data: existente } = await supabase
+    // Busca a recorrência do checklist para filtrar respostas pelo período atual
+    const { data: checklist } = await supabase
+      .from('checklists_futuros')
+      .select('recorrencia')
+      .eq('id', checklist_futuro_id)
+      .single()
+
+    const periodoInicio = inicioPeriodo(checklist?.recorrencia ?? null)
+
+    // Para checklists recorrentes, só considera resposta existente se for do período atual.
+    // Isso garante que um novo período (dia/semana/mês) sempre gera um INSERT com created_at atualizado,
+    // em vez de fazer UPDATE na resposta antiga (que ficaria com o created_at do período anterior).
+    let queryExistente = supabase
       .from('checklist_respostas')
       .select('id')
       .eq('checklist_futuro_id', checklist_futuro_id)
       .eq('colaborador_id', colaborador_id)
       .eq('item_id', item_id)
-      .maybeSingle()
+
+    if (periodoInicio) {
+      queryExistente = queryExistente.gte('created_at', periodoInicio)
+    }
+
+    const { data: existente } = await queryExistente.maybeSingle()
 
     if (existente) {
       const { error } = await supabase
