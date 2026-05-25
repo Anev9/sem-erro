@@ -75,10 +75,26 @@ export default function ChecklistsFuturosPage() {
             .select('*', { count: 'exact', head: true })
             .eq('checklist_futuro_id', checklist.id)
 
+          const totalItens = checklist.itens?.[0]?.count || 0
+          const itensRespondidos = respondidos || 0
+
+          let status = checklist.status || 'pendente'
+          if (totalItens > 0 && itensRespondidos >= totalItens) {
+            status = 'concluido'
+          } else if (itensRespondidos > 0) {
+            status = 'em_andamento'
+          }
+
+          const progresso_percentual = totalItens > 0
+            ? Math.round((itensRespondidos / totalItens) * 100)
+            : 0
+
           return {
             ...checklist,
-            total_itens: checklist.itens?.[0]?.count || 0,
-            itens_respondidos: respondidos || 0
+            status,
+            progresso_percentual,
+            total_itens: totalItens,
+            itens_respondidos: itensRespondidos,
           }
         })
       )

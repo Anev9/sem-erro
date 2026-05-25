@@ -266,7 +266,12 @@ export default function DetalhesChecklistPage() {
     }
   }
 
-  const statusCl = getStatusChecklist(checklist.status)
+  const dynamicStatus = respondidos >= totalItens && totalItens > 0
+    ? 'concluido'
+    : respondidos > 0
+    ? 'em_andamento'
+    : checklist.status || 'pendente'
+  const statusCl = getStatusChecklist(dynamicStatus)
 
   return (
     <>
