@@ -284,6 +284,7 @@ export default function EditarChecklistPage() {
                 type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
                 required
                 style={{ width: '100%', padding: '0.875rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '1rem', outline: 'none', backgroundColor: 'white' }}
                 onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
@@ -478,6 +479,7 @@ export default function EditarChecklistPage() {
                       placeholder="Título do item *"
                       value={item.titulo}
                       onChange={(e) => atualizarItem(index, 'titulo', e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
                       style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.95rem', marginBottom: '0.75rem', outline: 'none' }}
                       onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
                       onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}

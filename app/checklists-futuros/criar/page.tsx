@@ -811,6 +811,7 @@ export default function CriarChecklistFuturoPage() {
                         placeholder="Título do item *"
                         value={item.titulo}
                         onChange={(e) => atualizarItem(index, 'titulo', e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
                         style={{
                           width: '100%',
                           padding: '0.75rem',
@@ -954,6 +955,7 @@ export default function CriarChecklistFuturoPage() {
                       </div>
                       <input type="text" placeholder="Título do item *" value={item.titulo}
                         onChange={(e) => atualizarItem(index, 'titulo', e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
                         style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.95rem', marginBottom: '0.75rem', outline: 'none' }}
                       />
                       <textarea placeholder="Descrição (opcional)" value={item.descricao}
@@ -1172,6 +1174,7 @@ export default function CriarChecklistFuturoPage() {
                 type="text"
                 value={nomeChecklist}
                 onChange={(e) => setNomeChecklist(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
                 placeholder="Digite o nome do checklist"
                 required
                 style={{
