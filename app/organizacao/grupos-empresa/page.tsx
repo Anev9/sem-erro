@@ -49,9 +49,20 @@ export default function GruposEmpresaPage() {
   async function toggleAtivo(aluno: Aluno) {
     setToggling(aluno.id)
     const novoStatus = !aluno.ativo
-    const { error } = await supabase.from('alunos').update({ ativo: novoStatus }).eq('id', aluno.id)
-    if (!error) {
-      setAlunos((prev) => prev.map((a) => (a.id === aluno.id ? { ...a, ativo: novoStatus } : a)))
+    try {
+      const res = await fetch('/api/admin/clientes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: aluno.id, ativo: novoStatus }),
+      })
+      if (res.ok) {
+        setAlunos((prev) => prev.map((a) => (a.id === aluno.id ? { ...a, ativo: novoStatus } : a)))
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Erro ao atualizar status')
+      }
+    } catch {
+      alert('Erro ao atualizar status')
     }
     setToggling(null)
   }

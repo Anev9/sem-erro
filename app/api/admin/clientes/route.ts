@@ -75,13 +75,18 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   if (!isAdmin(request)) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
 
-  const { id, observacoes } = await request.json()
+  const body = await request.json()
+  const { id } = body
   if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
 
-  const { error } = await db()
-    .from('alunos')
-    .update({ observacoes: observacoes ?? null })
-    .eq('id', id)
+  const campos: Record<string, unknown> = {}
+  if (body.observacoes !== undefined) campos.observacoes = body.observacoes ?? null
+  if (body.ativo !== undefined) campos.ativo = body.ativo
+
+  if (Object.keys(campos).length === 0)
+    return NextResponse.json({ error: 'Nenhum campo para atualizar' }, { status: 400 })
+
+  const { error } = await db().from('alunos').update(campos).eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

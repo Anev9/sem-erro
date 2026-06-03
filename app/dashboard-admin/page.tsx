@@ -152,23 +152,30 @@ export default function DashboardAdmin() {
   async function toggleAtivo(aluno: Aluno) {
     setToggling(aluno.id)
     const novoStatus = !aluno.ativo
-    const { error } = await supabase
-      .from('alunos')
-      .update({ ativo: novoStatus })
-      .eq('id', aluno.id)
-    if (!error) {
-      setAlunos((prev) => prev.map((a) => (a.id === aluno.id ? { ...a, ativo: novoStatus } : a)))
-      // Registrar no histórico de alterações (silencioso se tabela não existir)
-      fetch('/api/admin/log-alteracoes', {
-        method: 'POST',
+    try {
+      const res = await fetch('/api/admin/clientes', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          aluno_id: aluno.id,
-          aluno_nome: aluno.clientes || aluno['e-mail'],
-          acao: novoStatus ? 'ativado' : 'desativado',
-          detalhe: `Cliente ${novoStatus ? 'ativado' : 'desativado'} pelo administrador`,
-        }),
-      }).catch(() => {})
+        body: JSON.stringify({ id: aluno.id, ativo: novoStatus }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        alert(data.error || 'Erro ao atualizar status')
+      } else {
+        setAlunos((prev) => prev.map((a) => (a.id === aluno.id ? { ...a, ativo: novoStatus } : a)))
+        fetch('/api/admin/log-alteracoes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            aluno_id: aluno.id,
+            aluno_nome: aluno.clientes || aluno['e-mail'],
+            acao: novoStatus ? 'ativado' : 'desativado',
+            detalhe: `Cliente ${novoStatus ? 'ativado' : 'desativado'} pelo administrador`,
+          }),
+        }).catch(() => {})
+      }
+    } catch {
+      alert('Erro ao atualizar status')
     }
     setToggling(null)
   }
