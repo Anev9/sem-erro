@@ -30,8 +30,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'Checklist não encontrado' }, { status: 404 })
   }
 
-  if (checklist.colaborador_id !== colaboradorId) {
+  // Checklist atribuído a outro colaborador específico — bloqueia
+  if (checklist.colaborador_id !== null && checklist.colaborador_id !== colaboradorId) {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+  }
+
+  // Checklist da empresa inteira (colaborador_id nulo) — verifica se este colaborador é da mesma empresa
+  if (checklist.colaborador_id === null && checklist.empresa_id) {
+    const { data: colab } = await supabase
+      .from('colaboradores')
+      .select('empresa_id')
+      .eq('id', colaboradorId)
+      .single()
+
+    if (!colab || colab.empresa_id !== checklist.empresa_id) {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+    }
   }
 
   const { data: itens, error: itensError } = await supabase

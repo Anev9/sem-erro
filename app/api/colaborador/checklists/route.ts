@@ -20,12 +20,27 @@ export async function GET(request: NextRequest) {
 
   const supabase = db()
 
-  const { data: checklists, error } = await supabase
+  // Buscar empresa do colaborador para incluir checklists da empresa sem colaborador específico
+  const { data: colab } = await supabase
+    .from('colaboradores')
+    .select('empresa_id')
+    .eq('id', colaborador_id)
+    .single()
+
+  const empresa_id = colab?.empresa_id
+
+  const query = supabase
     .from('checklists_futuros')
     .select(`*, empresas(nome_fantasia)`)
-    .eq('colaborador_id', colaborador_id)
     .eq('ativo', true)
     .order('proxima_execucao', { ascending: false })
+
+  // Checklists atribuídos a este colaborador OU a toda a empresa (colaborador_id nulo)
+  const { data: checklists, error } = empresa_id
+    ? await query
+        .eq('empresa_id', empresa_id)
+        .or(`colaborador_id.eq.${colaborador_id},colaborador_id.is.null`)
+    : await query.eq('colaborador_id', colaborador_id)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
