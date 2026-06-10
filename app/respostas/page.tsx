@@ -95,7 +95,46 @@ export default function TodasRespostas() {
   const taxaConformidade = totalRespostas > 0 ? Math.round((conformes / totalRespostas) * 100) : 0;
 
   const exportarExcel = () => {
-    toast.info('Função de exportar para Excel será implementada!');
+    if (respostas.length === 0) {
+      toast.error('Nenhuma resposta para exportar.');
+      return;
+    }
+
+    const headers = ['Data/Hora', 'Empresa', 'Checklist', 'Pergunta', 'Responsável', 'Resultado', 'Resposta', 'Observação'];
+    const resultadoLabel = (r: string) =>
+      r === 'conforme' ? 'Conforme' : r === 'nao_conforme' ? 'Não Conforme' : 'N/A';
+
+    const rows = respostas.map(r => [
+      r.data,
+      r.empresa,
+      r.checklist,
+      r.pergunta,
+      r.responsavel,
+      resultadoLabel(r.resultado),
+      r.resposta,
+      r.observacao,
+    ]);
+
+    const escape = (v: string) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const tableRows = [headers, ...rows]
+      .map(row => `<tr>${row.map(cell => `<td>${escape(String(cell))}</td>`).join('')}</tr>`)
+      .join('');
+
+    const html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="UTF-8"></head>
+      <body><table>${tableRows}</table></body>
+      </html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `respostas-${new Date().toISOString().split('T')[0]}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${respostas.length} respostas exportadas com sucesso!`);
   };
 
   const getBadgeResultado = (resultado: string) => {
