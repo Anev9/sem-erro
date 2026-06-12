@@ -749,6 +749,16 @@ export default function DashboardAdmin() {
               <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Performance e relatórios gerais</p>
             </div>
             <div
+              onClick={() => router.push('/dashboard-admin/checklists')}
+              style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', cursor: 'pointer', border: '2px solid transparent', transition: 'all 0.2s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              <CheckSquare size={32} style={{ color: '#3b82f6', marginBottom: '0.75rem' }} />
+              <h3 style={{ fontWeight: '600', color: '#1f2937', margin: '0 0 0.375rem' }}>Checklists dos Clientes</h3>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Veja quem preencheu, status e progresso</p>
+            </div>
+            <div
               onClick={() => router.push('/dashboard-admin/auditoria')}
               style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', cursor: 'pointer', border: '2px solid transparent', transition: 'all 0.2s' }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.transform = 'translateY(-2px)' }}
