@@ -22,6 +22,29 @@ interface AtividadeItem {
   empresa?: string
 }
 
+interface ChecklistStatus {
+  id: string
+  titulo: string | null
+  status: string
+  progresso: number
+  empresa_nome: string
+  colaborador_nome: string
+  concluido_por_nome: string | null
+  concluido_em: string | null
+  updated_at: string | null
+}
+
+const STATUS_INFO: Record<string, { bg: string; text: string; label: string }> = {
+  concluido: { bg: '#dcfce7', text: '#166534', label: 'Concluído' },
+  em_andamento: { bg: '#dbeafe', text: '#1e40af', label: 'Em Andamento' },
+  pendente: { bg: '#fef3c7', text: '#92400e', label: 'Pendente' },
+  atrasado: { bg: '#fee2e2', text: '#991b1b', label: 'Atrasado' },
+}
+
+function statusInfo(status: string) {
+  return STATUS_INFO[status] || { bg: '#f3f4f6', text: '#374151', label: status }
+}
+
 export default function AdminClienteDashboard() {
   const router = useRouter()
   const params = useParams()
@@ -29,6 +52,7 @@ export default function AdminClienteDashboard() {
 
   const [cliente, setCliente] = useState<ClienteData | null>(null)
   const [atividades, setAtividades] = useState<AtividadeItem[]>([])
+  const [checklists, setChecklists] = useState<ChecklistStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [logs, setLogs] = useState<{ acao: string; detalhe: string; created_at: string }[]>([])
   const [observacoes, setObservacoes] = useState('')
@@ -46,10 +70,11 @@ export default function AdminClienteDashboard() {
   async function carregarDados() {
     setLoading(true)
     try {
-      const [statsRes, atividadesRes, logsRes] = await Promise.all([
+      const [statsRes, atividadesRes, logsRes, checklistsRes] = await Promise.all([
         fetch('/api/admin/stats'),
         fetch(`/api/admin/cliente-atividades?aluno_id=${clienteId}`),
         fetch('/api/admin/log-alteracoes'),
+        fetch(`/api/admin/checklists-status?aluno_id=${clienteId}`),
       ])
 
       if (statsRes.ok) {
@@ -60,6 +85,11 @@ export default function AdminClienteDashboard() {
 
       if (atividadesRes.ok) {
         setAtividades(await atividadesRes.json())
+      }
+
+      if (checklistsRes.ok) {
+        const { checklists: cl } = await checklistsRes.json()
+        setChecklists(cl || [])
       }
 
       if (logsRes.ok) {
@@ -212,6 +242,66 @@ export default function AdminClienteDashboard() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Checklists do cliente */}
+        <div style={{ background: 'white', borderRadius: '1rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', overflow: 'hidden', marginBottom: '1.5rem' }}>
+          <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <CheckSquare size={18} style={{ color: '#334155' }} />
+            <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: '#1f2937' }}>Checklists</h2>
+            <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600' }}>{checklists.length} checklist{checklists.length !== 1 ? 's' : ''}</span>
+          </div>
+          {checklists.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>
+              <CheckSquare size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.35 }} />
+              <p style={{ margin: 0, fontSize: '0.875rem' }}>Nenhum checklist encontrado</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead style={{ background: '#f8fafc' }}>
+                  <tr>
+                    <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Empresa</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Checklist</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Responsável</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Progresso</th>
+                    <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Atualizado em</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {checklists.map((c) => {
+                    const info = statusInfo(c.status)
+                    return (
+                      <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '0.75rem 1.5rem', fontSize: '0.875rem', color: '#6b7280' }}>{c.empresa_nome}</td>
+                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#374151' }}>{c.titulo || 'Sem título'}</td>
+                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                          {c.status === 'concluido' && c.concluido_por_nome ? c.concluido_por_nome : c.colaborador_nome}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                          <span style={{ padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700', background: info.bg, color: info.text, whiteSpace: 'nowrap' }}>
+                            {info.label}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', minWidth: '120px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ flex: 1, height: '8px', borderRadius: '999px', background: '#f1f5f9', overflow: 'hidden' }}>
+                              <div style={{ width: `${c.progresso}%`, height: '100%', background: c.progresso >= 100 ? '#10b981' : '#3b82f6', borderRadius: '999px' }} />
+                            </div>
+                            <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '600' }}>{c.progresso}%</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.75rem 1.5rem', fontSize: '0.8rem', color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                          {c.status === 'concluido' ? formatarData(c.concluido_em) : formatarData(c.updated_at)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Atividades recentes */}
