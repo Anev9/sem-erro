@@ -239,9 +239,15 @@ export default function PerformancePage() {
                     const pctChecklist = calcPct(d.checklists.concluidos, d.checklists.total)
                     const atividadeMes = d.checklists.mes + d.acoes.mes
                     return (
-                      <tr key={d.aluno_id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                      <tr
+                        key={d.aluno_id}
+                        onClick={() => router.push(`/dashboard-admin/cliente/${d.aluno_id}`)}
+                        style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#fafafa', cursor: 'pointer' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f0f9ff' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = idx % 2 === 0 ? 'white' : '#fafafa' }}
+                      >
                         <td style={{ padding: '0.875rem 1rem' }}>
-                          <p style={{ margin: 0, fontWeight: '600', color: '#1f2937', fontSize: '0.875rem' }}>{d.nome}</p>
+                          <p style={{ margin: 0, fontWeight: '600', color: '#1d4ed8', fontSize: '0.875rem' }}>{d.nome}</p>
                           {d.email && <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.75rem' }}>{d.email}</p>}
                         </td>
                         <td style={{ padding: '0.875rem 1rem' }}>

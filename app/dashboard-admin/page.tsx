@@ -215,6 +215,14 @@ export default function DashboardAdmin() {
       ]
     },
     {
+      title: 'Relatórios',
+      submenu: [
+        { label: 'Relatórios Gerais', href: '/performance' },
+        { label: 'Checklists dos Clientes', href: '/dashboard-admin/checklists' },
+        { label: 'Auditoria', href: '/dashboard-admin/auditoria' },
+      ]
+    },
+    {
       title: 'Sistema',
       submenu: [
         { label: 'Usuários', href: '/usuarios' },
