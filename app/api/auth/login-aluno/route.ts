@@ -74,8 +74,18 @@ export async function POST(request: NextRequest) {
 
     if (authId) {
       // Conta Auth já existe — manter senha sincronizada
-      await supabase.auth.admin.updateUserById(authId, { password })
-    } else {
+      const { error: updateAuthError } = await supabase.auth.admin.updateUserById(authId, {
+        password,
+        email_confirm: true,
+      })
+      if (updateAuthError) {
+        // authId pode estar inválido (usuário deletado do Auth); tratar como novo
+        logger.warn('login-aluno', 'Falha ao atualizar Auth, tentando recriar', updateAuthError.message)
+        authId = null
+        await supabase.from('alunos').update({ auth_id: null }).eq('id', aluno.id)
+      }
+    }
+    if (!authId) {
       // Criar conta no Supabase Auth vinculada ao aluno
       const { data: created, error: createError } = await supabase.auth.admin.createUser({
         email: emailNorm,
@@ -85,13 +95,21 @@ export async function POST(request: NextRequest) {
       })
 
       if (createError && createError.message?.toLowerCase().includes('already')) {
-        // Email já existe no Auth — buscar e vincular
+        // Email já existe no Auth — buscar, vincular e sincronizar senha
         let page = 1
         while (page <= 10) {
           const { data: list } = await supabase.auth.admin.listUsers({ page, perPage: 100 })
           const users = list?.users ?? []
           const found = users.find((u) => u.email?.toLowerCase() === emailNorm)
-          if (found) { authId = found.id; break }
+          if (found) {
+            authId = found.id
+            // Sincronizar senha e confirmar email para garantir que signInWithPassword funcione
+            await supabase.auth.admin.updateUserById(authId, {
+              password,
+              email_confirm: true,
+            })
+            break
+          }
           if (users.length < 100) break
           page++
         }

@@ -19,7 +19,8 @@
       "Bash(xargs grep:*)",
       "Bash(npx next *)",
       "Bash(Remove-Item -Recurse -Force \"c:/Deisiane/Projetos/SemErro/sem-erro/.next\")",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(npx tsc *)"
     ],
     "additionalDirectories": [
       "c:\\Deisiane\\Projetos\\SemErro\\sem-erro\\.next"
