@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       if (authUser) {
         // Conta existe mas senha errada
         if (password === DEFAULT_PASSWORD) {
-          await supabase.auth.admin.updateUserById(authUser.id, { password: DEFAULT_PASSWORD })
+          await supabase.auth.admin.updateUserById(authUser.id, { password: DEFAULT_PASSWORD, email_confirm: true })
           if (authUser.id !== colaborador.auth_id) {
             await supabase.from('colaboradores').update({ auth_id: authUser.id }).eq('id', colaborador.id)
             colaborador.auth_id = authUser.id
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
                 page2++
               }
               if (found) {
-                await supabase.auth.admin.updateUserById(found.id, { password: DEFAULT_PASSWORD })
+                await supabase.auth.admin.updateUserById(found.id, { password: DEFAULT_PASSWORD, email_confirm: true })
                 await supabase.from('colaboradores').update({ auth_id: found.id }).eq('id', colaborador.id)
                 colaborador.auth_id = found.id
               } else {
@@ -183,10 +183,12 @@ export async function POST(request: NextRequest) {
         headers: { 'Content-Type': 'application/json', 'apikey': anonKey },
         body: JSON.stringify({ email: emailNorm, password }),
       })
+      const data = await res.json()
       if (res.ok) {
-        const data = await res.json()
         accessToken = data.access_token ?? null
         refreshToken = data.refresh_token ?? null
+      } else {
+        logger.error('login-colaborador', 'signInWithPassword falhou', { status: res.status, error: data?.error_description ?? data?.error })
       }
     }
 

@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       }
       userId = created?.user?.id
     } else {
-      await db.auth.admin.updateUserById(existingUser.id, { password })
+      await db.auth.admin.updateUserById(existingUser.id, { password, email_confirm: true })
     }
 
     const profile = {
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       password,
     })
     if (signInError || !session?.session?.access_token) {
-      logger.error('login-admin', 'Falha ao obter sessão JWT', signInError?.message)
+      logger.error('login-admin', 'Falha ao obter sessão JWT', { message: signInError?.message, code: signInError?.status })
       return NextResponse.json({ error: 'Erro ao iniciar sessão. Tente novamente.' }, { status: 500 })
     }
 

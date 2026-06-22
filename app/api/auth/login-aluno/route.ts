@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       password,
     })
     if (signInError || !session?.session?.access_token) {
-      logger.error('login-aluno', 'Falha ao obter sessão JWT', signInError?.message)
+      logger.error('login-aluno', 'Falha ao obter sessão JWT', { message: signInError?.message, code: (signInError as { status?: number })?.status })
       return NextResponse.json({ error: 'Erro ao iniciar sessão. Tente novamente.' }, { status: 500 })
     }
 
