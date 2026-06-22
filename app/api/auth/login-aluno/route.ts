@@ -70,54 +70,65 @@ export async function POST(request: NextRequest) {
 
     // Sincronizar com Supabase Auth para centralizar autenticação
     const emailNorm = email.toLowerCase().trim()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
     let authId: string | null = aluno['auth_id'] ?? null
 
+    // Busca direta por email via REST (mais confiável que paginação)
+    async function findAuthUserByEmail(email: string): Promise<string | null> {
+      try {
+        const res = await fetch(
+          `${supabaseUrl}/auth/v1/admin/users?filter=${encodeURIComponent(email)}&per_page=1000`,
+          { headers: { 'Authorization': `Bearer ${serviceKey}`, 'apikey': serviceKey } }
+        )
+        if (!res.ok) return null
+        const data = await res.json()
+        const users: Array<{ id: string; email?: string }> = data.users ?? []
+        return users.find((u) => u.email?.toLowerCase() === email)?.id ?? null
+      } catch {
+        return null
+      }
+    }
+
     if (authId) {
-      // Conta Auth já existe — manter senha sincronizada
       const { error: updateAuthError } = await supabase.auth.admin.updateUserById(authId, {
         password,
         email_confirm: true,
       })
       if (updateAuthError) {
-        // authId pode estar inválido (usuário deletado do Auth); tratar como novo
-        logger.warn('login-aluno', 'Falha ao atualizar Auth, tentando recriar', updateAuthError.message)
+        logger.warn('login-aluno', 'auth_id inválido, buscando conta por email', updateAuthError.message)
         authId = null
         await supabase.from('alunos').update({ auth_id: null }).eq('id', aluno.id)
       }
     }
-    if (!authId) {
-      // Criar conta no Supabase Auth vinculada ao aluno
-      const { data: created, error: createError } = await supabase.auth.admin.createUser({
-        email: emailNorm,
-        password,
-        email_confirm: true,
-        user_metadata: { aluno_id: aluno.id, role: 'aluno' },
-      })
 
-      if (createError && createError.message?.toLowerCase().includes('already')) {
-        // Email já existe no Auth — buscar, vincular e sincronizar senha
-        let page = 1
-        while (page <= 10) {
-          const { data: list } = await supabase.auth.admin.listUsers({ page, perPage: 100 })
-          const users = list?.users ?? []
-          const found = users.find((u) => u.email?.toLowerCase() === emailNorm)
-          if (found) {
-            authId = found.id
-            // Sincronizar senha e confirmar email para garantir que signInWithPassword funcione
-            await supabase.auth.admin.updateUserById(authId, {
-              password,
-              email_confirm: true,
-            })
-            break
+    if (!authId) {
+      // Tentar encontrar conta existente por email antes de criar
+      const existingId = await findAuthUserByEmail(emailNorm)
+
+      if (existingId) {
+        authId = existingId
+        await supabase.auth.admin.updateUserById(authId, { password, email_confirm: true })
+      } else {
+        const { data: created, error: createError } = await supabase.auth.admin.createUser({
+          email: emailNorm,
+          password,
+          email_confirm: true,
+          user_metadata: { aluno_id: aluno.id, role: 'aluno' },
+        })
+
+        if (!createError && created?.user) {
+          authId = created.user.id
+        } else if (createError?.message?.toLowerCase().includes('already')) {
+          // Criação falhou por duplicata — tentar buscar novamente
+          authId = await findAuthUserByEmail(emailNorm)
+          if (authId) {
+            await supabase.auth.admin.updateUserById(authId, { password, email_confirm: true })
           }
-          if (users.length < 100) break
-          page++
+        } else if (createError) {
+          logger.error('login-aluno', 'Falha ao criar conta no Supabase Auth', { error: createError.message, email: emailNorm })
+          return NextResponse.json({ error: `Erro ao criar conta: ${createError.message}` }, { status: 500 })
         }
-      } else if (!createError && created?.user) {
-        authId = created.user.id
-      } else if (createError) {
-        logger.error('login-aluno', 'Falha ao criar conta no Supabase Auth', { error: createError.message, email: emailNorm })
-        return NextResponse.json({ error: `Conta não pôde ser criada no sistema de autenticação: ${createError.message}` }, { status: 500 })
       }
 
       if (authId) {
