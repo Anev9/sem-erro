@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       } else if (!createError && created?.user) {
         authId = created.user.id
       } else if (createError) {
-        logger.warn('login-aluno', 'Não foi possível criar conta no Supabase Auth', createError.message)
+        logger.error('login-aluno', 'Falha ao criar conta no Supabase Auth', { error: createError.message, email: emailNorm })
       }
 
       if (authId) {
