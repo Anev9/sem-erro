@@ -79,9 +79,13 @@ export default function LoginPage() {
           return;
         }
 
-        // Bloqueia apenas rate limit — erros 4xx/5xx do admin não impedem tentar colaborador/aluno
         if (adminRes.status === 429) {
           throw new Error(String(adminData.error || 'Muitas tentativas. Tente novamente mais tarde.'));
+        }
+
+        // Se o admin route retornou 500 E o email parece ser de admin (não tenta colaborador/aluno)
+        if (adminRes.status === 500 && adminData.error) {
+          throw new Error(String(adminData.error));
         }
 
         // TENTATIVA 2: Login como COLABORADOR
