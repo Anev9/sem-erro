@@ -118,7 +118,7 @@ export default function ChecklistsFuturosPage() {
         .delete()
         .eq('checklist_futuro_id', id)
 
-      if (errorItens) throw errorItens
+      if (errorItens) throw new Error(`Itens: ${errorItens.message}`)
 
       // Excluir respostas
       const { error: errorRespostas } = await supabase
@@ -126,7 +126,7 @@ export default function ChecklistsFuturosPage() {
         .delete()
         .eq('checklist_futuro_id', id)
 
-      if (errorRespostas) throw errorRespostas
+      if (errorRespostas) throw new Error(`Respostas: ${errorRespostas.message}`)
 
       // Excluir checklist
       const { error: errorChecklist } = await supabase
@@ -134,14 +134,14 @@ export default function ChecklistsFuturosPage() {
         .delete()
         .eq('id', id)
 
-      if (errorChecklist) throw errorChecklist
+      if (errorChecklist) throw new Error(`Checklist: ${errorChecklist.message}`)
 
       toast.success('Checklist excluído com sucesso!')
       buscarChecklists(userRole === 'admin', userId)
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao excluir:', error)
-      toast.error('Erro ao excluir checklist')
+      toast.error(error?.message || 'Erro ao excluir checklist')
     }
   }
 

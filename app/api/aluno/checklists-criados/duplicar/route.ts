@@ -46,13 +46,24 @@ export async function POST(request: NextRequest) {
     .order('ordem')
 
   // Criar novo checklist como cópia
-  const { id: _id, created_at: _ca, updated_at: _ua, ...resto } = original
+  // IMPORTANTE: removemos também "chave_compartilhamento" pois essa coluna
+  // tem constraint UNIQUE no banco. Sem isso, o insert tentava duplicar o
+  // mesmo valor do checklist original e o Postgres rejeitava a operação.
+  const {
+    id: _id,
+    created_at: _ca,
+    updated_at: _ua,
+    chave_compartilhamento: _ccIgnorada,
+    ...resto
+  } = original
+
   const { data: novo, error: insertError } = await supabase
     .from('checklists_futuros')
     .insert([{
       ...resto,
       titulo: `Cópia de ${original.titulo}`,
       status: 'pendente',
+      chave_compartilhamento: crypto.randomUUID(),
     }])
     .select()
     .single()
