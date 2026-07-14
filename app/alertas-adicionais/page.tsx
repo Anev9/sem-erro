@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   ArrowLeft,
@@ -14,6 +14,22 @@ import {
   X
 } from 'lucide-react'
 
+interface Checklist {
+  id: string
+  titulo: string
+}
+
+interface Colaborador {
+  id: string
+  nome: string
+  cargo?: string
+}
+
+interface Empresa {
+  id: string
+  nome_fantasia: string
+}
+
 export default function AlertasAdicionais() {
   const [checklistFuturo, setChecklistFuturo] = useState('')
   const [usuario, setUsuario] = useState('')
@@ -22,28 +38,55 @@ export default function AlertasAdicionais() {
   const [aoFinalizar, setAoFinalizar] = useState(false)
   const [problemasCriticos, setProblemasCriticos] = useState(false)
 
-  // AQUI VOCÊ VAI BUSCAR OS DADOS DO SUPABASE
-  // Exemplo:
-  // const [checklists, setChecklists] = useState([])
-  // const [usuarios, setUsuarios] = useState([])
-  // const [empresas, setEmpresas] = useState([])
-  // 
-  // useEffect(() => {
-  //   async function fetchData() {
-  //     const { data: checklistsData } = await supabase.from('checklists_futuros').select('*')
-  //     const { data: usuariosData } = await supabase.from('usuarios').select('*')
-  //     const { data: empresasData } = await supabase.from('empresas').select('*')
-  //     setChecklists(checklistsData || [])
-  //     setUsuarios(usuariosData || [])
-  //     setEmpresas(empresasData || [])
-  //   }
-  //   fetchData()
-  // }, [])
+  const [checklists, setChecklists] = useState<Checklist[]>([])
+  const [usuarios, setUsuarios] = useState<Colaborador[]>([])
+  const [empresas, setEmpresas] = useState<Empresa[]>([])
+  const [carregando, setCarregando] = useState(true)
 
-  // Dados temporários vazios (simula que ainda não tem dados no banco)
-  const checklists: any[] = []
-  const usuarios: any[] = []
-  const empresas: any[] = []
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setCarregando(true)
+
+        const [checklistsRes, colaboradoresRes, empresasRes] = await Promise.all([
+          fetch('/api/aluno/checklists-futuros'),
+          fetch('/api/aluno/colaboradores'),
+          fetch('/api/aluno/empresas')
+        ])
+
+        const [checklistsData, colaboradoresData, empresasData] = await Promise.all([
+          checklistsRes.json(),
+          colaboradoresRes.json(),
+          empresasRes.json()
+        ])
+
+        if (checklistsRes.ok) {
+          setChecklists(Array.isArray(checklistsData) ? checklistsData : [])
+        } else {
+          console.error('Erro ao buscar checklists:', checklistsData.error)
+        }
+
+        if (colaboradoresRes.ok) {
+          setUsuarios(Array.isArray(colaboradoresData) ? colaboradoresData : [])
+        } else {
+          console.error('Erro ao buscar colaboradores:', colaboradoresData.error)
+        }
+
+        if (empresasRes.ok) {
+          setEmpresas(Array.isArray(empresasData) ? empresasData : [])
+        } else {
+          console.error('Erro ao buscar empresas:', empresasData.error)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err)
+        toast.error('Erro ao carregar dados do formulário')
+      } finally {
+        setCarregando(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const handleSubmit = async () => {
     if (!checklistFuturo || !usuario || !empresa) {
@@ -65,20 +108,26 @@ export default function AlertasAdicionais() {
       notificar_problemas_criticos: problemasCriticos
     }
 
-    console.log('Dados do alerta:', alertaData)
+    try {
+      const res = await fetch('/api/aluno/alertas-adicionais', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(alertaData)
+      })
 
-    // AQUI VOCÊ VAI SALVAR NO SUPABASE
-    // const { data, error } = await supabase
-    //   .from('alertas_adicionais')
-    //   .insert([alertaData])
-    // 
-    // if (error) {
-    //   alert('Erro ao criar alerta')
-    //   return
-    // }
-    // 
-    // alert('Alerta criado com sucesso!')
-    // handleReset()
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || 'Erro ao criar alerta')
+        return
+      }
+
+      toast.success('Alerta criado com sucesso!')
+      handleReset()
+    } catch (err) {
+      console.error('Erro ao salvar alerta:', err)
+      toast.error('Erro ao criar alerta')
+    }
   }
 
   const handleReset = () => {
@@ -341,7 +390,7 @@ export default function AlertasAdicionais() {
                   value={checklistFuturo}
                   onChange={(e) => setChecklistFuturo(e.target.value)}
                   className="form-input"
-                  disabled={checklists.length === 0}
+                  disabled={carregando || checklists.length === 0}
                   style={{
                     appearance: 'none',
                     backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23667eea\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'%3E%3C/polyline%3E%3C/svg%3E")',
@@ -352,17 +401,19 @@ export default function AlertasAdicionais() {
                   }}
                 >
                   <option value="">
-                    {checklists.length === 0 
-                      ? 'Nenhum checklist programado cadastrado ainda' 
-                      : 'Selecione um checklist'}
+                    {carregando
+                      ? 'Carregando...'
+                      : checklists.length === 0 
+                        ? 'Nenhum checklist programado cadastrado ainda' 
+                        : 'Selecione um checklist'}
                   </option>
                   {checklists.map((checklist) => (
                     <option key={checklist.id} value={checklist.id}>
-                      {checklist.nome}
+                      {checklist.titulo}
                     </option>
                   ))}
                 </select>
-                {checklists.length === 0 && (
+                {!carregando && checklists.length === 0 && (
                   <div className="empty-state">
                     <p className="empty-state-text">
                       Você precisa criar checklists programados antes de configurar alertas.
@@ -383,7 +434,7 @@ export default function AlertasAdicionais() {
                   value={usuario}
                   onChange={(e) => setUsuario(e.target.value)}
                   className="form-input"
-                  disabled={usuarios.length === 0}
+                  disabled={carregando || usuarios.length === 0}
                   style={{
                     appearance: 'none',
                     backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23667eea\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'%3E%3C/polyline%3E%3C/svg%3E")',
@@ -394,17 +445,19 @@ export default function AlertasAdicionais() {
                   }}
                 >
                   <option value="">
-                    {usuarios.length === 0 
-                      ? 'Nenhum usuário cadastrado ainda' 
-                      : 'Selecione um usuário'}
+                    {carregando
+                      ? 'Carregando...'
+                      : usuarios.length === 0 
+                        ? 'Nenhum usuário cadastrado ainda' 
+                        : 'Selecione um usuário'}
                   </option>
                   {usuarios.map((user) => (
                     <option key={user.id} value={user.id}>
-                      {user.nome} - {user.cargo}
+                      {user.nome}{user.cargo ? ` - ${user.cargo}` : ''}
                     </option>
                   ))}
                 </select>
-                {usuarios.length === 0 && (
+                {!carregando && usuarios.length === 0 && (
                   <div className="empty-state">
                     <p className="empty-state-text">
                       Você precisa cadastrar usuários no sistema antes de configurar alertas.
@@ -425,7 +478,7 @@ export default function AlertasAdicionais() {
                   value={empresa}
                   onChange={(e) => setEmpresa(e.target.value)}
                   className="form-input"
-                  disabled={empresas.length === 0}
+                  disabled={carregando || empresas.length === 0}
                   style={{
                     appearance: 'none',
                     backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23667eea\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'%3E%3C/polyline%3E%3C/svg%3E")',
@@ -436,17 +489,19 @@ export default function AlertasAdicionais() {
                   }}
                 >
                   <option value="">
-                    {empresas.length === 0 
-                      ? 'Nenhuma empresa cadastrada ainda' 
-                      : 'Selecione uma empresa'}
+                    {carregando
+                      ? 'Carregando...'
+                      : empresas.length === 0 
+                        ? 'Nenhuma empresa cadastrada ainda' 
+                        : 'Selecione uma empresa'}
                   </option>
                   {empresas.map((emp) => (
                     <option key={emp.id} value={emp.id}>
-                      {emp.nome}
+                      {emp.nome_fantasia}
                     </option>
                   ))}
                 </select>
-                {empresas.length === 0 && (
+                {!carregando && empresas.length === 0 && (
                   <div className="empty-state">
                     <p className="empty-state-text">
                       Você precisa cadastrar empresas no sistema antes de configurar alertas.
@@ -534,26 +589,26 @@ export default function AlertasAdicionais() {
 
               <button
                 onClick={handleSubmit}
-                disabled={checklists.length === 0 || usuarios.length === 0 || empresas.length === 0}
+                disabled={carregando || checklists.length === 0 || usuarios.length === 0 || empresas.length === 0}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.625rem',
                   padding: '0.875rem 2rem',
-                  background: checklists.length === 0 || usuarios.length === 0 || empresas.length === 0 
+                  background: carregando || checklists.length === 0 || usuarios.length === 0 || empresas.length === 0 
                     ? '#cbd5e1' 
                     : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '10px',
-                  cursor: checklists.length === 0 || usuarios.length === 0 || empresas.length === 0 
+                  cursor: carregando || checklists.length === 0 || usuarios.length === 0 || empresas.length === 0 
                     ? 'not-allowed' 
                     : 'pointer',
                   fontSize: '0.95rem',
                   fontWeight: '600',
                   boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
                   transition: 'all 0.3s ease',
-                  opacity: checklists.length === 0 || usuarios.length === 0 || empresas.length === 0 
+                  opacity: carregando || checklists.length === 0 || usuarios.length === 0 || empresas.length === 0 
                     ? 0.6 
                     : 1
                 }}
