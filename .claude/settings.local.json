@@ -20,7 +20,14 @@
       "Bash(npx next *)",
       "Bash(Remove-Item -Recurse -Force \"c:/Deisiane/Projetos/SemErro/sem-erro/.next\")",
       "Bash(npx eslint *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(node _diag_checklist.mjs)",
+      "Bash(node _diag_checklist2.mjs)",
+      "Bash(node _diag_checklist3.mjs)",
+      "Bash(node -e ' *)",
+      "Bash(node _diag_checklist4.mjs)",
+      "Bash(node _diag_checklist5.mjs)",
+      "Bash(node _diag_checklist6.mjs)"
     ],
     "additionalDirectories": [
       "c:\\Deisiane\\Projetos\\SemErro\\sem-erro\\.next"

@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
         .eq('colaborador_id', colaborador_id)
 
       if (periodoInicio) {
-        queryRespostas = queryRespostas.gte('created_at', periodoInicio)
+        queryRespostas = queryRespostas.gte('respondido_em', periodoInicio)
       }
 
       const [resItens, resRespostas] = await Promise.all([

@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
     const periodoInicio = inicioPeriodo(checklist?.recorrencia ?? null)
 
     // Para checklists recorrentes, só considera resposta existente se for do período atual.
-    // Isso garante que um novo período (dia/semana/mês) sempre gera um INSERT com created_at atualizado,
-    // em vez de fazer UPDATE na resposta antiga (que ficaria com o created_at do período anterior).
+    // Isso garante que um novo período (dia/semana/mês) sempre gera um INSERT com respondido_em atualizado,
+    // em vez de fazer UPDATE na resposta antiga (que ficaria com o respondido_em do período anterior).
     let queryExistente = supabase
       .from('checklist_respostas')
       .select('id')
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       .eq('item_id', item_id)
 
     if (periodoInicio) {
-      queryExistente = queryExistente.gte('created_at', periodoInicio)
+      queryExistente = queryExistente.gte('respondido_em', periodoInicio)
     }
 
     const { data: existente } = await queryExistente.maybeSingle()
