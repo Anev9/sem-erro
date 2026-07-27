@@ -17,12 +17,14 @@ import {
 interface Checklist {
   id: string
   nome: string
+  empresa_id: string
 }
 
 interface Colaborador {
   id: string
   nome: string
   cargo?: string
+  empresa_id: string
 }
 
 interface Empresa {
@@ -87,6 +89,21 @@ export default function AlertasAdicionais() {
 
     fetchData()
   }, [])
+
+  const usuariosDaEmpresa = empresa ? usuarios.filter((u) => u.empresa_id === empresa) : usuarios
+
+  const handleChecklistChange = (id: string) => {
+    setChecklistFuturo(id)
+    const checklist = checklists.find((c) => c.id === id)
+    if (checklist) {
+      setEmpresa(checklist.empresa_id)
+      if (!usuarios.some((u) => u.id === usuario && u.empresa_id === checklist.empresa_id)) {
+        setUsuario('')
+      }
+    } else {
+      setEmpresa('')
+    }
+  }
 
   const handleSubmit = async () => {
     if (!checklistFuturo || !usuario || !empresa) {
@@ -388,7 +405,7 @@ export default function AlertasAdicionais() {
                 </label>
                 <select
                   value={checklistFuturo}
-                  onChange={(e) => setChecklistFuturo(e.target.value)}
+                  onChange={(e) => handleChecklistChange(e.target.value)}
                   className="form-input"
                   disabled={carregando || checklists.length === 0}
                   style={{
@@ -434,7 +451,7 @@ export default function AlertasAdicionais() {
                   value={usuario}
                   onChange={(e) => setUsuario(e.target.value)}
                   className="form-input"
-                  disabled={carregando || usuarios.length === 0}
+                  disabled={carregando || usuariosDaEmpresa.length === 0}
                   style={{
                     appearance: 'none',
                     backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23667eea\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'%3E%3C/polyline%3E%3C/svg%3E")',
@@ -447,20 +464,22 @@ export default function AlertasAdicionais() {
                   <option value="">
                     {carregando
                       ? 'Carregando...'
-                      : usuarios.length === 0 
-                        ? 'Nenhum usuário cadastrado ainda' 
+                      : usuariosDaEmpresa.length === 0
+                        ? (checklistFuturo ? 'Nenhum usuário nesta empresa' : 'Selecione um checklist primeiro')
                         : 'Selecione um usuário'}
                   </option>
-                  {usuarios.map((user) => (
+                  {usuariosDaEmpresa.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.nome}{user.cargo ? ` - ${user.cargo}` : ''}
                     </option>
                   ))}
                 </select>
-                {!carregando && usuarios.length === 0 && (
+                {!carregando && usuariosDaEmpresa.length === 0 && (
                   <div className="empty-state">
                     <p className="empty-state-text">
-                      Você precisa cadastrar usuários no sistema antes de configurar alertas.
+                      {checklistFuturo
+                        ? 'Nenhum colaborador cadastrado na empresa deste checklist.'
+                        : 'Selecione um checklist para ver os usuários disponíveis.'}
                     </p>
                   </div>
                 )}
@@ -476,9 +495,8 @@ export default function AlertasAdicionais() {
                 </label>
                 <select
                   value={empresa}
-                  onChange={(e) => setEmpresa(e.target.value)}
+                  disabled
                   className="form-input"
-                  disabled={carregando || empresas.length === 0}
                   style={{
                     appearance: 'none',
                     backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23667eea\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'%3E%3C/polyline%3E%3C/svg%3E")',
@@ -489,11 +507,7 @@ export default function AlertasAdicionais() {
                   }}
                 >
                   <option value="">
-                    {carregando
-                      ? 'Carregando...'
-                      : empresas.length === 0 
-                        ? 'Nenhuma empresa cadastrada ainda' 
-                        : 'Selecione uma empresa'}
+                    {empresas.length === 0 ? 'Nenhuma empresa cadastrada ainda' : 'Definida automaticamente pelo checklist'}
                   </option>
                   {empresas.map((emp) => (
                     <option key={emp.id} value={emp.id}>
