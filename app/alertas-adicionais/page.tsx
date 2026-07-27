@@ -16,7 +16,7 @@ import {
 
 interface Checklist {
   id: string
-  titulo: string
+  nome: string
 }
 
 interface Colaborador {
@@ -409,7 +409,7 @@ export default function AlertasAdicionais() {
                   </option>
                   {checklists.map((checklist) => (
                     <option key={checklist.id} value={checklist.id}>
-                      {checklist.titulo}
+                      {checklist.nome}
                     </option>
                   ))}
                 </select>
