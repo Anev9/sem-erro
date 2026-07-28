@@ -32,6 +32,7 @@ export default function EditarChecklistPage() {
   const [recorrencia, setRecorrencia] = useState<'nenhuma' | 'diaria' | 'semanal' | 'mensal'>('nenhuma')
   const [diasTolerancia, setDiasTolerancia] = useState(0)
   const [prazoAlerta, setPrazoAlerta] = useState('')
+  const [horaLimite, setHoraLimite] = useState('')
   const [tipoNegocio, setTipoNegocio] = useState('')
   const [empresaId, setEmpresaId] = useState('')
   const [colaboradorId, setColaboradorId] = useState('')
@@ -72,6 +73,7 @@ export default function EditarChecklistPage() {
       setRecorrencia((checklist.recorrencia as 'diaria' | 'semanal' | 'mensal' | 'nenhuma') || 'nenhuma')
       setDiasTolerancia(checklist.dias_tolerancia || 0)
       setPrazoAlerta(checklist.prazo_alerta?.split('T')[0] || '')
+      setHoraLimite(checklist.hora_limite?.slice(0, 5) || '')
       setTipoNegocio(checklist.tipo_negocio || '')
       setEmpresaId(checklist.empresa_id || '')
       setColaboradorId(checklist.colaborador_id || '')
@@ -199,6 +201,7 @@ export default function EditarChecklistPage() {
           empresa_id: empresaId || null,
           colaborador_id: colaboradorId || null,
           prazo_alerta: prazoAlerta || null,
+          hora_limite: horaLimite || null,
         })
         .eq('id', id)
 
@@ -392,6 +395,28 @@ export default function EditarChecklistPage() {
               {prazoAlerta && (
                 <button type="button" onClick={() => setPrazoAlerta('')} style={{ marginLeft: '0.75rem', fontSize: '0.8rem', color: '#92400e', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
                   Remover prazo
+                </button>
+              )}
+            </div>
+
+            {/* Horário limite */}
+            <div style={{ marginBottom: '1.75rem', padding: '1.25rem', backgroundColor: '#eff6ff', border: '1.5px solid #93c5fd', borderRadius: '0.75rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.375rem', fontWeight: '600', color: '#1e40af', fontSize: '0.95rem' }}>
+                Horário limite (opcional)
+              </label>
+              <p style={{ fontSize: '0.8rem', color: '#1d4ed8', margin: '0 0 0.75rem' }}>
+                Defina um horário do dia até quando o checklist deve ser respondido (ex: 08:00 para “abertura de loja”).
+                O funcionário verá um alerta visual e receberá um e-mail quando o horário estiver próximo.
+              </p>
+              <input
+                type="time"
+                value={horaLimite}
+                onChange={(e) => setHoraLimite(e.target.value)}
+                style={{ padding: '0.75rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '1rem', outline: 'none', backgroundColor: 'white' }}
+              />
+              {horaLimite && (
+                <button type="button" onClick={() => setHoraLimite('')} style={{ marginLeft: '0.75rem', fontSize: '0.8rem', color: '#1e40af', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                  Remover horário
                 </button>
               )}
             </div>

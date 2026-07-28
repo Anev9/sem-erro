@@ -39,6 +39,7 @@ export default function AlertasAdicionais() {
   const [aoCriar, setAoCriar] = useState(false)
   const [aoFinalizar, setAoFinalizar] = useState(false)
   const [problemasCriticos, setProblemasCriticos] = useState(false)
+  const [prazoProximo, setPrazoProximo] = useState(false)
 
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [usuarios, setUsuarios] = useState<Colaborador[]>([])
@@ -111,7 +112,7 @@ export default function AlertasAdicionais() {
       return
     }
 
-    if (!aoCriar && !aoFinalizar && !problemasCriticos) {
+    if (!aoCriar && !aoFinalizar && !problemasCriticos && !prazoProximo) {
       toast.warning('Selecione pelo menos um tipo de notificação')
       return
     }
@@ -122,7 +123,8 @@ export default function AlertasAdicionais() {
       empresa_id: empresa,
       notificar_ao_criar: aoCriar,
       notificar_ao_finalizar: aoFinalizar,
-      notificar_problemas_criticos: problemasCriticos
+      notificar_problemas_criticos: problemasCriticos,
+      notificar_prazo_proximo: prazoProximo
     }
 
     try {
@@ -154,6 +156,7 @@ export default function AlertasAdicionais() {
     setAoCriar(false)
     setAoFinalizar(false)
     setProblemasCriticos(false)
+    setPrazoProximo(false)
   }
 
   return (
@@ -563,6 +566,17 @@ export default function AlertasAdicionais() {
                     />
                     <span style={{ fontSize: '0.95rem', color: '#475569' }}>
                       Problemas críticos detectados
+                    </span>
+                  </label>
+
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={prazoProximo}
+                      onChange={(e) => setPrazoProximo(e.target.checked)}
+                    />
+                    <span style={{ fontSize: '0.95rem', color: '#475569' }}>
+                      Quando o horário limite do checklist estiver próximo
                     </span>
                   </label>
                 </div>

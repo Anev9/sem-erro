@@ -157,6 +157,64 @@ export type Database = {
           },
         ]
       }
+      alertas_adicionais: {
+        Row: {
+          checklist_futuro_id: string
+          created_at: string
+          empresa_id: string
+          id: string
+          notificar_ao_criar: boolean
+          notificar_ao_finalizar: boolean
+          notificar_prazo_proximo: boolean
+          notificar_problemas_criticos: boolean
+          usuario_id: string
+        }
+        Insert: {
+          checklist_futuro_id: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          notificar_ao_criar?: boolean
+          notificar_ao_finalizar?: boolean
+          notificar_prazo_proximo?: boolean
+          notificar_problemas_criticos?: boolean
+          usuario_id: string
+        }
+        Update: {
+          checklist_futuro_id?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          notificar_ao_criar?: boolean
+          notificar_ao_finalizar?: boolean
+          notificar_prazo_proximo?: boolean
+          notificar_problemas_criticos?: boolean
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertas_adicionais_checklist_futuro_id_fkey"
+            columns: ["checklist_futuro_id"]
+            isOneToOne: false
+            referencedRelation: "checklists_futuros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_adicionais_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_adicionais_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alunos: {
         Row: {
           ativo: boolean | null
@@ -576,6 +634,7 @@ export type Database = {
           descricao: string | null
           dias_tolerancia: number | null
           empresa_id: string | null
+          hora_limite: string | null
           id: string
           nome: string
           prazo_alerta: string | null
@@ -587,6 +646,7 @@ export type Database = {
           template_id: string | null
           tipo_negocio: string | null
           titulo: string | null
+          ultimo_alerta_prazo_enviado_em: string | null
           updated_at: string | null
         }
         Insert: {
@@ -605,6 +665,7 @@ export type Database = {
           descricao?: string | null
           dias_tolerancia?: number | null
           empresa_id?: string | null
+          hora_limite?: string | null
           id?: string
           nome: string
           prazo_alerta?: string | null
@@ -616,6 +677,7 @@ export type Database = {
           template_id?: string | null
           tipo_negocio?: string | null
           titulo?: string | null
+          ultimo_alerta_prazo_enviado_em?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -634,6 +696,7 @@ export type Database = {
           descricao?: string | null
           dias_tolerancia?: number | null
           empresa_id?: string | null
+          hora_limite?: string | null
           id?: string
           nome?: string
           prazo_alerta?: string | null
@@ -645,6 +708,7 @@ export type Database = {
           template_id?: string | null
           tipo_negocio?: string | null
           titulo?: string | null
+          ultimo_alerta_prazo_enviado_em?: string | null
           updated_at?: string | null
         }
         Relationships: [

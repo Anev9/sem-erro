@@ -13,7 +13,7 @@ function getAlunoId(request: NextRequest): string | null {
   return request.cookies.get('sem-erro-aluno-id')?.value || null
 }
 
-// POST body: { checklist_futuro_id, usuario_id, empresa_id, notificar_ao_criar, notificar_ao_finalizar, notificar_problemas_criticos }
+// POST body: { checklist_futuro_id, usuario_id, empresa_id, notificar_ao_criar, notificar_ao_finalizar, notificar_problemas_criticos, notificar_prazo_proximo }
 export async function POST(request: NextRequest) {
   const alunoId = getAlunoId(request)
   if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
     empresa_id,
     notificar_ao_criar,
     notificar_ao_finalizar,
-    notificar_problemas_criticos
+    notificar_problemas_criticos,
+    notificar_prazo_proximo
   } = body
 
   if (!checklist_futuro_id || !usuario_id || !empresa_id) {
@@ -61,7 +62,8 @@ export async function POST(request: NextRequest) {
       empresa_id,
       notificar_ao_criar: !!notificar_ao_criar,
       notificar_ao_finalizar: !!notificar_ao_finalizar,
-      notificar_problemas_criticos: !!notificar_problemas_criticos
+      notificar_problemas_criticos: !!notificar_problemas_criticos,
+      notificar_prazo_proximo: !!notificar_prazo_proximo
     }])
     .select()
     .single()

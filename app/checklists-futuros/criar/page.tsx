@@ -47,6 +47,7 @@ export default function CriarChecklistFuturoPage() {
 
   const [recorrencia, setRecorrencia] = useState<'nenhuma' | 'diaria' | 'semanal' | 'mensal'>('nenhuma')
   const [diasTolerancia, setDiasTolerancia] = useState(0)
+  const [horaLimite, setHoraLimite] = useState('')
 
   const [empresas, setEmpresas] = useState<{id: string, nome_fantasia: string}[]>([])
   const [colaboradores, setColaboradores] = useState<{id: string, nome: string}[]>([])
@@ -259,6 +260,7 @@ export default function CriarChecklistFuturoPage() {
         proxima_execucao: proximaExecucao,
         recorrencia,
         dias_tolerancia: diasTolerancia,
+        hora_limite: horaLimite || null,
         aluno_id: Number(userId),
         empresa_id: empresaId || null,
         colaborador_id: colaboradorId || null,
@@ -319,6 +321,7 @@ export default function CriarChecklistFuturoPage() {
         proxima_execucao: proximaExecucao,
         recorrencia,
         dias_tolerancia: diasTolerancia,
+        hora_limite: horaLimite || null,
         template_id: templateSelecionado,
         aluno_id: Number(userId),
         empresa_id: empresaId || null,
@@ -387,6 +390,7 @@ export default function CriarChecklistFuturoPage() {
         proxima_execucao: proximaExecucao,
         recorrencia,
         dias_tolerancia: diasTolerancia,
+        hora_limite: horaLimite || null,
         aluno_id: Number(userId),
         empresa_id: empresaId || null,
         colaborador_id: colaboradorId || null,
@@ -1062,6 +1066,35 @@ export default function CriarChecklistFuturoPage() {
                 />
                 <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.375rem' }}>
                   Dias antes e depois que o funcionário pode realizar
+                </p>
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  fontSize: '0.95rem'
+                }}>
+                  Horário limite
+                </label>
+                <input
+                  type="time"
+                  value={horaLimite}
+                  onChange={(e) => setHoraLimite(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem 1rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    backgroundColor: 'white'
+                  }}
+                />
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.375rem' }}>
+                  Ex: 08:00 para “abertura de loja”. O funcionário verá um alerta ao se aproximar do horário.
                 </p>
               </div>
 
