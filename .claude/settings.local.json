@@ -28,7 +28,8 @@
       "Bash(node _diag_checklist4.mjs)",
       "Bash(node _diag_checklist5.mjs)",
       "Bash(node _diag_checklist6.mjs)",
-      "Bash(npx supabase *)"
+      "Bash(npx supabase *)",
+      "Bash(npm install *)"
     ],
     "additionalDirectories": [
       "c:\\Deisiane\\Projetos\\SemErro\\sem-erro\\.next"
