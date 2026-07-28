@@ -17,7 +17,7 @@ function isAdmin(request: NextRequest): boolean {
 export async function POST(request: NextRequest) {
   if (!isAdmin(request)) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
 
-  const { nome, email, senha, programa } = await request.json()
+  const { nome, email, senha, programa, origem } = await request.json()
 
   if (!nome || !email || !senha) {
     return NextResponse.json({ error: 'Nome, e-mail e senha são obrigatórios' }, { status: 400 })
@@ -45,10 +45,11 @@ export async function POST(request: NextRequest) {
       'e-mail': email.toLowerCase().trim(),
       senha: hash,
       programa: programa || null,
+      origem: origem === 'pagante' ? 'pagante' : 'programa',
       ativo: true,
       tipo: 'aluno',
     })
-    .select('id, clientes, "e-mail", programa, ativo')
+    .select('id, clientes, "e-mail", programa, origem, ativo')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -82,6 +83,7 @@ export async function PATCH(request: NextRequest) {
   const campos: Record<string, unknown> = {}
   if (body.observacoes !== undefined) campos.observacoes = body.observacoes ?? null
   if (body.ativo !== undefined) campos.ativo = body.ativo
+  if (body.origem !== undefined && (body.origem === 'pagante' || body.origem === 'programa')) campos.origem = body.origem
 
   if (Object.keys(campos).length === 0)
     return NextResponse.json({ error: 'Nenhum campo para atualizar' }, { status: 400 })

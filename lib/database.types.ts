@@ -231,6 +231,7 @@ export type Database = {
           foto_url: string | null
           id: number
           observacoes: string | null
+          origem: string
           programa: string
           senha: string | null
           senha_temporaria: boolean
@@ -253,6 +254,7 @@ export type Database = {
           foto_url?: string | null
           id?: number
           observacoes?: string | null
+          origem?: string
           programa: string
           senha?: string | null
           senha_temporaria?: boolean
@@ -275,6 +277,7 @@ export type Database = {
           foto_url?: string | null
           id?: number
           observacoes?: string | null
+          origem?: string
           programa?: string
           senha?: string | null
           senha_temporaria?: boolean

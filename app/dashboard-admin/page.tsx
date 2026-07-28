@@ -13,6 +13,7 @@ interface Aluno {
   'e-mail': string | null
   programa: string | null
   ativo: boolean | null
+  origem: string | null
 }
 
 interface AtividadeRecente {
@@ -54,6 +55,7 @@ export default function DashboardAdmin() {
   const [evolucao, setEvolucao] = useState<{ label: string; checklists: number; acoes: number; novosClientes: number }[]>([])
   const [loadingEvolucao, setLoadingEvolucao] = useState(true)
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos')
+  const [filtroOrigem, setFiltroOrigem] = useState<'todos' | 'pagante' | 'programa'>('todos')
   const [enviandoEmail, setEnviandoEmail] = useState(false)
   const [emailResultado, setEmailResultado] = useState<string | null>(null)
 
@@ -240,6 +242,7 @@ export default function DashboardAdmin() {
   const alunosFiltrados = alunos.filter((a) => {
     if (filtroStatus === 'ativo' && !a.ativo) return false
     if (filtroStatus === 'inativo' && a.ativo) return false
+    if (filtroOrigem !== 'todos' && a.origem !== filtroOrigem) return false
     if (!busca.trim()) return true
     const q = busca.toLowerCase()
     return (
@@ -367,6 +370,8 @@ export default function DashboardAdmin() {
               { label: 'Total de Clientes', value: alunos.length, color: '#3b82f6', bg: '#eff6ff', icon: <Building2 size={20} /> },
               { label: 'Ativos', value: alunos.filter((a) => a.ativo).length, color: '#10b981', bg: '#f0fdf4', icon: <CheckCircle size={20} /> },
               { label: 'Inativos', value: alunos.filter((a) => !a.ativo).length, color: '#ef4444', bg: '#fef2f2', icon: <XCircle size={20} /> },
+              { label: 'Pagantes', value: alunos.filter((a) => a.origem === 'pagante').length, color: '#f97316', bg: '#fff7ed', icon: <UserPlus size={20} /> },
+              { label: 'Programa', value: alunos.filter((a) => a.origem === 'programa').length, color: '#0891b2', bg: '#ecfeff', icon: <Users size={20} /> },
               {
                 label: 'Colaboradores',
                 value: totalColaboradores === null ? (
@@ -552,6 +557,24 @@ export default function DashboardAdmin() {
                     </button>
                   ))}
                 </div>
+                {/* Filtro pagante/programa */}
+                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.1)', borderRadius: '0.375rem', padding: '2px', gap: '2px' }}>
+                  {(['todos', 'pagante', 'programa'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setFiltroOrigem(f)}
+                      style={{
+                        padding: '0.25rem 0.625rem', border: 'none', borderRadius: '0.25rem', cursor: 'pointer',
+                        fontSize: '0.78rem', fontWeight: '600', whiteSpace: 'nowrap',
+                        background: filtroOrigem === f ? 'white' : 'transparent',
+                        color: filtroOrigem === f ? '#334155' : 'rgba(255,255,255,0.75)',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {f === 'todos' ? 'Todos' : f === 'pagante' ? 'Pagantes' : 'Programa'}
+                    </button>
+                  ))}
+                </div>
                 {/* Busca */}
                 <div style={{ position: 'relative' }}>
                   <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.5)', pointerEvents: 'none' }} />
@@ -615,7 +638,16 @@ export default function DashboardAdmin() {
                       : <XCircle size={18} style={{ color: '#ef4444', flexShrink: 0 }} />
                     }
                     <div style={{ flex: 1, minWidth: '120px' }}>
-                      <p style={{ margin: 0, fontWeight: '600', color: '#1f2937', fontSize: '0.9rem' }}>{aluno.clientes || 'Sem nome'}</p>
+                      <p style={{ margin: 0, fontWeight: '600', color: '#1f2937', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {aluno.clientes || 'Sem nome'}
+                        <span style={{
+                          fontSize: '0.68rem', fontWeight: '700', padding: '0.1rem 0.5rem', borderRadius: '999px',
+                          color: aluno.origem === 'pagante' ? '#c2410c' : '#0e7490',
+                          backgroundColor: aluno.origem === 'pagante' ? '#ffedd5' : '#cffafe',
+                        }}>
+                          {aluno.origem === 'pagante' ? 'Pagante' : 'Programa'}
+                        </span>
+                      </p>
                       <p style={{ margin: 0, color: '#6b7280', fontSize: '0.8rem' }}>{aluno['e-mail'] || ''}{aluno.programa ? ` • ${aluno.programa}` : ''}</p>
                     </div>
                     <button

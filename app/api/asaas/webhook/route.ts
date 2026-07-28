@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
           'e-mail':          venda.email,
           senha:             hash,
           programa:          venda.plano,
+          origem:            'pagante',
           ativo:             true,
           tipo:              'aluno',
           senha_temporaria:  true,
