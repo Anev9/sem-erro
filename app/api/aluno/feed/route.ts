@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+const db = createAdminClient
 
 // GET /api/aluno/feed — retorna as últimas atividades do aluno
 export async function GET(request: NextRequest) {
-  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  const alunoId = getAlunoId(request)
   if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const supabase = db()
@@ -24,29 +20,21 @@ export async function GET(request: NextRequest) {
   const empresaIds = (empresas || []).map((e: { id: string }) => e.id)
   if (empresaIds.length === 0) return NextResponse.json([])
 
-  // Buscar checklists recentes criados/atualizados
-  const { data: checklistsRecentes } = await supabase
-    .from('checklists_futuros')
-    .select('id, titulo, status, created_at, empresa_id, empresas(nome_fantasia)')
-    .in('empresa_id', empresaIds)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  // Buscar respostas recentes
-  const { data: respostasRecentes } = await supabase
-    .from('checklist_respostas')
-    .select('id, created_at, checklist_futuro_id, colaboradores(nome), checklists_futuros!inner(titulo, empresa_id)')
-    .in('checklists_futuros.empresa_id', empresaIds)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  // Buscar ações corretivas recentes
-  const { data: acoesRecentes } = await supabase
-    .from('acoes_corretivas')
-    .select('id, titulo, status, created_at, checklist_id, checklists_futuros!inner(empresa_id, titulo)')
-    .in('checklists_futuros.empresa_id', empresaIds)
-    .order('created_at', { ascending: false })
-    .limit(5)
+  // Checklists e ações recentes são independentes entre si — buscar em paralelo
+  const [{ data: checklistsRecentes }, { data: acoesRecentes }] = await Promise.all([
+    supabase
+      .from('checklists_futuros')
+      .select('id, titulo, status, created_at, empresa_id, empresas(nome_fantasia)')
+      .in('empresa_id', empresaIds)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('acoes_corretivas')
+      .select('id, titulo, status, created_at, checklist_id, checklists_futuros!inner(empresa_id, titulo)')
+      .in('checklists_futuros.empresa_id', empresaIds)
+      .order('created_at', { ascending: false })
+      .limit(5),
+  ])
 
   // Montar feed
   const feed: Array<{ tipo: string; descricao: string; data: string; checklist?: string }> = []

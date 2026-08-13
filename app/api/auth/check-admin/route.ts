@@ -1,24 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 // Usa service role para bypassar RLS e verificar se o usuário é admin
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
+
 
 export async function POST(request: NextRequest) {
   try {
-    const { user_id, email } = await request.json()
+    const { email } = await request.json().catch(() => ({}))
 
-    if (!user_id) {
-      return NextResponse.json({ isAdmin: false }, { status: 400 })
+    const token = request.cookies.get('sem-erro-token')?.value
+    if (!token) {
+      return NextResponse.json({ isAdmin: false }, { status: 401 })
     }
 
     const supabase = db()
+
+    // Verificar o JWT e obter a identidade real do requisitante — nunca confiar
+    // em um user_id enviado pelo cliente.
+    const { data: authData, error: authErr } = await supabase.auth.getUser(token)
+    if (authErr || !authData?.user) {
+      return NextResponse.json({ isAdmin: false }, { status: 401 })
+    }
+    const user_id = authData.user.id
 
     // Busca o perfil na tabela user_profiles usando service role (ignora RLS)
     const { data: profile } = await supabase

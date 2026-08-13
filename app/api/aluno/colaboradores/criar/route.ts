@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
+
 
 // POST body: { email, senha, nome, celular, cargo, empresa_id }
 export async function POST(request: NextRequest) {
   try {
-    const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+    const alunoId = getAlunoId(request)
     if (!alunoId) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }

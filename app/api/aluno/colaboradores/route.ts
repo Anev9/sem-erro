@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
 
-function getAlunoId(request: NextRequest): string | null {
-  return request.cookies.get('sem-erro-aluno-id')?.value || null
-}
 
 // GET → lista colaboradores das empresas do aluno autenticado
 export async function GET(request: NextRequest) {
@@ -77,6 +69,13 @@ export async function PUT(request: NextRequest) {
   const campos = Object.fromEntries(
     Object.entries(body).filter(([key]) => allowedFields.includes(key))
   )
+
+  // Se empresa_id está sendo alterado, a nova empresa também precisa pertencer a este aluno
+  if (typeof campos.empresa_id === 'string' && campos.empresa_id !== colab.empresa_id) {
+    const { data: novaEmpresa } = await db().from('empresas').select('id').eq('id', campos.empresa_id).eq('aluno_id', alunoId).single()
+    if (!novaEmpresa) return NextResponse.json({ error: 'Sem permissão para mover o colaborador para esta empresa' }, { status: 403 })
+  }
+
   const { error } = await db().from('colaboradores').update(campos).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })

@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { isAdmin } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
 
-function isAdmin(request: NextRequest): boolean {
-  return !!request.cookies.get('sem-erro-admin')?.value
-}
 
 async function enviarEmailResend(to: string, subject: string, html: string) {
   const apiKey = process.env.RESEND_API_KEY
@@ -105,7 +97,7 @@ function buildEmailHtml(nome: string, alertas: string[], appUrl: string): string
 
 export async function POST(request: NextRequest) {
   const isCron = request.headers.get('x-cron-secret') === process.env.CRON_SECRET && !!process.env.CRON_SECRET
-  if (!isCron && !isAdmin(request)) {
+  if (!isCron && !(await isAdmin(request))) {
     return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
   }
 
@@ -170,12 +162,9 @@ export async function POST(request: NextRequest) {
     ...(atividadeChecklists || []).map(c => String(c.empresa_id)).filter(Boolean),
   ])
 
-  // Enviar alertas
-  let enviados = 0
-  let erros = 0
+  // Montar a lista de quem precisa receber alerta antes de enviar nada
   let semEmail = 0
-  const semResend = !process.env.RESEND_API_KEY
-  const errosDetalhe: string[] = []
+  const pendentes: { email: string; nome: string; alertasHtml: string[] }[] = []
 
   for (const aluno of alunos) {
     const email = aluno['e-mail']
@@ -207,22 +196,33 @@ export async function POST(request: NextRequest) {
 
     if (alertasHtml.length === 0) continue
 
-    const nome = aluno.clientes || email
+    pendentes.push({ email, nome: aluno.clientes || email, alertasHtml })
+  }
 
-    if (semResend) {
-      enviados++
-    } else {
-      const html = buildEmailHtml(nome, alertasHtml, appUrl)
-      const resultado = await enviarEmailResend(
-        email,
-        `⚠️ Alertas pendentes — Performe seu Mercado`,
-        html
-      )
-      if (resultado.ok) {
-        enviados++
-      } else {
+  // Enviar em lotes concorrentes em vez de um e-mail por vez — evita que o
+  // tempo total escale linearmente com o número de alunos e estoure o limite
+  // de execução da função serverless quando a base crescer.
+  let enviados = 0
+  let erros = 0
+  const semResend = !process.env.RESEND_API_KEY
+  const errosDetalhe: string[] = []
+  const TAMANHO_LOTE = 10
+
+  for (let i = 0; i < pendentes.length; i += TAMANHO_LOTE) {
+    const lote = pendentes.slice(i, i + TAMANHO_LOTE)
+    const resultados = await Promise.all(
+      lote.map(async ({ email, nome, alertasHtml }) => {
+        if (semResend) return { ok: true as const, email }
+        const html = buildEmailHtml(nome, alertasHtml, appUrl)
+        const resultado = await enviarEmailResend(email, `⚠️ Alertas pendentes — Performe seu Mercado`, html)
+        return { ok: resultado.ok, email, erro: resultado.ok ? undefined : resultado.erro }
+      })
+    )
+    for (const r of resultados) {
+      if (r.ok) enviados++
+      else {
         erros++
-        errosDetalhe.push(`${email}: ${resultado.erro}`)
+        errosDetalhe.push(`${r.email}: ${r.erro}`)
       }
     }
   }

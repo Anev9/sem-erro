@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 const BASE_URL    = process.env.BOMCONTROLE_API_URL!
 const API_KEY     = process.env.BOMCONTROLE_API_KEY!
@@ -17,13 +17,8 @@ const planoValores: Record<string, { valor: number; nome: string }> = {
   enterprise: { valor: 129.99, nome: 'Enterprise' },
 }
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
+
 
 function bcHeaders() {
   return { 'Content-Type': 'application/json', 'Authorization': `ApiKey ${API_KEY}` }

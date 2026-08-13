@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
+import { isAdmin } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
 
-function isAdmin(request: NextRequest): boolean {
-  return !!request.cookies.get('sem-erro-admin')?.value
-}
 
 export async function POST(request: NextRequest) {
-  if (!isAdmin(request)) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
+  if (!(await isAdmin(request))) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
 
   const { nome, email, senha, programa } = await request.json()
 
@@ -56,7 +48,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!isAdmin(request)) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
+  if (!(await isAdmin(request))) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
 
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
@@ -73,7 +65,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  if (!isAdmin(request)) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
+  if (!(await isAdmin(request))) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
 
   const body = await request.json()
   const { id } = body

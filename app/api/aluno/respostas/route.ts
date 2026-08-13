@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
-function db() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+const db = createAdminClient
 
 type Empresa = Pick<Database['public']['Tables']['empresas']['Row'], 'id' | 'nome_fantasia'>
 type ChecklistFuturo = Pick<Database['public']['Tables']['checklists_futuros']['Row'], 'id' | 'titulo' | 'empresa_id' | 'colaborador_id' | 'created_at'>
@@ -18,7 +14,7 @@ type Colaborador = Pick<Database['public']['Tables']['colaboradores']['Row'], 'i
 // GET [&empresa_id=Y][&data_inicio=Z][&data_fim=W][&resultado=conforme|nao_conforme]
 export async function GET(request: NextRequest) {
   try {
-    const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+    const alunoId = getAlunoId(request)
     if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const { searchParams } = new URL(request.url)

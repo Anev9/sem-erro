@@ -3,14 +3,11 @@ import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { loginSchema } from '@/lib/schemas'
 import { logger } from '@/lib/logger'
+import { setSessionCookies } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 
-function serviceDb() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const serviceDb = createAdminClient
+
 
 function getAdminEmails(): string[] {
   return (process.env.ADMIN_EMAILS || '')
@@ -22,7 +19,7 @@ function getAdminEmails(): string[] {
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request)
-    const { allowed, retryAfterSec } = checkRateLimit(ip, 'admin')
+    const { allowed, retryAfterSec } = await checkRateLimit(ip, 'admin')
     if (!allowed) {
       return NextResponse.json(
         { error: `Muitas tentativas. Tente novamente em ${retryAfterSec} segundos.` },
@@ -55,8 +52,15 @@ export async function POST(request: NextRequest) {
     }
 
     let userId: string | undefined = existingUser?.id
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+
+    let session: Awaited<ReturnType<typeof anonClient.auth.signInWithPassword>>['data'] | undefined
 
     if (!existingUser) {
+      // Primeiro login de um e-mail em ADMIN_EMAILS: provisiona a conta com a senha informada
       const { data: created, error: createError } = await db.auth.admin.createUser({
         email: emailNorm,
         password,
@@ -67,8 +71,20 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Erro ao criar conta: ' + createError.message }, { status: 500 })
       }
       userId = created?.user?.id
+
+      const { data: newSession, error: signInError } = await anonClient.auth.signInWithPassword({ email: emailNorm, password })
+      if (signInError || !newSession?.session?.access_token) {
+        logger.error('login-admin', 'Falha ao obter sessão JWT após criar conta', { message: signInError?.message })
+        return NextResponse.json({ error: 'Erro ao iniciar sessão. Tente novamente.' }, { status: 500 })
+      }
+      session = newSession
     } else {
-      await db.auth.admin.updateUserById(existingUser.id, { password, email_confirm: true })
+      // Conta já existe: a senha precisa bater com a senha atual — nunca sobrescrever sem verificar
+      const { data: signedIn, error: signInError } = await anonClient.auth.signInWithPassword({ email: emailNorm, password })
+      if (signInError || !signedIn?.session?.access_token) {
+        return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
+      }
+      session = signedIn
     }
 
     const profile = {
@@ -88,26 +104,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Obter JWT do Supabase Auth
-    const anonClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data: session, error: signInError } = await anonClient.auth.signInWithPassword({
-      email: emailNorm,
-      password,
-    })
-    if (signInError || !session?.session?.access_token) {
-      logger.error('login-admin', 'Falha ao obter sessão JWT', { message: signInError?.message, code: signInError?.status })
+    if (!session?.session?.access_token) {
+      logger.error('login-admin', 'Sessão ausente após autenticação')
       return NextResponse.json({ error: 'Erro ao iniciar sessão. Tente novamente.' }, { status: 500 })
     }
 
-    const isProd = process.env.NODE_ENV === 'production'
-    const cookieOpts = { httpOnly: true, sameSite: 'lax' as const, path: '/', secure: isProd }
     const response = NextResponse.json({ isAdmin: true, profile })
-    response.cookies.set('sem-erro-token', session.session.access_token, { ...cookieOpts, maxAge: 60 * 60 })
-    response.cookies.set('sem-erro-refresh-token', session.session.refresh_token, { ...cookieOpts, maxAge: 60 * 60 * 24 * 30 })
-    response.cookies.set('sem-erro-admin', '1', { ...cookieOpts, maxAge: 60 * 60 * 24 * 30 })
+    setSessionCookies(response, session.session.access_token, session.session.refresh_token, [
+      { name: 'sem-erro-admin', value: '1' },
+    ])
     return response
 
   } catch (err) {

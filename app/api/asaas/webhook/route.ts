@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
 import { logger } from '@/lib/logger'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 const APP_URL    = process.env.NEXT_PUBLIC_APP_URL ?? 'https://performeseumercado.com.br'
 const EMAIL_FROM = process.env.EMAIL_FROM ?? 'Performe seu Mercado <noreply@performeseumercado.com.br>'
 
 const EVENTOS_PAGOS = new Set(['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED'])
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
+
 
 function gerarSenha(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!'
@@ -88,7 +83,11 @@ async function enviarEmailAcesso(email: string, nome: string, senha: string, pla
 
 export async function POST(request: NextRequest) {
   try {
-    // Validação de token desativada temporariamente para diagnóstico
+    // Validar token secreto configurado no painel Asaas
+    const token = request.headers.get('asaas-access-token')
+    if (process.env.ASAAS_WEBHOOK_TOKEN && token !== process.env.ASAAS_WEBHOOK_TOKEN) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const body    = await request.json()
     const event   = body?.event as string

@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+const db = createAdminClient
 
 // GET /api/aluno/checklists-criados/[id]/versoes — lista versões salvas
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  const alunoId = getAlunoId(request)
   if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const { id: checklistId } = await params
@@ -48,7 +44,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  const alunoId = getAlunoId(request)
   if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const { id: checklistId } = await params

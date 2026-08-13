@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
 import bcrypt from 'bcryptjs'
 import { logger } from '@/lib/logger'
 
@@ -16,11 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
+    const supabase = createAdminClient()
 
     // Verificar JWT e obter o usuário
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token)

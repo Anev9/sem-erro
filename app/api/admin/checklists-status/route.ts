@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
+import { isAdmin } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 
-function db() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
 
-function isAdmin(request: NextRequest): boolean {
-  return !!request.cookies.get('sem-erro-admin')?.value
-}
 
 type Aluno = Pick<Database['public']['Tables']['alunos']['Row'], 'id' | 'clientes'>
 type Empresa = Pick<Database['public']['Tables']['empresas']['Row'], 'id' | 'nome_fantasia' | 'aluno_id'>
@@ -23,7 +15,7 @@ type Checklist = Pick<Database['public']['Tables']['checklists_futuros']['Row'],
 type Colaborador = Pick<Database['public']['Tables']['colaboradores']['Row'], 'id' | 'nome'>
 
 export async function GET(request: NextRequest) {
-  if (!isAdmin(request)) {
+  if (!(await isAdmin(request))) {
     return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 })
   }
 

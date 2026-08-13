@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+    const alunoId = getAlunoId(request)
     if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabase = createAdminClient()
 
     // 1. Buscar empresas do aluno
     const { data: empresas, error: empresasError } = await supabase
@@ -28,35 +26,34 @@ export async function GET(request: NextRequest) {
 
     const empresaIds = empresas.map((e: { id: string }) => e.id)
 
-    // 2. Buscar checklists dos últimos 30 dias
+    // 2. Buscar todos os checklists das empresas de uma vez — os "últimos 30
+    // dias" são um subconjunto deste mesmo resultado, filtrado em memória em
+    // vez de repetir a mesma tabela em uma segunda query.
     const dataLimite = new Date()
     dataLimite.setDate(dataLimite.getDate() - 30)
+    const dataLimiteISO = dataLimite.toISOString()
 
-    const { data: checklists, error: checklistsError } = await supabase
+    const { data: todosChecklistsRaw, error: checklistsError } = await supabase
       .from('checklists')
       .select('id, nome, descricao, status, created_at, empresa_id, empresas(nome_fantasia)')
       .in('empresa_id', empresaIds)
-      .gte('created_at', dataLimite.toISOString())
       .order('created_at', { ascending: false })
 
     if (checklistsError) {
       return NextResponse.json({ error: checklistsError.message }, { status: 500 })
     }
 
-    // 3. Buscar todos os checklists para performance
-    const { data: todosChecklists, error: todosError } = await supabase
-      .from('checklists')
-      .select('id, empresa_id, status')
-      .in('empresa_id', empresaIds)
-
-    if (todosError) {
-      return NextResponse.json({ error: todosError.message }, { status: 500 })
-    }
+    const checklists = (todosChecklistsRaw || []).filter((c) => c.created_at >= dataLimiteISO)
+    const todosChecklists = (todosChecklistsRaw || []).map((c) => ({
+      id: c.id,
+      empresa_id: c.empresa_id,
+      status: c.status,
+    }))
 
     return NextResponse.json({
       empresas,
-      checklists: checklists || [],
-      todosChecklists: todosChecklists || [],
+      checklists,
+      todosChecklists,
     })
   } catch {
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })

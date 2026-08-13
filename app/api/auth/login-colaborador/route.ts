@@ -1,23 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { loginSchema } from '@/lib/schemas'
 import { logger } from '@/lib/logger'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { setSessionCookies } from '@/lib/auth'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
 
-const DEFAULT_PASSWORD = process.env.COLABORADOR_DEFAULT_PASSWORD || ''
 
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request)
-    const { allowed, retryAfterSec } = checkRateLimit(ip, 'colaborador')
+    const { allowed, retryAfterSec } = await checkRateLimit(ip, 'colaborador')
     if (!allowed) {
       return NextResponse.json(
         { error: `Muitas tentativas. Tente novamente em ${retryAfterSec} segundos.` },
@@ -116,16 +110,9 @@ export async function POST(request: NextRequest) {
       }
 
       if (authUser) {
-        // Conta existe mas senha errada
-        if (password === DEFAULT_PASSWORD) {
-          await supabase.auth.admin.updateUserById(authUser.id, { password: DEFAULT_PASSWORD, email_confirm: true })
-          if (authUser.id !== colaborador.auth_id) {
-            await supabase.from('colaboradores').update({ auth_id: authUser.id }).eq('id', colaborador.id)
-            colaborador.auth_id = authUser.id
-          }
-        } else {
-          return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
-        }
+        // Conta existe mas a senha informada não bate — nunca resetar a senha aqui.
+        // Um reset legítimo exige um admin autenticado via /api/aluno/colaboradores/reset-senha.
+        return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
       } else {
         // Conta não existe — criar agora com a senha fornecida
         const { data: created, error: createError } = await supabase.auth.admin.createUser({
@@ -136,33 +123,11 @@ export async function POST(request: NextRequest) {
         })
 
         if (createError) {
-          // Tratar caso onde o email já existe mas não foi encontrado pelo listUsers
+          // Tratar caso onde o email já existe mas não foi encontrado pelo listUsers.
+          // A conta já existe e o login com a senha informada já falhou acima —
+          // nunca resetar a senha aqui (mesmo problema de segurança do branch anterior).
           if (createError.message?.toLowerCase().includes('already')) {
-            if (password === DEFAULT_PASSWORD) {
-              let found: { id: string; email?: string } | undefined
-              let page2 = 1
-              while (page2 <= 10) {
-                const listResult2 = await Promise.race([
-                  supabase.auth.admin.listUsers({ page: page2, perPage: 100 }),
-                  new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000))
-                ])
-                if (!listResult2 || !('data' in listResult2)) break
-                const users2 = listResult2.data?.users ?? []
-                if (users2.length === 0) break
-                found = users2.find(u => u.email?.toLowerCase() === emailNorm)
-                if (found || users2.length < 100) break
-                page2++
-              }
-              if (found) {
-                await supabase.auth.admin.updateUserById(found.id, { password: DEFAULT_PASSWORD, email_confirm: true })
-                await supabase.from('colaboradores').update({ auth_id: found.id }).eq('id', colaborador.id)
-                colaborador.auth_id = found.id
-              } else {
-                return NextResponse.json({ error: 'Conta de acesso com problema. Contate o administrador.' }, { status: 500 })
-              }
-            } else {
-              return NextResponse.json({ error: 'E-mail já cadastrado. Tente com a senha padrão.' }, { status: 401 })
-            }
+            return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
           } else {
             logger.error('login-colaborador', 'Erro ao criar conta', createError.message)
             return NextResponse.json({ error: 'Não foi possível criar a conta. Tente com a senha padrão.' }, { status: 500 })
@@ -212,13 +177,9 @@ export async function POST(request: NextRequest) {
     }
 
     const response = NextResponse.json({ isColaborador: true, profile })
-    const isProd = process.env.NODE_ENV === 'production'
-    const cookieOpts = { httpOnly: true, sameSite: 'lax' as const, path: '/', secure: isProd }
-    response.cookies.set('sem-erro-token', accessToken, { ...cookieOpts, maxAge: 60 * 60 })
-    if (refreshToken) {
-      response.cookies.set('sem-erro-refresh-token', refreshToken, { ...cookieOpts, maxAge: 60 * 60 * 24 * 30 })
-    }
-    response.cookies.set('semerro-colaborador-id', String(colaborador.id), { ...cookieOpts, maxAge: 60 * 60 * 24 * 30 })
+    setSessionCookies(response, accessToken, refreshToken, [
+      { name: 'semerro-colaborador-id', value: String(colaborador.id) },
+    ])
     return response
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno'

@@ -163,12 +163,29 @@ export default function CriarChecklistFuturoPage() {
     URL.revokeObjectURL(url)
   }
 
+  function decodeCsvBuffer(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer)
+    // BOM UTF-8 (EF BB BF) — o arquivo é UTF-8 de verdade
+    if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+      return new TextDecoder('utf-8').decode(bytes)
+    }
+    const utf8 = new TextDecoder('utf-8').decode(bytes)
+    // Se a decodificação UTF-8 gerar caracteres inválidos (�), o arquivo
+    // provavelmente foi salvo pelo Excel como CSV ANSI (Windows-1252), que é
+    // o padrão do Windows em português — refaz a leitura com essa codificação.
+    if (utf8.includes('�')) {
+      return new TextDecoder('windows-1252').decode(bytes)
+    }
+    return utf8
+  }
+
   function importarCSV(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
     reader.onload = (ev) => {
-      const text = ev.target?.result as string
+      const buffer = ev.target?.result as ArrayBuffer
+      const text = decodeCsvBuffer(buffer)
       const linhas = text.split(/\r?\n/).filter(l => l.trim())
       // Ignora cabeçalho se começar com "Título" ou "titulo"
       const inicio = linhas[0]?.toLowerCase().startsWith('título') || linhas[0]?.toLowerCase().startsWith('titulo') ? 1 : 0
@@ -188,7 +205,7 @@ export default function CriarChecklistFuturoPage() {
       setItens(novosItens)
       setRecorrente('proprio')
     }
-    reader.readAsText(file, 'UTF-8')
+    reader.readAsArrayBuffer(file)
     e.target.value = ''
   }
 

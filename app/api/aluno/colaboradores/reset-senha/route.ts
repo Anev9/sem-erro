@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
+
 
 const RESET_PASSWORD = process.env.COLABORADOR_DEFAULT_PASSWORD || ''
 
 // POST body: { colaborador_id } — reseta a senha para a senha padrão definida em COLABORADOR_DEFAULT_PASSWORD
 export async function POST(request: NextRequest) {
   try {
-    const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+    const alunoId = getAlunoId(request)
     if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const { colaborador_id } = await request.json()

@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { isAdmin } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
 
-function isAdmin(request: NextRequest): boolean {
-  return !!request.cookies.get('sem-erro-admin')?.value
-}
 
 export async function GET(request: NextRequest) {
-  if (!isAdmin(request)) {
+  if (!(await isAdmin(request))) {
     return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 })
   }
 
@@ -29,19 +21,28 @@ export async function GET(request: NextRequest) {
   ha30Dias.setDate(ha30Dias.getDate() - 30)
   const ha30DaysISO = ha30Dias.toISOString()
 
-  // Buscar todos os alunos (clientes)
-  const { data: alunos } = await supabase
-    .from('alunos')
-    .select('id, clientes, "e-mail", ativo, ultimo_login')
-    .neq('tipo', 'admin')
-    .order('clientes')
+  // Buscar tudo de uma vez, em paralelo — checklists e ações são buscados
+  // completos (sem filtro) uma única vez, e os recortes por mês/30 dias são
+  // derivados em memória, em vez de repetir a mesma tabela em várias queries
+  // filtradas e seriais.
+  const [{ data: alunos }, { data: empresas }, { data: todosChecklists }, { data: todasAcoes }] = await Promise.all([
+    supabase
+      .from('alunos')
+      .select('id, clientes, "e-mail", ativo, ultimo_login')
+      .neq('tipo', 'admin')
+      .order('clientes'),
+    supabase
+      .from('empresas')
+      .select('id, aluno_id, nome_fantasia'),
+    supabase
+      .from('checklists_futuros')
+      .select('id, empresa_id, status, created_at, updated_at'),
+    supabase
+      .from('acoes_corretivas')
+      .select('id, empresa_id, status, created_at, titulo'),
+  ])
 
   if (!alunos) return NextResponse.json({ usoMensal: [], alertas: [], performanceGeral: [] })
-
-  // Buscar todas as empresas para mapear aluno_id
-  const { data: empresas } = await supabase
-    .from('empresas')
-    .select('id, aluno_id, nome_fantasia')
 
   const empresaMap: Record<string, { aluno_id: string; nome_fantasia: string }> = {}
   for (const emp of empresas || []) {
@@ -55,63 +56,32 @@ export async function GET(request: NextRequest) {
     empresaIdsPorAluno[aid].push(empId)
   }
 
-  // Buscar checklists do mês
-  const { data: checklistsMes } = await supabase
-    .from('checklists_futuros')
-    .select('id, empresa_id, status, created_at, updated_at')
-    .gte('created_at', inicioMesISO)
-
-  // Buscar ações do mês
-  const { data: acoesMes } = await supabase
-    .from('acoes_corretivas')
-    .select('id, empresa_id, status, created_at')
-    .gte('created_at', inicioMesISO)
-
-  // Buscar TODAS as ações atrasadas (independente do mês)
-  const { data: acoesAtrasadas } = await supabase
-    .from('acoes_corretivas')
-    .select('id, empresa_id, titulo')
-    .eq('status', 'atrasada')
-
-  // Buscar toda atividade dos últimos 30 dias para detectar clientes sem atividade
-  const { data: checklistsRecentes } = await supabase
-    .from('checklists_futuros')
-    .select('id, empresa_id, updated_at')
-    .gte('updated_at', ha30DaysISO)
-
-  const { data: acoesRecentes } = await supabase
-    .from('acoes_corretivas')
-    .select('id, empresa_id, created_at')
-    .gte('created_at', ha30DaysISO)
-
-  // Montar estrutura de uso mensal por aluno
+  // Montar estrutura de uso mensal por aluno (checklists/ações criados desde o início do mês)
   const checklistsPorEmpresa: Record<string, number> = {}
-  for (const cl of checklistsMes || []) {
-    checklistsPorEmpresa[cl.empresa_id] = (checklistsPorEmpresa[cl.empresa_id] || 0) + 1
-  }
-
   const acoesPorEmpresa: Record<string, number> = {}
-  for (const ac of acoesMes || []) {
-    acoesPorEmpresa[ac.empresa_id] = (acoesPorEmpresa[ac.empresa_id] || 0) + 1
-  }
-
   const atrasadasPorEmpresa: Record<string, number> = {}
-  for (const ac of acoesAtrasadas || []) {
-    atrasadasPorEmpresa[ac.empresa_id] = (atrasadasPorEmpresa[ac.empresa_id] || 0) + 1
+  const empresasComAtividade = new Set<string>()
+
+  for (const cl of todosChecklists || []) {
+    if (cl.created_at >= inicioMesISO) {
+      checklistsPorEmpresa[cl.empresa_id] = (checklistsPorEmpresa[cl.empresa_id] || 0) + 1
+    }
+    if (cl.updated_at && cl.updated_at >= ha30DaysISO) {
+      empresasComAtividade.add(cl.empresa_id)
+    }
   }
 
-  const empresasComAtividade = new Set<string>()
-  for (const cl of checklistsRecentes || []) empresasComAtividade.add(cl.empresa_id)
-  for (const ac of acoesRecentes || []) empresasComAtividade.add(ac.empresa_id)
-
-  // Buscar totais gerais por empresa (para performance)
-  const { data: todosChecklists } = await supabase
-    .from('checklists_futuros')
-    .select('id, empresa_id, status')
-
-  const { data: todasAcoes } = await supabase
-    .from('acoes_corretivas')
-    .select('id, empresa_id, status')
+  for (const ac of todasAcoes || []) {
+    if (ac.created_at >= inicioMesISO) {
+      acoesPorEmpresa[ac.empresa_id] = (acoesPorEmpresa[ac.empresa_id] || 0) + 1
+    }
+    if (ac.created_at >= ha30DaysISO) {
+      empresasComAtividade.add(ac.empresa_id)
+    }
+    if (ac.status === 'atrasada') {
+      atrasadasPorEmpresa[ac.empresa_id] = (atrasadasPorEmpresa[ac.empresa_id] || 0) + 1
+    }
+  }
 
   const clTotalPorEmpresa: Record<string, { total: number; concluidos: number }> = {}
   for (const cl of todosChecklists || []) {

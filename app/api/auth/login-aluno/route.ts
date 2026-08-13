@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
 import bcrypt from 'bcryptjs'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { loginSchema } from '@/lib/schemas'
 import { logger } from '@/lib/logger'
+import { setSessionCookies } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request)
-    const { allowed, retryAfterSec } = checkRateLimit(ip, 'aluno')
+    const { allowed, retryAfterSec } = await checkRateLimit(ip, 'aluno')
     if (!allowed) {
       return NextResponse.json(
         { error: `Muitas tentativas. Tente novamente em ${retryAfterSec} segundos.` },
@@ -22,11 +24,7 @@ export async function POST(request: NextRequest) {
     }
     const { email, password } = parsed.data
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
+    const supabase = createAdminClient()
 
     // Coluna de email na tabela se chama 'e-mail' (com hífen)
     const { data: aluno, error } = await supabase
@@ -164,22 +162,10 @@ export async function POST(request: NextRequest) {
       senha_temporaria: aluno['senha_temporaria'] ?? false,
     }
 
-    const isProd = process.env.NODE_ENV === 'production'
-    const cookieOpts = { httpOnly: true, sameSite: 'lax' as const, path: '/', secure: isProd }
     const response = NextResponse.json(userData)
-
-    response.cookies.set('sem-erro-token', session.session.access_token, {
-      ...cookieOpts,
-      maxAge: 60 * 60, // 1 hora (validade do JWT)
-    })
-    response.cookies.set('sem-erro-refresh-token', session.session.refresh_token, {
-      ...cookieOpts,
-      maxAge: 60 * 60 * 24 * 30, // 30 dias
-    })
-    response.cookies.set('sem-erro-aluno-id', String(aluno.id), {
-      ...cookieOpts,
-      maxAge: 60 * 60 * 24 * 30,
-    })
+    setSessionCookies(response, session.session.access_token, session.session.refresh_token, [
+      { name: 'sem-erro-aluno-id', value: String(aluno.id) },
+    ])
 
     return response
   } catch (err) {

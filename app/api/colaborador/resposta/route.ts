@@ -1,42 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
+import { getColaboradorId } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { inicioPeriodo } from '@/lib/periodo'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
-
-function inicioPeriodo(recorrencia: string | null): string | null {
-  const BRAZIL_OFFSET_MS = 3 * 60 * 60 * 1000
-  const agora = new Date()
-  const local = new Date(agora.getTime() - BRAZIL_OFFSET_MS)
-
-  if (recorrencia === 'diaria') {
-    local.setUTCHours(0, 0, 0, 0)
-    return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
-  }
-  if (recorrencia === 'semanal') {
-    local.setUTCDate(local.getUTCDate() - local.getUTCDay())
-    local.setUTCHours(0, 0, 0, 0)
-    return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
-  }
-  if (recorrencia === 'mensal') {
-    local.setUTCDate(1)
-    local.setUTCHours(0, 0, 0, 0)
-    return new Date(local.getTime() + BRAZIL_OFFSET_MS).toISOString()
-  }
-  return null
-}
+const db = createAdminClient
 
 export async function POST(request: NextRequest) {
   try {
-    const { checklist_futuro_id, colaborador_id, item_id, resposta, observacao, foto_url } = await request.json()
+    const colaborador_id = getColaboradorId(request)
+    if (!colaborador_id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    }
 
-    if (!checklist_futuro_id || !colaborador_id || !item_id || !resposta) {
+    const { checklist_futuro_id, item_id, resposta, observacao, foto_url } = await request.json()
+
+    if (!checklist_futuro_id || !item_id || !resposta) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
 

@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+const db = createAdminClient
 
 // GET /api/aluno/comentarios?checklist_id=xxx
 export async function GET(request: NextRequest) {
-  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  const alunoId = getAlunoId(request)
   if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const checklistId = request.nextUrl.searchParams.get('checklist_id')
@@ -39,7 +35,7 @@ export async function GET(request: NextRequest) {
 // POST /api/aluno/comentarios — criar comentário
 // body: { checklist_id, item_id, texto, autor? }
 export async function POST(request: NextRequest) {
-  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  const alunoId = getAlunoId(request)
   if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const body = await request.json()
@@ -70,7 +66,7 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/aluno/comentarios?id=xxx
 export async function DELETE(request: NextRequest) {
-  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  const alunoId = getAlunoId(request)
   if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const comentarioId = request.nextUrl.searchParams.get('id')

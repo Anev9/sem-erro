@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+const db = createAdminClient
 
 // POST /api/aluno/checklists-criados/duplicar
 // body: { checklist_id: string }
 export async function POST(request: NextRequest) {
-  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  const alunoId = getAlunoId(request)
   if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const body = await request.json()

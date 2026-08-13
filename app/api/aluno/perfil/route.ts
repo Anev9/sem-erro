@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import type { Database } from '@/lib/database.types'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
-function db() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}
+const db = createAdminClient
+
 
 // GET — buscar dados completos do aluno
 export async function GET(request: NextRequest) {
-  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  const alunoId = getAlunoId(request)
   if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const { data, error } = await db()
@@ -28,7 +23,7 @@ export async function GET(request: NextRequest) {
 
 // PATCH — atualizar nome, telefone ou foto_url
 export async function PATCH(request: NextRequest) {
-  const alunoId = request.cookies.get('sem-erro-aluno-id')?.value
+  const alunoId = getAlunoId(request)
   if (!alunoId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const body = await request.json()

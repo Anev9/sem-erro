@@ -1,20 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { getAlunoId } from '@/lib/auth'
 
-function db() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!
-  return createClient(url, key, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  })
-}
-
-function getAlunoId(request: NextRequest): string | null {
-  return request.cookies.get('sem-erro-aluno-id')?.value || null
-}
+const db = createAdminClient
 
 // GET → lista empresas do aluno autenticado
 export async function GET(request: NextRequest) {
