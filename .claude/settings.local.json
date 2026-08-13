@@ -28,6 +28,7 @@
       "Bash(node _diag_checklist4.mjs)",
       "Bash(node _diag_checklist5.mjs)",
       "Bash(node _diag_checklist6.mjs)",
+<<<<<<< HEAD
       "Bash(cd \"C:\\\\Deisiane\\\\Projetos\\\\SemErro\\\\sem-erro\" && find . -iname \"CLAUDE.md\" -not -path \"./node_modules/*\" 2>/dev/null; echo \"---user---\"; ls -la \"C:\\\\Users\\\\deisi\\\\.claude\\\\CLAUDE.md\" 2>/dev/null; echo done)",
       "Read(//c/Users/deisi/.claude/**)",
       "Bash(xargs grep -l \"'use client'\")",
@@ -35,6 +36,10 @@
       "Bash(python \"/c/Users/deisi/AppData/Local/Temp/claude/c--Deisiane-Projetos-SemErro-sem-erro/cc6dd103-5f91-4ecd-b5b7-626b121f726b/scratchpad/dedupe_admin_client2.py\" .)",
       "Bash(python \"/c/Users/deisi/AppData/Local/Temp/claude/c--Deisiane-Projetos-SemErro-sem-erro/cc6dd103-5f91-4ecd-b5b7-626b121f726b/scratchpad/dedupe_aluno_id.py\" .)",
       "Bash(git stash *)"
+=======
+      "Bash(npx supabase *)",
+      "Bash(npm install *)"
+>>>>>>> cf7b7960801d39f99e4b917089bdc55989360103
     ],
     "additionalDirectories": [
       "c:\\Deisiane\\Projetos\\SemErro\\sem-erro\\.next"

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   const [{ data: alunos }, { data: empresas }, { data: todosChecklists }, { data: todasAcoes }] = await Promise.all([
     supabase
       .from('alunos')
-      .select('id, clientes, "e-mail", ativo, ultimo_login')
+      .select('id, clientes, "e-mail", ativo, ultimo_login, origem')
       .neq('tipo', 'admin')
       .order('clientes'),
     supabase
@@ -158,6 +158,7 @@ export async function GET(request: NextRequest) {
       nome: aluno.clientes || aluno['e-mail'] || 'Sem nome',
       email: aluno['e-mail'],
       ativo: aluno.ativo,
+      origem: aluno.origem,
       ultimo_login: aluno.ultimo_login ?? null,
       empresas: empIds.length,
       checklists: { total: clTotal, concluidos: clConcluidos, mes: checklistsMesAluno },

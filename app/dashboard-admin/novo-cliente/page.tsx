@@ -9,7 +9,7 @@ export default function NovoClientePage() {
   const router = useRouter()
   const [salvando, setSalvando] = useState(false)
   const [mostrarSenha, setMostrarSenha] = useState(false)
-  const [form, setForm] = useState({ nome: '', email: '', senha: '', programa: '' })
+  const [form, setForm] = useState({ nome: '', email: '', senha: '', programa: '', origem: 'programa' })
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -129,6 +129,37 @@ export default function NovoClientePage() {
                 onFocus={e => e.currentTarget.style.borderColor = '#334155'}
                 onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}
               />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.375rem' }}>
+                Tipo de cliente
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {([
+                  { value: 'pagante', label: 'Pagante' },
+                  { value: 'programa', label: 'Programa' },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => set('origem', opt.value)}
+                    style={{
+                      flex: 1, padding: '0.625rem', borderRadius: '0.5rem', cursor: 'pointer',
+                      fontSize: '0.875rem', fontWeight: '600',
+                      border: `1.5px solid ${form.origem === opt.value ? '#334155' : '#e5e7eb'}`,
+                      background: form.origem === opt.value ? '#334155' : 'white',
+                      color: form.origem === opt.value ? 'white' : '#374151',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                Pagante: cliente que paga pelo acesso. Programa: aluno vinculado a um programa/parceria.
+              </p>
             </div>
 
             <button type="submit" disabled={salvando}

@@ -13,6 +13,10 @@
     {
       "path": "/api/admin/cron-alertas",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/admin/cron-prazo-checklist",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

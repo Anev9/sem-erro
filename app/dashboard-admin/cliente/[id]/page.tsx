@@ -9,6 +9,7 @@ interface ClienteData {
   nome: string
   email: string | null
   ativo: boolean
+  origem: string | null
   ultimo_login: string | null
   empresas: number
   checklists: { total: number; concluidos: number; mes: number }
@@ -58,6 +59,7 @@ export default function AdminClienteDashboard() {
   const [observacoes, setObservacoes] = useState('')
   const [salvandoObs, setSalvandoObs] = useState(false)
   const [obsSalva, setObsSalva] = useState(false)
+  const [salvandoOrigem, setSalvandoOrigem] = useState(false)
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -129,6 +131,23 @@ export default function AdminClienteDashboard() {
     }
   }
 
+  async function alterarOrigem(novaOrigem: 'pagante' | 'programa') {
+    if (!cliente || cliente.origem === novaOrigem) return
+    setSalvandoOrigem(true)
+    try {
+      const res = await fetch('/api/admin/clientes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: Number(clienteId), origem: novaOrigem }),
+      })
+      if (res.ok) {
+        setCliente(prev => prev ? { ...prev, origem: novaOrigem } : prev)
+      }
+    } finally {
+      setSalvandoOrigem(false)
+    }
+  }
+
   function calcPct(v: number, t: number) {
     return t > 0 ? Math.round((v / t) * 100) : 0
   }
@@ -196,6 +215,31 @@ export default function AdminClienteDashboard() {
           <div>
             <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Empresas</p>
             <p style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', color: '#374151', fontWeight: '700' }}>{cliente.empresas}</p>
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tipo de cliente</p>
+            <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.375rem' }}>
+              {([
+                { value: 'pagante', label: 'Pagante' },
+                { value: 'programa', label: 'Programa' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => alterarOrigem(opt.value)}
+                  disabled={salvandoOrigem}
+                  style={{
+                    padding: '0.25rem 0.75rem', borderRadius: '999px', cursor: salvandoOrigem ? 'not-allowed' : 'pointer',
+                    fontSize: '0.75rem', fontWeight: '600',
+                    border: `1.5px solid ${cliente.origem === opt.value ? (opt.value === 'pagante' ? '#f97316' : '#0891b2') : '#e5e7eb'}`,
+                    background: cliente.origem === opt.value ? (opt.value === 'pagante' ? '#ffedd5' : '#cffafe') : 'white',
+                    color: cliente.origem === opt.value ? (opt.value === 'pagante' ? '#c2410c' : '#0e7490') : '#9ca3af',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Último Login</p>

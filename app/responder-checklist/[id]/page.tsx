@@ -27,6 +27,7 @@ import {
   contarRespostasPendentes,
 } from '@/lib/offline-db'
 import { toast } from 'sonner'
+import { calcularAlertaHorario } from '@/lib/prazo-horario'
 
 interface Checklist {
   id: string
@@ -35,6 +36,7 @@ interface Checklist {
   proxima_execucao?: string
   empresa_id: string
   colaborador_id: string
+  hora_limite?: string | null
   empresas?: { nome_fantasia: string }
 }
 
@@ -77,6 +79,13 @@ export default function ResponderChecklistPage() {
   const [pendentes, setPendentes] = useState(0)
   const [sincronizando, setSincronizando] = useState(false)
   const [modoCache, setModoCache] = useState(false) // true = dados vieram do cache local
+
+  // Força recalcular o alerta de horário limite a cada minuto
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const intervalo = setInterval(() => setTick(t => t + 1), 60000)
+    return () => clearInterval(intervalo)
+  }, [])
 
   useEffect(() => {
     setIsOnline(navigator.onLine)
@@ -608,6 +617,20 @@ export default function ResponderChecklistPage() {
               {totalRespondidos}/{itens.length} respondidas
             </span>
           </div>
+
+          {checklist.hora_limite && (() => {
+            const alerta = calcularAlertaHorario(checklist.hora_limite)
+            const bg = alerta?.nivel === 'vencido' ? 'rgba(239,68,68,0.9)' : alerta?.nivel === 'proximo' ? 'rgba(245,158,11,0.9)' : 'rgba(255,255,255,0.15)'
+            return (
+              <div style={{ marginTop: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.75rem', borderRadius: '9999px', backgroundColor: bg, color: 'white', fontSize: '0.8rem', fontWeight: '600' }}>
+                ⏰ {alerta?.nivel === 'vencido'
+                  ? `Prazo de hoje vencido às ${alerta.horaFormatada}`
+                  : alerta?.nivel === 'proximo'
+                    ? `Faltam ${alerta.minutosRestantes} min para o prazo (${alerta.horaFormatada})`
+                    : `Responder até ${checklist.hora_limite.slice(0, 5)}`}
+              </div>
+            )
+          })()}
         </div>
       </div>
 

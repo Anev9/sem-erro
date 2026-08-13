@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Calendar, Clock, CheckCircle, AlertCircle, PlayCircle, Trash2, Pencil } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { calcularAlertaHorario } from '@/lib/prazo-horario'
 
 type ChecklistFuturo = {
   id: string
@@ -21,6 +22,7 @@ type ChecklistFuturo = {
   recorrencia?: string | null
   dias_tolerancia?: number | null
   prazo_alerta?: string | null
+  hora_limite?: string | null
 }
 
 export default function ChecklistsFuturosPage() {
@@ -29,6 +31,13 @@ export default function ChecklistsFuturosPage() {
   const [loading, setLoading] = useState(true)
   const [userRole, setUserRole] = useState<'admin' | 'aluno'>('aluno')
   const [userId, setUserId] = useState('')
+
+  // Força recalcular os alertas de horário a cada minuto, sem precisar recarregar a página
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const intervalo = setInterval(() => setTick(t => t + 1), 60000)
+    return () => clearInterval(intervalo)
+  }, [])
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -328,6 +337,7 @@ export default function ChecklistsFuturosPage() {
                 const StatusIcon = statusInfo.icon
                 const progresso = checklist.progresso_percentual || 0
                 const alertaPrazo = obterAlertaPrazo(checklist.prazo_alerta)
+                const alertaHorario = checklist.status !== 'concluido' ? calcularAlertaHorario(checklist.hora_limite) : null
 
                 return (
                   <div
@@ -370,6 +380,16 @@ export default function ChecklistsFuturosPage() {
                         {alertaPrazo.nivel === 'proximo' && (
                           <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: '0.8rem', fontWeight: '700', border: '1.5px solid #fcd34d' }}>
                             ⏰ Vence em {alertaPrazo.diasRestantes === 0 ? 'hoje' : `${alertaPrazo.diasRestantes}d`}
+                          </span>
+                        )}
+                        {alertaHorario?.nivel === 'vencido' && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: '0.8rem', fontWeight: '700', border: '1.5px solid #fca5a5' }}>
+                            ⏰ Prazo de hoje vencido ({alertaHorario.horaFormatada})
+                          </span>
+                        )}
+                        {alertaHorario?.nivel === 'proximo' && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: '0.8rem', fontWeight: '700', border: '1.5px solid #fcd34d' }}>
+                            ⏰ Prazo em {alertaHorario.minutosRestantes} min ({alertaHorario.horaFormatada})
                           </span>
                         )}
                         <span style={{
@@ -444,6 +464,11 @@ export default function ChecklistsFuturosPage() {
                             const j = calcularJanela(checklist.proxima_execucao ?? '', checklist.dias_tolerancia!)
                             return `${j.inicio} – ${j.fim}`
                           })()}
+                        </span>
+                      )}
+                      {checklist.hora_limite && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6b7280' }}>
+                          ⏰ Até {checklist.hora_limite.slice(0, 5)}
                         </span>
                       )}
                     </div>

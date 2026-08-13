@@ -19,6 +19,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'colaborador_id é obrigatório' }, { status: 400 })
     }
 
+    if (!RESET_PASSWORD) {
+      return NextResponse.json(
+        { error: 'Senha padrão não configurada no servidor (variável COLABORADOR_DEFAULT_PASSWORD ausente).' },
+        { status: 500 }
+      )
+    }
+
     const supabase = db()
 
     // Buscar o colaborador
@@ -44,38 +51,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sem permissão para resetar a senha deste colaborador' }, { status: 403 })
     }
 
-    let authId = colaborador.auth_id
-
-    if (!authId) {
-      // Colaborador não tem conta no Supabase Auth — verificar se já existe pelo email
+    // Encontra (ou cria) a conta no Supabase Auth pelo e-mail e vincula o auth_id
+    async function resolverAuthId(): Promise<{ authId: string } | { erro: string }> {
       const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const existingAuthUser = listData?.users?.find((u) => u.email === colaborador.email)
+      const existingAuthUser = listData?.users?.find((u) => u.email === colaborador!.email)
 
+      let novoAuthId: string
       if (existingAuthUser) {
-        authId = existingAuthUser.id
+        novoAuthId = existingAuthUser.id
       } else {
-        // Criar nova conta no Supabase Auth
         const { data: created, error: createError } = await supabase.auth.admin.createUser({
-          email: colaborador.email,
+          email: colaborador!.email,
           password: RESET_PASSWORD,
           email_confirm: true,
           user_metadata: { role: 'colaborador' }
         })
         if (createError) {
-          return NextResponse.json({ error: 'Erro ao criar conta: ' + createError.message }, { status: 500 })
+          return { erro: 'Erro ao criar conta: ' + createError.message }
         }
-        authId = created.user!.id
+        novoAuthId = created.user!.id
       }
 
-      // Salvar o auth_id na tabela colaboradores
-      await supabase.from('colaboradores').update({ auth_id: authId }).eq('id', colaborador_id)
+      await supabase.from('colaboradores').update({ auth_id: novoAuthId }).eq('id', colaborador_id)
+      return { authId: novoAuthId }
+    }
+
+    let authId = colaborador.auth_id
+
+    if (!authId) {
+      // Colaborador não tem conta no Supabase Auth — verificar se já existe pelo email, ou criar
+      const resolvido = await resolverAuthId()
+      if ('erro' in resolvido) return NextResponse.json({ error: resolvido.erro }, { status: 500 })
+      authId = resolvido.authId
     }
 
     // Resetar a senha no Supabase Auth
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
+    let { error: updateError } = await supabase.auth.admin.updateUserById(
       authId,
       { password: RESET_PASSWORD }
     )
+
+    if (updateError) {
+      // auth_id pode estar "órfão" (conta apagada diretamente no Supabase Auth,
+      // por exemplo) — tenta re-resolver pelo e-mail e refazer o reset uma vez
+      // antes de desistir.
+      const resolvido = await resolverAuthId()
+      if ('erro' in resolvido) return NextResponse.json({ error: resolvido.erro }, { status: 500 })
+
+      const retry = await supabase.auth.admin.updateUserById(resolvido.authId, { password: RESET_PASSWORD })
+      updateError = retry.error
+    }
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })

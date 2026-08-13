@@ -12,6 +12,7 @@ import {
   Building2,
   Calendar
 } from 'lucide-react'
+import { calcularAlertaHorario } from '@/lib/prazo-horario'
 
 interface Empresa {
   nome_fantasia: string
@@ -42,6 +43,7 @@ interface Checklist {
   respostas_count: number
   recorrencia?: string | null
   dias_tolerancia?: number | null
+  hora_limite?: string | null
 }
 
 export default function DashboardColaborador() {
@@ -54,6 +56,31 @@ export default function DashboardColaborador() {
   const [appInstalado, setAppInstalado] = useState(false)
   const [checklistsNovos, setChecklistsNovos] = useState<string[]>([])
   const [notifDescartada, setNotifDescartada] = useState(false)
+  const [notifPermissao, setNotifPermissao] = useState<NotificationPermission | 'unsupported'>('default')
+
+  // Força recalcular os alertas de horário limite a cada minuto
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotifPermissao(Notification.permission)
+    } else {
+      setNotifPermissao('unsupported')
+    }
+    const intervalo = setInterval(() => setTick(t => t + 1), 60000)
+    return () => clearInterval(intervalo)
+  }, [])
+
+  async function ativarNotificacoesPrazo() {
+    if (!('Notification' in window)) return
+    const perm = await Notification.requestPermission()
+    setNotifPermissao(perm)
+    if (perm === 'granted') {
+      new Notification('Performe seu Mercado', {
+        body: 'Notificações ativadas! Você será alertado quando o prazo de um checklist estiver próximo.',
+        icon: '/logo-semerro.jpg',
+      })
+    }
+  }
 
   useEffect(() => {
     const handler = (e: Event) => { e.preventDefault(); setDeferredInstall(e) }
@@ -194,6 +221,34 @@ export default function DashboardColaborador() {
   const checklistsEmAndamento = checklists.filter(c => c.status === 'em_andamento')
   const checklistsConcluidos = checklists.filter(c => c.status === 'concluido')
   const checklistsAtrasados = checklists.filter(c => c.status === 'atrasado')
+
+  const checklistsComPrazoProximo = checklists.filter(c => {
+    if (c.status === 'concluido') return false
+    return calcularAlertaHorario(c.hora_limite)?.nivel === 'proximo'
+  })
+  const checklistsComPrazoVencidoHoje = checklists.filter(c => {
+    if (c.status === 'concluido') return false
+    return calcularAlertaHorario(c.hora_limite)?.nivel === 'vencido'
+  })
+
+  // Dispara uma notificação do navegador (1x por dia por checklist) quando o prazo estiver próximo
+  useEffect(() => {
+    if (notifPermissao !== 'granted' || !colaborador) return
+    const hoje = new Date().toDateString()
+    checklistsComPrazoProximo.forEach(c => {
+      const chave = `notif_prazo_${colaborador.id}_${c.id}_${hoje}`
+      if (localStorage.getItem(chave)) return
+      const alerta = calcularAlertaHorario(c.hora_limite)
+      if (!alerta) return
+      new Notification(`⏰ Prazo próximo: ${c.nome}`, {
+        body: `Responda até ${alerta.horaFormatada} — faltam ${alerta.minutosRestantes} minuto(s).`,
+        icon: '/logo-semerro.jpg',
+        tag: chave,
+      })
+      localStorage.setItem(chave, '1')
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checklistsComPrazoProximo.map(c => c.id).join(','), notifPermissao, colaborador])
 
   const labelRecorrencia: Record<string, string> = {
     diaria: '🔄 Diária',
@@ -387,6 +442,44 @@ export default function DashboardColaborador() {
           </div>
         )}
 
+        {/* Banner de prazo por horário próximo ou vencido */}
+        {(checklistsComPrazoVencidoHoje.length > 0 || checklistsComPrazoProximo.length > 0) && (
+          <div className="fade-in" style={{
+            background: checklistsComPrazoVencidoHoje.length > 0 ? '#fef2f2' : '#fffbeb',
+            border: `2px solid ${checklistsComPrazoVencidoHoje.length > 0 ? '#ef4444' : '#f59e0b'}`,
+            borderRadius: '0.875rem',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>⏰</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: '700', color: checklistsComPrazoVencidoHoje.length > 0 ? '#991b1b' : '#92400e', fontSize: '0.95rem' }}>
+                  {checklistsComPrazoVencidoHoje.length > 0
+                    ? `${checklistsComPrazoVencidoHoje.length} checklist(s) com o prazo de hoje vencido!`
+                    : `${checklistsComPrazoProximo.length} checklist(s) com prazo próximo!`}
+                </p>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: checklistsComPrazoVencidoHoje.length > 0 ? '#b91c1c' : '#b45309' }}>
+                  Confira os checklists com o horário limite destacado abaixo.
+                </p>
+              </div>
+            </div>
+            {notifPermissao === 'default' && (
+              <button
+                onClick={ativarNotificacoesPrazo}
+                style={{ padding: '0.5rem 1rem', backgroundColor: 'white', border: '1px solid #d1d5db', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}
+              >
+                🔔 Ativar notificações
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Stats */}
         <div className="fade-in" style={{
           display: 'grid',
@@ -550,7 +643,9 @@ export default function DashboardColaborador() {
                   Pendentes ({checklistsPendentes.length})
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                  {checklistsPendentes.map(checklist => (
+                  {checklistsPendentes.map(checklist => {
+                    const alertaHorario = calcularAlertaHorario(checklist.hora_limite)
+                    return (
                     <div
                       key={checklist.id}
                       className="card"
@@ -560,7 +655,7 @@ export default function DashboardColaborador() {
                         borderRadius: '1rem',
                         padding: '1.5rem',
                         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-                        border: '2px solid #fef3c7'
+                        border: alertaHorario?.nivel === 'vencido' ? '2px solid #fca5a5' : alertaHorario?.nivel === 'proximo' ? '2px solid #fcd34d' : '2px solid #fef3c7'
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem', gap: '0.5rem' }}>
@@ -571,6 +666,16 @@ export default function DashboardColaborador() {
                           {checklistsNovos.includes(checklist.id) && (
                             <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#3b82f6', color: 'white', whiteSpace: 'nowrap' }}>
                               🔔 NOVO
+                            </span>
+                          )}
+                          {alertaHorario?.nivel === 'vencido' && (
+                            <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#ef4444', color: 'white', whiteSpace: 'nowrap' }}>
+                              ⏰ Prazo vencido
+                            </span>
+                          )}
+                          {alertaHorario?.nivel === 'proximo' && (
+                            <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#f59e0b', color: 'white', whiteSpace: 'nowrap' }}>
+                              ⏰ {alertaHorario.minutosRestantes} min restantes
                             </span>
                           )}
                           <span style={{
@@ -600,6 +705,11 @@ export default function DashboardColaborador() {
                             🕐 {(() => { const j = calcularJanela(checklist.proxima_execucao, checklist.dias_tolerancia!); return `Disponível: ${j.inicio} – ${j.fim}` })()}
                           </div>
                         )}
+                        {checklist.hora_limite && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: alertaHorario?.nivel === 'vencido' ? '#dc2626' : alertaHorario?.nivel === 'proximo' ? '#b45309' : '#6b7280', fontWeight: alertaHorario?.nivel ? '600' : '400' }}>
+                            ⏰ Responder até {checklist.hora_limite.slice(0, 5)}
+                          </div>
+                        )}
                         {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ padding: '0.15rem 0.5rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '9999px', fontWeight: '600', fontSize: '0.75rem', border: '1px solid #bfdbfe' }}>
@@ -625,7 +735,8 @@ export default function DashboardColaborador() {
                         Iniciar Agora →
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -646,7 +757,9 @@ export default function DashboardColaborador() {
                   Em Andamento ({checklistsEmAndamento.length})
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                  {checklistsEmAndamento.map(checklist => (
+                  {checklistsEmAndamento.map(checklist => {
+                    const alertaHorario = calcularAlertaHorario(checklist.hora_limite)
+                    return (
                     <div
                       key={checklist.id}
                       className="card"
@@ -656,23 +769,35 @@ export default function DashboardColaborador() {
                         borderRadius: '1rem',
                         padding: '1.5rem',
                         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-                        border: '2px solid #dbeafe'
+                        border: alertaHorario?.nivel === 'vencido' ? '2px solid #fca5a5' : alertaHorario?.nivel === 'proximo' ? '2px solid #fcd34d' : '2px solid #dbeafe'
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem', gap: '0.5rem' }}>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0, flex: 1 }}>
                           {checklist.nome}
                         </h3>
-                        <span style={{
-                          padding: '0.375rem 0.75rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          backgroundColor: '#dbeafe',
-                          color: '#1e40af'
-                        }}>
-                          Em Andamento
-                        </span>
+                        <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, flexDirection: 'column', alignItems: 'flex-end' }}>
+                          {alertaHorario?.nivel === 'vencido' && (
+                            <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#ef4444', color: 'white', whiteSpace: 'nowrap' }}>
+                              ⏰ Prazo vencido
+                            </span>
+                          )}
+                          {alertaHorario?.nivel === 'proximo' && (
+                            <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#f59e0b', color: 'white', whiteSpace: 'nowrap' }}>
+                              ⏰ {alertaHorario.minutosRestantes} min restantes
+                            </span>
+                          )}
+                          <span style={{
+                            padding: '0.375rem 0.75rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            backgroundColor: '#dbeafe',
+                            color: '#1e40af'
+                          }}>
+                            Em Andamento
+                          </span>
+                        </div>
                       </div>
                       {checklist.descricao && (
                         <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
@@ -707,7 +832,7 @@ export default function DashboardColaborador() {
                           }} />
                         </div>
                       </div>
-                      {(checklist.recorrencia && checklist.recorrencia !== 'nenhuma') || (checklist.dias_tolerancia ?? 0) > 0 ? (
+                      {(checklist.recorrencia && checklist.recorrencia !== 'nenhuma') || (checklist.dias_tolerancia ?? 0) > 0 || checklist.hora_limite ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', fontSize: '0.8rem', color: '#6b7280' }}>
                           {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
                             <span style={{ padding: '0.15rem 0.5rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '9999px', fontWeight: '600', border: '1px solid #bfdbfe' }}>
@@ -717,6 +842,11 @@ export default function DashboardColaborador() {
                           {(checklist.dias_tolerancia ?? 0) > 0 && checklist.proxima_execucao && (
                             <span>
                               🕐 {(() => { const j = calcularJanela(checklist.proxima_execucao, checklist.dias_tolerancia!); return `${j.inicio} – ${j.fim}` })()}
+                            </span>
+                          )}
+                          {checklist.hora_limite && (
+                            <span style={{ fontWeight: alertaHorario?.nivel ? '700' : '400', color: alertaHorario?.nivel === 'vencido' ? '#dc2626' : alertaHorario?.nivel === 'proximo' ? '#b45309' : '#6b7280' }}>
+                              ⏰ Até {checklist.hora_limite.slice(0, 5)}
                             </span>
                           )}
                         </div>
@@ -734,7 +864,8 @@ export default function DashboardColaborador() {
                         Continuar →
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}

@@ -88,7 +88,11 @@ export default function ColaboradoresPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ colaborador_id: id })
     })
-    if (!res.ok) { toast.error('Erro ao resetar senha'); return }
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      toast.error(data?.error || 'Erro ao resetar senha')
+      return
+    }
     toast.success(`Senha de ${nome} resetada para "123mudar" com sucesso!`)
   }
 
