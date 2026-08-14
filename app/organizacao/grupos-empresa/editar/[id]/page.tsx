@@ -28,6 +28,7 @@ export default function EditarEmpresaPage() {
     senha: '',
     tipo: 'aluno',
     data_saida: '',
+    origem: 'programa',
   })
 
   const estados = [
@@ -68,6 +69,7 @@ export default function EditarEmpresaPage() {
         senha: (data as Record<string, unknown>).senha as string ?? '',
         tipo: (data as Record<string, unknown>).tipo as string ?? 'aluno',
         data_saida: data.data_saida ?? '',
+        origem: (data as Record<string, unknown>).origem as string ?? 'programa',
       })
     } catch (error) {
       console.error('Erro ao buscar empresa:', error)
@@ -389,6 +391,37 @@ export default function EditarEmpresaPage() {
                 onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
                 onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
               />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151', fontSize: '0.95rem' }}>
+                Tipo de cliente
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {([
+                  { value: 'pagante', label: 'Pagante' },
+                  { value: 'programa', label: 'Programa' },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setEmpresa({ ...empresa, origem: opt.value })}
+                    style={{
+                      flex: 1, padding: '0.875rem', borderRadius: '0.5rem', cursor: 'pointer',
+                      fontSize: '0.95rem', fontWeight: '600',
+                      border: `1.5px solid ${empresa.origem === opt.value ? (opt.value === 'pagante' ? '#f97316' : '#0891b2') : '#d1d5db'}`,
+                      background: empresa.origem === opt.value ? (opt.value === 'pagante' ? '#ffedd5' : '#cffafe') : 'white',
+                      color: empresa.origem === opt.value ? (opt.value === 'pagante' ? '#c2410c' : '#0e7490') : '#374151',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p style={{ color: '#9ca3af', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
+                Pagante: cliente que paga pelo acesso. Programa: aluno vinculado a um programa/parceria.
+              </p>
             </div>
 
             <div>

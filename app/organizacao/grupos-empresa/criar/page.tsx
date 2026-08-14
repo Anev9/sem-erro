@@ -78,6 +78,7 @@ export default function CriarEmpresaPage() {
     auditor_atribui_acao: false,
     tipo: 'aluno',
     data_saida: '',
+    origem: 'programa',
   })
 
   function set(field: string, value: string | boolean) {
@@ -294,6 +295,35 @@ export default function CriarEmpresaPage() {
                 />
                 {errors.senha && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>{errors.senha}</p>}
               </Field>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Field label="Tipo de cliente">
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {([
+                      { value: 'pagante', label: 'Pagante' },
+                      { value: 'programa', label: 'Programa' },
+                    ] as const).map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => set('origem', opt.value)}
+                        style={{
+                          flex: 1, padding: '0.75rem', borderRadius: '0.5rem', cursor: 'pointer',
+                          fontSize: '0.9rem', fontWeight: '600',
+                          border: `1.5px solid ${form.origem === opt.value ? (opt.value === 'pagante' ? '#f97316' : '#0891b2') : '#d1d5db'}`,
+                          background: form.origem === opt.value ? (opt.value === 'pagante' ? '#ffedd5' : '#cffafe') : 'white',
+                          color: form.origem === opt.value ? (opt.value === 'pagante' ? '#c2410c' : '#0e7490') : '#374151',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p style={{ color: '#9ca3af', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
+                    Pagante: cliente que paga pelo acesso. Programa: aluno vinculado a um programa/parceria.
+                  </p>
+                </Field>
+              </div>
             </div>
           </div>
 
