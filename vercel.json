@@ -16,7 +16,7 @@
     },
     {
       "path": "/api/admin/cron-prazo-checklist",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
