@@ -239,7 +239,12 @@ export default function EditarChecklistPage() {
       setMensagem('✅ Checklist atualizado com sucesso!')
       setTimeout(() => router.push('/checklists-futuros'), 1500)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+      // Erros do Supabase (PostgrestError) não são instâncias de Error, mas
+      // têm .message — sem isso, o erro real ficava escondido atrás de
+      // "Erro desconhecido".
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string } | null)?.message || 'Erro desconhecido'
       setMensagem(`❌ Erro: ${msg}`)
     } finally {
       setSalvando(false)
