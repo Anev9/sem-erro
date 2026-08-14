@@ -216,25 +216,29 @@ export default function EditarChecklistPage() {
         if (errDel) throw errDel
       }
 
-      // 3. Atualizar itens existentes e inserir novos
-      for (const item of itensValidos) {
-        if (item.id) {
-          await supabase
-            .from('checklist_futuro_itens')
-            .update({ titulo: item.titulo, descricao: item.descricao || null, ordem: item.ordem, foto_obrigatoria: item.foto_obrigatoria })
-            .eq('id', item.id)
-        } else {
-          await supabase
-            .from('checklist_futuro_itens')
-            .insert({
-              checklist_futuro_id: id,
-              titulo: item.titulo,
-              descricao: item.descricao || null,
-              ordem: item.ordem,
-              foto_obrigatoria: item.foto_obrigatoria,
-            })
-        }
-      }
+      // 3. Atualizar itens existentes e inserir novos — em paralelo, mas
+      // verificando o erro de cada um. Antes os erros eram ignorados e a
+      // tela mostrava "sucesso" mesmo quando um item não era salvo.
+      const resultadosItens = await Promise.all(
+        itensValidos.map((item) =>
+          item.id
+            ? supabase
+                .from('checklist_futuro_itens')
+                .update({ titulo: item.titulo, descricao: item.descricao || null, ordem: item.ordem, foto_obrigatoria: item.foto_obrigatoria })
+                .eq('id', item.id)
+            : supabase
+                .from('checklist_futuro_itens')
+                .insert({
+                  checklist_futuro_id: id,
+                  titulo: item.titulo,
+                  descricao: item.descricao || null,
+                  ordem: item.ordem,
+                  foto_obrigatoria: item.foto_obrigatoria,
+                })
+        )
+      )
+      const errItem = resultadosItens.find((r) => r.error)?.error
+      if (errItem) throw errItem
 
       setMensagem('✅ Checklist atualizado com sucesso!')
       setTimeout(() => router.push('/checklists-futuros'), 1500)
