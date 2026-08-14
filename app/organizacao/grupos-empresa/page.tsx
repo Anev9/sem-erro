@@ -18,6 +18,7 @@ interface Aluno {
   cnpj: string | null
   created_at: string | null
   data_saida: string | null
+  origem: string | null
 }
 
 export default function GruposEmpresaPage() {
@@ -27,6 +28,7 @@ export default function GruposEmpresaPage() {
   const [toggling, setToggling] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [ativoFilter, setAtivoFilter] = useState('todas')
+  const [origemFilter, setOrigemFilter] = useState('todas')
   const [ordenacao, setOrdenacao] = useState('nome')
 
   useEffect(() => {
@@ -71,10 +73,11 @@ export default function GruposEmpresaPage() {
     // Aspas duplas em cada célula + escape interno (RFC 4180)
     const cel = (v: string | number) => '"' + String(v).replace(/"/g, '""') + '"'
 
-    const headers = ['ID', 'Nome', 'Programa', 'Status', 'Email', 'Telefone', 'CNPJ', 'Tipo de Empresa', 'Cidade', 'Estado', 'Data de Cadastro', 'Data de Saída']
+    const headers = ['ID', 'Nome', 'Origem', 'Programa', 'Status', 'Email', 'Telefone', 'CNPJ', 'Tipo de Empresa', 'Cidade', 'Estado', 'Data de Cadastro', 'Data de Saída']
     const rows = alunosFiltrados.map((a) => [
       cel(a.id),
       cel(a.clientes || ''),
+      cel(a.origem === 'pagante' ? 'Pagante' : 'Programa'),
       cel(a.programa || ''),
       cel(a.ativo ? 'Ativo' : 'Inativo'),
       cel(a['e-mail'] || ''),
@@ -117,12 +120,14 @@ export default function GruposEmpresaPage() {
         ativoFilter === 'todas' ||
         (ativoFilter === 'ativas' && aluno.ativo === true) ||
         (ativoFilter === 'inativas' && aluno.ativo === false)
-      return matchSearch && matchAtivo
+      const matchOrigem = origemFilter === 'todas' || aluno.origem === origemFilter
+      return matchSearch && matchAtivo && matchOrigem
     })
   )
 
   const totalAtivos = alunos.filter((a) => a.ativo).length
   const totalInativos = alunos.filter((a) => !a.ativo).length
+  const totalPagantes = alunos.filter((a) => a.origem === 'pagante').length
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
@@ -146,6 +151,7 @@ export default function GruposEmpresaPage() {
             { label: 'Total de Clientes', value: alunos.length, color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
             { label: 'Ativos', value: totalAtivos, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
             { label: 'Inativos', value: totalInativos, color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+            { label: 'Pagantes', value: totalPagantes, color: '#f97316', bg: '#fff7ed', border: '#fed7aa' },
           ].map((card) => (
             <div key={card.label} style={{
               backgroundColor: card.bg, borderRadius: '0.75rem',
@@ -291,9 +297,42 @@ export default function GruposEmpresaPage() {
                   </button>
                 )
               })}
-              {(searchTerm || ativoFilter !== 'todas') && (
+              <span style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0.25rem 0 0.75rem' }}>Origem:</span>
+              {[
+                { value: 'todas', label: 'Todos' },
+                { value: 'pagante', label: 'Pagante' },
+                { value: 'programa', label: 'Programa' },
+              ].map((opt) => {
+                const active = origemFilter === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setOrigemFilter(opt.value)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+                      padding: '0.375rem 0.875rem', borderRadius: '9999px',
+                      fontSize: '0.8rem', fontWeight: active ? '700' : '500',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                      border: active ? '1.5px solid transparent' : '1.5px solid #e5e7eb',
+                      backgroundColor: active
+                        ? opt.value === 'pagante' ? '#ffedd5'
+                          : opt.value === 'programa' ? '#cffafe'
+                          : '#dbeafe'
+                        : 'white',
+                      color: active
+                        ? opt.value === 'pagante' ? '#c2410c'
+                          : opt.value === 'programa' ? '#0e7490'
+                          : '#1d4ed8'
+                        : '#6b7280',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+              {(searchTerm || ativoFilter !== 'todas' || origemFilter !== 'todas') && (
                 <button
-                  onClick={() => { setSearchTerm(''); setAtivoFilter('todas') }}
+                  onClick={() => { setSearchTerm(''); setAtivoFilter('todas'); setOrigemFilter('todas') }}
                   style={{
                     marginLeft: '0.5rem', padding: '0.375rem 0.75rem',
                     border: '1px dashed #d1d5db', borderRadius: '9999px',
@@ -323,7 +362,7 @@ export default function GruposEmpresaPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                    {['Status', 'Nome', 'Programa', 'Email', 'Localização', 'Telefone', 'Data de Saída', 'Ações'].map((h) => (
+                    {['Status', 'Nome', 'Origem', 'Programa', 'Email', 'Localização', 'Telefone', 'Data de Saída', 'Ações'].map((h) => (
                       <th key={h} style={{
                         padding: '0.75rem 1rem', textAlign: 'left',
                         fontSize: '0.75rem', fontWeight: '600',
@@ -368,6 +407,17 @@ export default function GruposEmpresaPage() {
                             {aluno.cnpj}
                           </p>
                         )}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', whiteSpace: 'nowrap' }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center',
+                          padding: '0.25rem 0.625rem', borderRadius: '9999px',
+                          fontSize: '0.72rem', fontWeight: '700',
+                          backgroundColor: aluno.origem === 'pagante' ? '#ffedd5' : '#cffafe',
+                          color: aluno.origem === 'pagante' ? '#c2410c' : '#0e7490'
+                        }}>
+                          {aluno.origem === 'pagante' ? 'Pagante' : 'Programa'}
+                        </span>
                       </td>
                       <td style={{ padding: '0.875rem 1rem', color: '#6b7280', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                         {aluno.programa || <span style={{ color: '#d1d5db' }}>—</span>}
