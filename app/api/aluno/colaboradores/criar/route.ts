@@ -36,13 +36,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sem permissão para adicionar colaborador nesta empresa' }, { status: 403 })
     }
 
-    // Verificar se já existe colaborador com este email nesta empresa (ativo ou inativo)
+    // Verificar se já existe colaborador com este email (email é único globalmente,
+    // então precisamos checar em qualquer empresa, não só na empresa de destino)
     const { data: existingColab } = await supabase
       .from('colaboradores')
-      .select('id, ativo, auth_id')
+      .select('id, ativo, auth_id, empresa_id')
       .eq('email', email)
-      .eq('empresa_id', empresa_id)
       .maybeSingle()
+
+    // Se o email já pertence a um colaborador de outra empresa, essa empresa
+    // precisa ser do mesmo aluno (senão seria possível "roubar" colaborador de outra conta)
+    if (existingColab && existingColab.empresa_id !== empresa_id) {
+      const { data: empresaAtual } = await supabase
+        .from('empresas')
+        .select('id')
+        .eq('id', existingColab.empresa_id)
+        .eq('aluno_id', alunoId)
+        .maybeSingle()
+
+      if (!empresaAtual) {
+        return NextResponse.json({ error: 'Este email já está cadastrado para outro colaborador.' }, { status: 400 })
+      }
+    }
 
     // Resolver o auth_id (criar ou reutilizar conta existente no Supabase Auth)
     let authUserId: string
@@ -85,11 +100,12 @@ export async function POST(request: NextRequest) {
       authCriado = true
     }
 
-    // Se já existe registro nesta empresa (ativo ou inativo), reativar e atualizar dados
+    // Se já existe registro com este email (nesta empresa ou em outra do mesmo aluno),
+    // reativar, mover para a empresa de destino e atualizar dados
     if (existingColab) {
       const { error: colabError } = await supabase
         .from('colaboradores')
-        .update({ auth_id: authUserId, nome, celular: celular || null, cargo, ativo: true })
+        .update({ auth_id: authUserId, nome, celular: celular || null, cargo, empresa_id, ativo: true })
         .eq('id', existingColab.id)
 
       if (colabError) {
