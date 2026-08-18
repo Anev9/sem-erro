@@ -230,6 +230,7 @@ export type Database = {
           estado: string | null
           foto_url: string | null
           id: number
+          nome_aluno: string | null
           observacoes: string | null
           origem: string
           programa: string
@@ -253,6 +254,7 @@ export type Database = {
           estado?: string | null
           foto_url?: string | null
           id?: number
+          nome_aluno?: string | null
           observacoes?: string | null
           origem?: string
           programa: string
@@ -276,6 +278,7 @@ export type Database = {
           estado?: string | null
           foto_url?: string | null
           id?: number
+          nome_aluno?: string | null
           observacoes?: string | null
           origem?: string
           programa?: string

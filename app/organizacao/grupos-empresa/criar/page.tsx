@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Building2, Mail, MapPin, Lock, CheckSquare, CalendarX } from 'lucide-react'
+import { Save, Building2, Mail, MapPin, Lock, CheckSquare, CalendarX } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 const estados = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
@@ -12,30 +15,12 @@ const estados = [
   'RS','RO','RR','SC','SP','SE','TO'
 ]
 
-const inputStyle = {
-  width: '100%',
-  padding: '0.75rem 1rem',
-  border: '1px solid #d1d5db',
-  borderRadius: '0.5rem',
-  fontSize: '0.95rem',
-  outline: 'none',
-  boxSizing: 'border-box' as const,
-  transition: 'border-color 0.2s',
-  backgroundColor: 'white',
-}
-
-const labelStyle = {
-  display: 'block',
-  marginBottom: '0.4rem',
-  fontWeight: '500' as const,
-  color: '#374151',
-  fontSize: '0.875rem',
-}
+const inputClass = 'w-full rounded-xl bg-surface-2 px-4 py-2.5 text-sm outline-none transition-colors focus:ring-2 focus:ring-surface-2'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={labelStyle}>{label}</label>
+      <label className="mb-1.5 block text-sm font-medium text-ink-muted">{label}</label>
       {children}
     </div>
   )
@@ -43,9 +28,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '2px solid #f3f4f6' }}>
-      {icon}
-      <h2 style={{ fontSize: '1rem', fontWeight: '700', color: '#111827', margin: 0 }}>{title}</h2>
+    <div className="mb-5 flex items-center gap-2 border-b border-surface-2 pb-3">
+      <span className="text-ink-faint">{icon}</span>
+      <h2 className="font-display text-sm font-semibold text-ink">{title}</h2>
     </div>
   )
 }
@@ -64,6 +49,7 @@ export default function CriarEmpresaPage() {
 
   const [form, setForm] = useState({
     clientes: '',
+    nome_aluno: '',
     cnpj: '',
     tipo_empresa: '',
     programa: '',
@@ -117,62 +103,45 @@ export default function CriarEmpresaPage() {
     }
   }
 
-  function inputProps(field: string) {
-    return {
-      style: { ...inputStyle, borderColor: errors[field] ? '#ef4444' : '#d1d5db' },
-      onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        e.currentTarget.style.borderColor = errors[field] ? '#ef4444' : '#3b82f6'
-        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)'
-      },
-      onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        e.currentTarget.style.borderColor = errors[field] ? '#ef4444' : '#d1d5db'
-        e.currentTarget.style.boxShadow = 'none'
-      },
-    }
+  function fieldClass(field: string) {
+    return `${inputClass} ${errors[field] ? 'border border-coral bg-coral-tint focus:ring-coral-tint' : ''}`
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[900px] px-6 py-8">
+        <PageHeader
+          title="Novo Grupo de Empresa"
+          subtitle="Preencha os dados abaixo para cadastrar um novo cliente"
+          backHref="/organizacao/grupos-empresa"
+        />
 
-        <button
-          onClick={() => router.push('/organizacao/grupos-empresa')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.5rem 1rem', backgroundColor: 'white',
-            border: '1px solid #e5e7eb', borderRadius: '0.5rem',
-            cursor: 'pointer', marginBottom: '1.5rem', color: '#374151', fontSize: '0.9rem'
-          }}
-        >
-          <ArrowLeft size={16} /> Voltar
-        </button>
+        <div className="grid gap-4">
 
-        {/* Page header */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#111827', margin: '0 0 0.25rem' }}>
-            Novo Grupo de Empresa
-          </h1>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>
-            Preencha os dados abaixo para cadastrar um novo cliente
-          </p>
-        </div>
-
-        <div style={{ display: 'grid', gap: '1.25rem' }}>
-
-          {/* Dados principais */}
-          <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
-            <SectionTitle icon={<Building2 size={18} style={{ color: '#3b82f6' }} />} title="Dados da Empresa" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div style={{ gridColumn: '1 / -1' }}>
+          <Card className="p-6">
+            <SectionTitle icon={<Building2 size={18} />} title="Dados da Empresa" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
                 <Field label="Nome da empresa *">
                   <input
                     type="text"
                     placeholder="Ex: Supermercado Silva Ltda"
                     value={form.clientes}
                     onChange={(e) => set('clientes', e.target.value)}
-                    {...inputProps('clientes')}
+                    className={fieldClass('clientes')}
                   />
-                  {errors.clientes && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>{errors.clientes}</p>}
+                  {errors.clientes && <p className="mt-1 text-xs text-coral">{errors.clientes}</p>}
+                </Field>
+              </div>
+              <div className="sm:col-span-2">
+                <Field label="Nome do aluno">
+                  <input
+                    type="text"
+                    placeholder="Ex: Maria Silva"
+                    value={form.nome_aluno}
+                    onChange={(e) => set('nome_aluno', e.target.value)}
+                    className={fieldClass('nome_aluno')}
+                  />
                 </Field>
               </div>
               <Field label="CNPJ">
@@ -181,7 +150,7 @@ export default function CriarEmpresaPage() {
                   placeholder="00.000.000/0000-00"
                   value={form.cnpj}
                   onChange={(e) => set('cnpj', e.target.value)}
-                  {...inputProps('cnpj')}
+                  className={fieldClass('cnpj')}
                 />
               </Field>
               <Field label="Tipo de empresa">
@@ -190,26 +159,25 @@ export default function CriarEmpresaPage() {
                   placeholder="Ex: Supermercado, Farmácia, Padaria..."
                   value={form.tipo_empresa}
                   onChange={(e) => set('tipo_empresa', e.target.value)}
-                  {...inputProps('tipo_empresa')}
+                  className={fieldClass('tipo_empresa')}
                 />
               </Field>
             </div>
-          </div>
+          </Card>
 
-          {/* Contato */}
-          <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
-            <SectionTitle icon={<Mail size={18} style={{ color: '#10b981' }} />} title="Contato" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div style={{ gridColumn: '1 / -1' }}>
+          <Card className="p-6">
+            <SectionTitle icon={<Mail size={18} />} title="Contato" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
                 <Field label="Email *">
                   <input
                     type="email"
                     placeholder="contato@empresa.com"
                     value={form['e-mail']}
                     onChange={(e) => set('e-mail', e.target.value)}
-                    {...inputProps('e-mail')}
+                    className={fieldClass('e-mail')}
                   />
-                  {errors['e-mail'] && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>{errors['e-mail']}</p>}
+                  {errors['e-mail'] && <p className="mt-1 text-xs text-coral">{errors['e-mail']}</p>}
                 </Field>
               </div>
               <Field label="Telefone">
@@ -218,7 +186,7 @@ export default function CriarEmpresaPage() {
                   placeholder="(00) 0000-0000"
                   value={form.telefone}
                   onChange={(e) => set('telefone', e.target.value)}
-                  {...inputProps('telefone')}
+                  className={fieldClass('telefone')}
                 />
               </Field>
               <Field label="Celular / WhatsApp">
@@ -227,24 +195,23 @@ export default function CriarEmpresaPage() {
                   placeholder="(00) 00000-0000"
                   value={form.celular}
                   onChange={(e) => set('celular', e.target.value)}
-                  {...inputProps('celular')}
+                  className={fieldClass('celular')}
                 />
               </Field>
             </div>
-          </div>
+          </Card>
 
-          {/* Endereço */}
-          <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
-            <SectionTitle icon={<MapPin size={18} style={{ color: '#f59e0b' }} />} title="Endereço" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div style={{ gridColumn: '1 / -1' }}>
+          <Card className="p-6">
+            <SectionTitle icon={<MapPin size={18} />} title="Endereço" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
                 <Field label="Endereço">
                   <input
                     type="text"
                     placeholder="Rua, número, bairro"
                     value={form.endereco}
                     onChange={(e) => set('endereco', e.target.value)}
-                    {...inputProps('endereco')}
+                    className={fieldClass('endereco')}
                   />
                 </Field>
               </div>
@@ -254,35 +221,32 @@ export default function CriarEmpresaPage() {
                   placeholder="Nome da cidade"
                   value={form.cidade}
                   onChange={(e) => set('cidade', e.target.value)}
-                  {...inputProps('cidade')}
+                  className={fieldClass('cidade')}
                 />
               </Field>
               <Field label="Estado">
                 <select
                   value={form.estado}
                   onChange={(e) => set('estado', e.target.value)}
-                  style={{ ...inputStyle, borderColor: '#d1d5db', cursor: 'pointer' }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)' }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = '#d1d5db'; e.currentTarget.style.boxShadow = 'none' }}
+                  className={`${inputClass} cursor-pointer border-transparent`}
                 >
                   <option value="">Selecione o estado</option>
                   {estados.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
                 </select>
               </Field>
             </div>
-          </div>
+          </Card>
 
-          {/* Acesso */}
-          <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
-            <SectionTitle icon={<Lock size={18} style={{ color: '#8b5cf6' }} />} title="Acesso ao Sistema" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <Card className="p-6">
+            <SectionTitle icon={<Lock size={18} />} title="Acesso ao Sistema" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Programa / Plano">
                 <input
                   type="text"
                   placeholder="Ex: IMPULSO, BÁSICO..."
                   value={form.programa}
                   onChange={(e) => set('programa', e.target.value)}
-                  {...inputProps('programa')}
+                  className={fieldClass('programa')}
                 />
               </Field>
               <Field label="Senha de acesso *">
@@ -291,115 +255,92 @@ export default function CriarEmpresaPage() {
                   placeholder="Senha para login do cliente"
                   value={form.senha}
                   onChange={(e) => set('senha', e.target.value)}
-                  {...inputProps('senha')}
+                  className={fieldClass('senha')}
                 />
-                {errors.senha && <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>{errors.senha}</p>}
+                {errors.senha && <p className="mt-1 text-xs text-coral">{errors.senha}</p>}
               </Field>
-              <div style={{ gridColumn: '1 / -1' }}>
+              <div className="sm:col-span-2">
                 <Field label="Tipo de cliente">
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div className="flex gap-2">
                     {([
                       { value: 'pagante', label: 'Pagante' },
                       { value: 'programa', label: 'Programa' },
-                    ] as const).map(opt => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => set('origem', opt.value)}
-                        style={{
-                          flex: 1, padding: '0.75rem', borderRadius: '0.5rem', cursor: 'pointer',
-                          fontSize: '0.9rem', fontWeight: '600',
-                          border: `1.5px solid ${form.origem === opt.value ? (opt.value === 'pagante' ? '#f97316' : '#0891b2') : '#d1d5db'}`,
-                          background: form.origem === opt.value ? (opt.value === 'pagante' ? '#ffedd5' : '#cffafe') : 'white',
-                          color: form.origem === opt.value ? (opt.value === 'pagante' ? '#c2410c' : '#0e7490') : '#374151',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                    ] as const).map(opt => {
+                      const active = form.origem === opt.value
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => set('origem', opt.value)}
+                          className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                            active
+                              ? 'border-brand bg-brand text-white'
+                              : 'border-transparent bg-white text-ink-muted '
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
                   </div>
-                  <p style={{ color: '#9ca3af', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
+                  <p className="mt-1.5 text-xs text-ink-faint">
                     Pagante: cliente que paga pelo acesso. Programa: aluno vinculado a um programa/parceria.
                   </p>
                 </Field>
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Data de Saída */}
-          <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
-            <SectionTitle icon={<CalendarX size={18} style={{ color: '#ef4444' }} />} title="Data de Saída do App" />
+          <Card className="p-6">
+            <SectionTitle icon={<CalendarX size={18} />} title="Data de Saída do App" />
             <Field label="Data de saída (opcional)">
               <input
                 type="date"
                 value={form.data_saida}
                 onChange={(e) => set('data_saida', e.target.value)}
-                {...inputProps('data_saida')}
+                className={fieldClass('data_saida')}
               />
-              <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
+              <p className="mt-1.5 text-xs text-ink-faint">
                 Preencha apenas se o cliente encerrou o uso do app
               </p>
             </Field>
-          </div>
+          </Card>
 
-          {/* Configurações */}
-          <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
-            <SectionTitle icon={<CheckSquare size={18} style={{ color: '#ef4444' }} />} title="Configurações" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <Card className="p-6">
+            <SectionTitle icon={<CheckSquare size={18} />} title="Configurações" />
+            <div className="flex flex-col gap-3">
               {[
                 { field: 'ativo', label: 'Cadastro ativo', desc: 'O cliente poderá acessar o sistema' },
                 { field: 'auditor_atribui_acao', label: 'Auditor atribui ação no checklist', desc: 'Permite que o auditor defina responsáveis por ações corretivas' },
               ].map(({ field, label, desc }) => (
-                <label key={field} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
-                  cursor: 'pointer', padding: '0.875rem 1rem',
-                  border: '1px solid #e5e7eb', borderRadius: '0.5rem',
-                  backgroundColor: form[field as keyof typeof form] ? '#f0fdf4' : '#fafafa',
-                  transition: 'all 0.2s'
-                }}>
+                <label
+                  key={field}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl px-4 py-3.5 transition-colors ${
+                    form[field as keyof typeof form] ? 'bg-teal-tint' : 'bg-surface-2'
+                  }`}
+                >
                   <input
                     type="checkbox"
                     checked={form[field as keyof typeof form] as boolean}
                     onChange={(e) => set(field, e.target.checked)}
-                    style={{ width: '1.125rem', height: '1.125rem', marginTop: '0.1rem', cursor: 'pointer', accentColor: '#10b981' }}
+                    className="mt-0.5 h-4.5 w-4.5 cursor-pointer accent-teal"
                   />
                   <div>
-                    <p style={{ fontWeight: '600', color: '#111827', margin: '0 0 0.15rem', fontSize: '0.9rem' }}>{label}</p>
-                    <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: 0 }}>{desc}</p>
+                    <p className="text-sm font-semibold text-ink">{label}</p>
+                    <p className="text-xs text-ink-muted">{desc}</p>
                   </div>
                 </label>
               ))}
             </div>
-          </div>
+          </Card>
 
-          {/* Botões */}
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingBottom: '1rem' }}>
-            <button
-              onClick={() => router.push('/organizacao/grupos-empresa')}
-              style={{
-                padding: '0.75rem 2rem', border: '1px solid #d1d5db',
-                borderRadius: '0.5rem', cursor: 'pointer',
-                fontSize: '0.95rem', fontWeight: '500',
-                backgroundColor: 'white', color: '#374151'
-              }}
-            >
+          <div className="flex justify-end gap-3 pb-4">
+            <Button variant="secondary" onClick={() => router.push('/organizacao/grupos-empresa')}>
               Cancelar
-            </button>
-            <button
-              onClick={salvar}
-              disabled={saving}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                padding: '0.75rem 2rem', backgroundColor: saving ? '#9ca3af' : '#10b981',
-                color: 'white', border: 'none', borderRadius: '0.5rem',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                fontWeight: '700', fontSize: '0.95rem'
-              }}
-            >
-              <Save size={16} />
+            </Button>
+            <Button variant="primary" icon={<Save size={16} />} onClick={salvar} disabled={saving}>
               {saving ? 'Salvando...' : 'Salvar cadastro'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

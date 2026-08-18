@@ -2,21 +2,39 @@
 
 @import "tailwindcss";
 
-:root {
-  --sidebar-bg: #3b4d61;
-  --sidebar-hover: #4a5f76;
-}
+@theme {
+  --font-sans: 'Work Sans', sans-serif;
+  --font-display: 'Sora', sans-serif;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  --color-bg-1: #cfe6fb;
+  --color-bg-2: #eaf4fc;
+  --color-surface-2: #f2f7fc;
+
+  --color-ink: #142137;
+  --color-ink-muted: #64758c;
+  --color-ink-faint: #9aa9be;
+
+  --color-brand: #ff7a3d;
+  --color-brand-tint: #ffe7d6;
+  --color-violet: #8a6ff2;
+  --color-violet-tint: #e9e3fe;
+  --color-teal: #16b88a;
+  --color-teal-tint: #d7f5ec;
+  --color-blue: #4c8bff;
+  --color-blue-tint: #e1ecff;
+  --color-coral: #fb5c66;
+  --color-coral-tint: #ffe2e4;
+  --color-amber: #f5a524;
+  --color-amber-tint: #fef1d9;
+
+  --shadow-soft: 0 22px 40px -26px rgba(20,50,90,0.30), 0 3px 10px -2px rgba(20,50,90,0.08);
+  --shadow-soft-sm: 0 10px 22px -14px rgba(20,50,90,0.22);
 }
 
 body {
   font-family: 'Work Sans', sans-serif;
-  background: #ffffff;
-  color: #2c3e50;
+  background: radial-gradient(1100px 520px at 15% -10%, var(--color-bg-2), var(--color-bg-1)) fixed;
+  color: var(--color-ink);
 }
 
 .gradient-text {
@@ -112,10 +130,6 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb {
   background: #555;
 }
 
-/* ===== VARIÁVEIS DE TEMA (base para futuras expansões) ===== */
 :root {
-  --color-brand: #f97316;
-  --color-brand-dark: #ea580c;
-  --color-nav: #334155;
   --transition-theme: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }

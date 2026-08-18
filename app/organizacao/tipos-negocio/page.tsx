@@ -11,7 +11,7 @@ export default function TiposNegocioPage() {
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
         
         <button
-          onClick={() => router.push('/organizacao')}
+          onClick={() => router.push('/dashboard-admin')}
           style={{
             display: 'flex',
             alignItems: 'center',

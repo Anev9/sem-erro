@@ -2,8 +2,27 @@
 
 import { useLang } from '../contexts/LanguageContext'
 
-export function LanguageToggle() {
+export function LanguageToggle({ variant = 'dark' }: { variant?: 'dark' | 'light' }) {
   const { lang, setLang } = useLang()
+
+  if (variant === 'light') {
+    return (
+      <div className="flex items-center overflow-hidden rounded-xl bg-surface-2 p-1 flex-shrink-0">
+        {(['pt', 'en'] as const).map((l) => (
+          <button
+            key={l}
+            onClick={() => setLang(l)}
+            title={l === 'pt' ? 'Português' : 'English'}
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+              lang === l ? 'bg-white text-ink shadow-soft-sm' : 'text-ink-muted'
+            }`}
+          >
+            {l.toUpperCase()}
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem', overflow: 'hidden', flexShrink: 0 }}>

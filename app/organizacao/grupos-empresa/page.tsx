@@ -2,13 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Download, Plus, Search, CheckCircle, XCircle, Pencil, Building2, CalendarX } from 'lucide-react'
+import { Download, Plus, Search, CheckCircle, XCircle, Pencil, Building2, CalendarX } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface Aluno {
   id: number
   programa: string | null
   clientes: string | null
+  nome_aluno: string | null
   'e-mail': string | null
   telefone: string | null
   tipo: string | null
@@ -73,10 +78,11 @@ export default function GruposEmpresaPage() {
     // Aspas duplas em cada célula + escape interno (RFC 4180)
     const cel = (v: string | number) => '"' + String(v).replace(/"/g, '""') + '"'
 
-    const headers = ['ID', 'Nome', 'Origem', 'Programa', 'Status', 'Email', 'Telefone', 'CNPJ', 'Tipo de Empresa', 'Cidade', 'Estado', 'Data de Cadastro', 'Data de Saída']
+    const headers = ['ID', 'Nome', 'Nome do Aluno', 'Origem', 'Programa', 'Status', 'Email', 'Telefone', 'CNPJ', 'Tipo de Empresa', 'Cidade', 'Estado', 'Data de Cadastro', 'Data de Saída']
     const rows = alunosFiltrados.map((a) => [
       cel(a.id),
       cel(a.clientes || ''),
+      cel(a.nome_aluno || ''),
       cel(a.origem === 'pagante' ? 'Pagante' : 'Programa'),
       cel(a.programa || ''),
       cel(a.ativo ? 'Ativo' : 'Inativo'),
@@ -92,7 +98,7 @@ export default function GruposEmpresaPage() {
 
     // Separador ponto-e-vírgula (padrão Excel pt-BR) + CRLF entre linhas
     const csv = [headers.map(cel), ...rows].map((row) => row.join(';')).join('\r\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -113,6 +119,7 @@ export default function GruposEmpresaPage() {
       const s = searchTerm.toLowerCase()
       const matchSearch =
         (aluno.clientes || '').toLowerCase().includes(s) ||
+        (aluno.nome_aluno || '').toLowerCase().includes(s) ||
         (aluno.programa || '').toLowerCase().includes(s) ||
         (aluno['e-mail'] || '').toLowerCase().includes(s) ||
         (aluno.cidade || '').toLowerCase().includes(s)
@@ -129,202 +136,110 @@ export default function GruposEmpresaPage() {
   const totalInativos = alunos.filter((a) => !a.ativo).length
   const totalPagantes = alunos.filter((a) => a.origem === 'pagante').length
 
+  const statCards = [
+    { label: 'Total de Clientes', value: alunos.length, valueClass: 'text-ink' },
+    { label: 'Ativos', value: totalAtivos, valueClass: 'text-teal' },
+    { label: 'Inativos', value: totalInativos, valueClass: 'text-coral' },
+    { label: 'Pagantes', value: totalPagantes, valueClass: 'text-brand' },
+  ]
+
+  const statusPills = [
+    { value: 'todas', label: 'Todos', count: alunos.length },
+    { value: 'ativas', label: 'Ativos', count: totalAtivos },
+    { value: 'inativas', label: 'Inativos', count: totalInativos },
+  ]
+
+  const origemPills = [
+    { value: 'todas', label: 'Todos' },
+    { value: 'pagante', label: 'Pagante' },
+    { value: 'programa', label: 'Programa' },
+  ]
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1600px] px-6 py-8">
+        <PageHeader
+          title="Grupos de Empresas"
+          subtitle={`${alunosFiltrados.length} resultado${alunosFiltrados.length !== 1 ? 's' : ''}`}
+          backHref="/dashboard-admin"
+          actions={
+            <>
+              <Button variant="primary" icon={<Plus size={16} />} onClick={() => router.push('/organizacao/grupos-empresa/criar')}>
+                Criar novo
+              </Button>
+              <Button variant="secondary" icon={<Download size={16} />} onClick={exportarCSV}>
+                Exportar CSV
+              </Button>
+            </>
+          }
+        />
 
-        <button
-          onClick={() => router.push('/dashboard-admin')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.5rem 1rem', backgroundColor: 'white',
-            border: '1px solid #e5e7eb', borderRadius: '0.5rem',
-            cursor: 'pointer', marginBottom: '2rem', color: '#374151', fontSize: '0.9rem'
-          }}
-        >
-          <ArrowLeft size={16} /> Voltar
-        </button>
-
-        {/* Cards resumo */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-          {[
-            { label: 'Total de Clientes', value: alunos.length, color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
-            { label: 'Ativos', value: totalAtivos, color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
-            { label: 'Inativos', value: totalInativos, color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
-            { label: 'Pagantes', value: totalPagantes, color: '#f97316', bg: '#fff7ed', border: '#fed7aa' },
-          ].map((card) => (
-            <div key={card.label} style={{
-              backgroundColor: card.bg, borderRadius: '0.75rem',
-              padding: '1.25rem 1.5rem', border: `1px solid ${card.border}`
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <Building2 size={16} style={{ color: card.color }} />
-                <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>{card.label}</p>
-              </div>
-              <p style={{ color: card.color, fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>{card.value}</p>
-            </div>
+        <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
+          {statCards.map((card) => (
+            <Card key={card.label} className="p-4">
+              <p className="mb-1.5 text-sm text-ink-muted">{card.label}</p>
+              <p className={`font-display text-2xl font-bold ${card.valueClass}`}>{card.value}</p>
+            </Card>
           ))}
         </div>
 
-        <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-
-          {/* Header */}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '1.5rem 2rem', borderBottom: '1px solid #f3f4f6', flexWrap: 'wrap', gap: '1rem'
-          }}>
-            <div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827', margin: 0 }}>
-                Grupos de Empresas
-              </h1>
-              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.25rem 0 0' }}>
-                {alunosFiltrados.length} resultado{alunosFiltrados.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={() => router.push('/organizacao/grupos-empresa/criar')}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  padding: '0.625rem 1.25rem', backgroundColor: '#10b981',
-                  color: 'white', border: 'none', borderRadius: '0.5rem',
-                  cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem'
-                }}
-              >
-                <Plus size={16} /> Criar novo
-              </button>
-              <button
-                onClick={exportarCSV}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  padding: '0.625rem 1.25rem', backgroundColor: '#3b82f6',
-                  color: 'white', border: 'none', borderRadius: '0.5rem',
-                  cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem'
-                }}
-              >
-                <Download size={16} /> Exportar CSV
-              </button>
-            </div>
-          </div>
-
-          {/* Filtros */}
-          <div style={{ padding: '1rem 2rem', borderBottom: '1px solid #f3f4f6', backgroundColor: '#fafafa' }}>
-            {/* Linha 1: busca + ordenação */}
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.875rem', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
-                <Search size={15} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+        <Card className="overflow-hidden">
+          <div className="p-4">
+            <div className="mb-3 flex flex-wrap gap-2">
+              <div className="relative min-w-[220px] flex-1">
+                <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
                 <input
                   type="text"
-                  placeholder="Buscar por nome, programa, email ou cidade..."
+                  placeholder="Buscar por nome, aluno, programa, email ou cidade..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: '100%', padding: '0.625rem 2.5rem 0.625rem 2.25rem',
-                    border: '1px solid #e5e7eb', borderRadius: '0.5rem',
-                    fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box',
-                    backgroundColor: 'white', transition: 'border-color 0.2s, box-shadow 0.2s'
-                  }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)' }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none' }}
+                  className="w-full rounded-xl bg-surface-2 py-2 pl-9 pr-8 text-sm outline-none placeholder:text-ink-faint"
                 />
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    style={{
-                      position: 'absolute', right: '0.625rem', top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af',
-                      fontSize: '1rem', lineHeight: 1, padding: '0.1rem 0.25rem'
-                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-ink-faint hover:text-ink"
                   >×</button>
                 )}
               </div>
               <select
                 value={ordenacao}
                 onChange={(e) => setOrdenacao(e.target.value)}
-                style={{
-                  padding: '0.625rem 0.875rem', border: '1px solid #e5e7eb',
-                  borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none',
-                  cursor: 'pointer', backgroundColor: 'white', color: '#374151',
-                  minWidth: '180px'
-                }}
+                className="min-w-[170px] cursor-pointer rounded-xl bg-surface-2 px-3 py-2 text-sm text-ink-muted outline-none"
               >
-                <option value="nome">↕ Ordenar por nome</option>
-                <option value="programa">↕ Ordenar por programa</option>
-                <option value="data">↕ Ordenar por data</option>
+                <option value="nome">Ordenar por nome</option>
+                <option value="programa">Ordenar por programa</option>
+                <option value="data">Ordenar por data</option>
               </select>
             </div>
 
-            {/* Linha 2: pills de status */}
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.8rem', color: '#9ca3af', marginRight: '0.25rem' }}>Status:</span>
-              {[
-                { value: 'todas', label: 'Todos', count: alunos.length },
-                { value: 'ativas', label: 'Ativos', count: totalAtivos },
-                { value: 'inativas', label: 'Inativos', count: totalInativos },
-              ].map((opt) => {
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 text-xs text-ink-faint">Status:</span>
+              {statusPills.map((opt) => {
                 const active = ativoFilter === opt.value
                 return (
                   <button
                     key={opt.value}
                     onClick={() => setAtivoFilter(opt.value)}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-                      padding: '0.375rem 0.875rem', borderRadius: '9999px',
-                      fontSize: '0.8rem', fontWeight: active ? '700' : '500',
-                      cursor: 'pointer', transition: 'all 0.15s',
-                      border: active ? '1.5px solid transparent' : '1.5px solid #e5e7eb',
-                      backgroundColor: active
-                        ? opt.value === 'ativas' ? '#dcfce7'
-                          : opt.value === 'inativas' ? '#fee2e2'
-                          : '#dbeafe'
-                        : 'white',
-                      color: active
-                        ? opt.value === 'ativas' ? '#15803d'
-                          : opt.value === 'inativas' ? '#b91c1c'
-                          : '#1d4ed8'
-                        : '#6b7280',
-                    }}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors ${
+                      active ? 'bg-brand font-bold text-white' : 'bg-surface-2 font-medium text-ink-muted'
+                    }`}
                   >
                     {opt.label}
-                    <span style={{
-                      backgroundColor: active ? 'rgba(0,0,0,0.1)' : '#f3f4f6',
-                      color: active ? 'inherit' : '#9ca3af',
-                      borderRadius: '9999px', padding: '0 0.375rem',
-                      fontSize: '0.72rem', fontWeight: '700'
-                    }}>
-                      {opt.count}
-                    </span>
+                    <span className={active ? 'text-white/70' : 'text-ink-faint'}>{opt.count}</span>
                   </button>
                 )
               })}
-              <span style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0 0.25rem 0 0.75rem' }}>Origem:</span>
-              {[
-                { value: 'todas', label: 'Todos' },
-                { value: 'pagante', label: 'Pagante' },
-                { value: 'programa', label: 'Programa' },
-              ].map((opt) => {
+              <span className="ml-3 mr-1 text-xs text-ink-faint">Origem:</span>
+              {origemPills.map((opt) => {
                 const active = origemFilter === opt.value
                 return (
                   <button
                     key={opt.value}
                     onClick={() => setOrigemFilter(opt.value)}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-                      padding: '0.375rem 0.875rem', borderRadius: '9999px',
-                      fontSize: '0.8rem', fontWeight: active ? '700' : '500',
-                      cursor: 'pointer', transition: 'all 0.15s',
-                      border: active ? '1.5px solid transparent' : '1.5px solid #e5e7eb',
-                      backgroundColor: active
-                        ? opt.value === 'pagante' ? '#ffedd5'
-                          : opt.value === 'programa' ? '#cffafe'
-                          : '#dbeafe'
-                        : 'white',
-                      color: active
-                        ? opt.value === 'pagante' ? '#c2410c'
-                          : opt.value === 'programa' ? '#0e7490'
-                          : '#1d4ed8'
-                        : '#6b7280',
-                    }}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors ${
+                      active ? 'bg-brand font-bold text-white' : 'bg-surface-2 font-medium text-ink-muted'
+                    }`}
                   >
                     {opt.label}
                   </button>
@@ -333,12 +248,7 @@ export default function GruposEmpresaPage() {
               {(searchTerm || ativoFilter !== 'todas' || origemFilter !== 'todas') && (
                 <button
                   onClick={() => { setSearchTerm(''); setAtivoFilter('todas'); setOrigemFilter('todas') }}
-                  style={{
-                    marginLeft: '0.5rem', padding: '0.375rem 0.75rem',
-                    border: '1px dashed #d1d5db', borderRadius: '9999px',
-                    fontSize: '0.8rem', color: '#9ca3af', cursor: 'pointer',
-                    backgroundColor: 'transparent'
-                  }}
+                  className="ml-2 cursor-pointer rounded-full px-2.5 py-1 text-xs text-ink-faint hover:text-ink-muted"
                 >
                   Limpar filtros
                 </button>
@@ -346,123 +256,80 @@ export default function GruposEmpresaPage() {
             </div>
           </div>
 
-          {/* Tabela */}
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏳</div>
-              Carregando...
-            </div>
+            <div className="py-16 text-center text-ink-faint">Carregando...</div>
           ) : alunosFiltrados.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>
-              <Building2 size={40} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.3 }} />
+            <div className="py-16 text-center text-ink-faint">
+              <Building2 size={36} className="mx-auto mb-3 opacity-30" />
               Nenhum resultado encontrado
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
                 <thead>
-                  <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                    {['Status', 'Nome', 'Origem', 'Programa', 'Email', 'Localização', 'Telefone', 'Data de Saída', 'Ações'].map((h) => (
-                      <th key={h} style={{
-                        padding: '0.75rem 1rem', textAlign: 'left',
-                        fontSize: '0.75rem', fontWeight: '600',
-                        color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em',
-                        whiteSpace: 'nowrap'
-                      }}>{h}</th>
+                  <tr>
+                    {['Status', 'Nome', 'Aluno', 'Origem', 'Programa', 'Email', 'Localização', 'Telefone', 'Data de Saída', 'Ações'].map((h) => (
+                      <th key={h} className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-ink-faint">
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {alunosFiltrados.map((aluno, idx) => (
-                    <tr
-                      key={aluno.id}
-                      style={{
-                        borderBottom: '1px solid #f3f4f6',
-                        backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa',
-                        transition: 'background-color 0.15s'
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0fdf4')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = idx % 2 === 0 ? 'white' : '#fafafa')}
-                    >
-                      <td style={{ padding: '0.875rem 1rem', whiteSpace: 'nowrap' }}>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-                          padding: '0.25rem 0.625rem', borderRadius: '9999px',
-                          fontSize: '0.75rem', fontWeight: '600',
-                          backgroundColor: aluno.ativo ? '#dcfce7' : '#fee2e2',
-                          color: aluno.ativo ? '#15803d' : '#b91c1c'
-                        }}>
-                          {aluno.ativo
-                            ? <><CheckCircle size={12} /> Ativo</>
-                            : <><XCircle size={12} /> Inativo</>
-                          }
-                        </span>
+                  {alunosFiltrados.map((aluno) => (
+                    <tr key={aluno.id} className="transition-colors hover:bg-surface-2">
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <Badge tone={aluno.ativo ? 'success' : 'danger'}>
+                          {aluno.ativo ? <><CheckCircle size={12} /> Ativo</> : <><XCircle size={12} /> Inativo</>}
+                        </Badge>
                       </td>
-                      <td style={{ padding: '0.875rem 1rem' }}>
-                        <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem' }}>
-                          {aluno.clientes || <em style={{ color: '#9ca3af' }}>Sem nome</em>}
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-semibold text-ink">
+                          {aluno.clientes || <em className="text-ink-faint">Sem nome</em>}
                         </span>
-                        {aluno.cnpj && (
-                          <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: '0.1rem 0 0' }}>
-                            {aluno.cnpj}
-                          </p>
-                        )}
+                        {aluno.cnpj && <p className="mt-0.5 text-xs text-ink-faint">{aluno.cnpj}</p>}
                       </td>
-                      <td style={{ padding: '0.875rem 1rem', whiteSpace: 'nowrap' }}>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center',
-                          padding: '0.25rem 0.625rem', borderRadius: '9999px',
-                          fontSize: '0.72rem', fontWeight: '700',
-                          backgroundColor: aluno.origem === 'pagante' ? '#ffedd5' : '#cffafe',
-                          color: aluno.origem === 'pagante' ? '#c2410c' : '#0e7490'
-                        }}>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-ink-muted">
+                        {aluno.nome_aluno || <span className="text-ink-faint">—</span>}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <Badge tone={aluno.origem === 'pagante' ? 'brand' : 'info'}>
                           {aluno.origem === 'pagante' ? 'Pagante' : 'Programa'}
-                        </span>
+                        </Badge>
                       </td>
-                      <td style={{ padding: '0.875rem 1rem', color: '#6b7280', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
-                        {aluno.programa || <span style={{ color: '#d1d5db' }}>—</span>}
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-ink-muted">
+                        {aluno.programa || <span className="text-ink-faint">—</span>}
                       </td>
-                      <td style={{ padding: '0.875rem 1rem', color: '#6b7280', fontSize: '0.875rem' }}>
-                        {aluno['e-mail'] || <span style={{ color: '#d1d5db' }}>—</span>}
+                      <td className="px-4 py-3 text-sm text-ink-muted">
+                        {aluno['e-mail'] || <span className="text-ink-faint">—</span>}
                       </td>
-                      <td style={{ padding: '0.875rem 1rem', color: '#6b7280', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-ink-muted">
                         {aluno.cidade && aluno.estado
                           ? `${aluno.cidade} / ${aluno.estado}`
-                          : aluno.cidade || aluno.estado || <span style={{ color: '#d1d5db' }}>—</span>
+                          : aluno.cidade || aluno.estado || <span className="text-ink-faint">—</span>
                         }
                       </td>
-                      <td style={{ padding: '0.875rem 1rem', color: '#6b7280', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
-                        {aluno.telefone || <span style={{ color: '#d1d5db' }}>—</span>}
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-ink-muted">
+                        {aluno.telefone || <span className="text-ink-faint">—</span>}
                       </td>
-                      <td style={{ padding: '0.875rem 1rem', whiteSpace: 'nowrap' }}>
+                      <td className="whitespace-nowrap px-4 py-3">
                         {aluno.data_saida ? (
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-                            padding: '0.25rem 0.625rem', borderRadius: '9999px',
-                            fontSize: '0.75rem', fontWeight: '600',
-                            backgroundColor: '#fef2f2', color: '#b91c1c'
-                          }}>
+                          <Badge tone="danger">
                             <CalendarX size={12} />
                             {new Date(aluno.data_saida).toLocaleDateString('pt-BR')}
-                          </span>
+                          </Badge>
                         ) : (
-                          <span style={{ color: '#d1d5db', fontSize: '0.875rem' }}>—</span>
+                          <span className="text-sm text-ink-faint">—</span>
                         )}
                       </td>
-                      <td style={{ padding: '0.875rem 1rem', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <div className="flex gap-2">
                           <button
                             onClick={() => toggleAtivo(aluno)}
                             disabled={toggling === aluno.id}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: '0.25rem',
-                              padding: '0.375rem 0.75rem', border: 'none', borderRadius: '0.375rem',
-                              cursor: toggling === aluno.id ? 'not-allowed' : 'pointer',
-                              fontWeight: '600', fontSize: '0.8rem',
-                              backgroundColor: aluno.ativo ? '#fee2e2' : '#dcfce7',
-                              color: aluno.ativo ? '#dc2626' : '#16a34a',
-                              opacity: toggling === aluno.id ? 0.6 : 1
-                            }}
+                            className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-opacity disabled:cursor-not-allowed disabled:opacity-60 ${
+                              aluno.ativo ? 'bg-coral-tint text-coral' : 'bg-teal-tint text-teal'
+                            }`}
                           >
                             {toggling === aluno.id
                               ? '...'
@@ -473,13 +340,7 @@ export default function GruposEmpresaPage() {
                           </button>
                           <button
                             onClick={() => router.push(`/organizacao/grupos-empresa/editar/${aluno.id}`)}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: '0.25rem',
-                              padding: '0.375rem 0.75rem', border: '1px solid #e5e7eb',
-                              borderRadius: '0.375rem', cursor: 'pointer',
-                              fontWeight: '500', fontSize: '0.8rem',
-                              backgroundColor: 'white', color: '#374151'
-                            }}
+                            className="flex items-center gap-1 rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink-muted hover:text-ink"
                           >
                             <Pencil size={13} /> Editar
                           </button>
@@ -491,7 +352,7 @@ export default function GruposEmpresaPage() {
               </table>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )

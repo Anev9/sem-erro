@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { Search, Download, Inbox } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface LogEntry {
   id: string
@@ -13,14 +18,22 @@ interface LogEntry {
 }
 
 const ACOES_LABELS: Record<string, string> = {
-  ativo_alterado: '🔄 Status alterado',
-  cliente_criado: '➕ Cliente criado',
-  cliente_excluido: '🗑️ Cliente excluído',
-  checklist_criado: '📋 Checklist criado',
-  acao_criada: '⚡ Ação criada',
-  acao_concluida: '✅ Ação concluída',
-  login: '🔑 Login',
+  ativo_alterado: 'Status alterado',
+  cliente_criado: 'Cliente criado',
+  cliente_excluido: 'Cliente excluído',
+  checklist_criado: 'Checklist criado',
+  acao_criada: 'Ação criada',
+  acao_concluida: 'Ação concluída',
+  login: 'Login',
 }
+
+function tonFor(acao: string): 'danger' | 'success' | 'info' {
+  if (acao.includes('exclu')) return 'danger'
+  if (acao.includes('cria')) return 'success'
+  return 'info'
+}
+
+const inputClass = 'rounded-xl bg-surface-2 px-3.5 py-2 text-sm outline-none placeholder:text-ink-faint'
 
 export default function AuditoriaPage() {
   const router = useRouter()
@@ -71,7 +84,7 @@ export default function AuditoriaPage() {
       ])
     ]
     const csv = linhas.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -83,120 +96,99 @@ export default function AuditoriaPage() {
 
   const acoesUnicas = Array.from(new Set(logs.map(l => l.acao))).sort()
 
-  const inputStyle = {
-    padding: '0.5rem 0.75rem', border: '1.5px solid #e2e8f0', borderRadius: '0.5rem',
-    fontSize: '0.875rem', outline: 'none', background: 'white',
-  }
-
   return (
-    <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
-      {/* Header */}
-      <nav style={{ background: '#334155', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', height: '4rem' }}>
-          <button onClick={() => router.push('/dashboard-admin')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem 0.875rem', color: 'white', cursor: 'pointer', fontSize: '0.875rem' }}>
-            ← Voltar
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <span style={{ fontSize: '1.25rem' }}>🔍</span>
-            <span style={{ color: 'white', fontWeight: '700', fontSize: '1.1rem' }}>Auditoria do Sistema</span>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1200px] px-6 py-8">
+        <PageHeader
+          title="Auditoria do Sistema"
+          subtitle="Registro completo de atividades do sistema"
+          backHref="/dashboard-admin"
+        />
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-
-        {/* Filtros */}
-        <div style={{ background: 'white', borderRadius: '1rem', padding: '1.25rem 1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', gap: '0.875rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <input
-              type="text"
-              placeholder="🔍 Buscar cliente, ação, detalhe..."
-              value={filtros.busca}
-              onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))}
-              style={{ ...inputStyle, flex: '1 1 200px', minWidth: '160px' }}
-            />
+        <Card className="mb-4 p-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[200px] flex-1">
+              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
+              <input
+                type="text"
+                placeholder="Buscar cliente, ação, detalhe..."
+                value={filtros.busca}
+                onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))}
+                className={`${inputClass} w-full pl-9`}
+              />
+            </div>
             <select
               value={filtros.acao}
               onChange={e => setFiltros(f => ({ ...f, acao: e.target.value }))}
-              style={inputStyle}
+              className={`${inputClass} cursor-pointer`}
             >
               <option value="">Todos os eventos</option>
               {acoesUnicas.map(a => (
                 <option key={a} value={a}>{ACOES_LABELS[a] || a}</option>
               ))}
             </select>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>De</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-ink-faint">De</span>
               <input type="date" value={filtros.dataInicio}
                 onChange={e => setFiltros(f => ({ ...f, dataInicio: e.target.value }))}
-                style={inputStyle} />
+                className={inputClass} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>Até</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-ink-faint">Até</span>
               <input type="date" value={filtros.dataFim}
                 onChange={e => setFiltros(f => ({ ...f, dataFim: e.target.value }))}
-                style={inputStyle} />
+                className={inputClass} />
             </div>
-            <button onClick={carregar}
-              style={{ padding: '0.5rem 1.25rem', background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer' }}>
-              Filtrar
-            </button>
-            <button onClick={exportarCSV} disabled={exportando || logsFiltrados.length === 0}
-              style={{ padding: '0.5rem 1.25rem', background: '#16a34a', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', opacity: logsFiltrados.length === 0 ? 0.5 : 1 }}>
-              {exportando ? 'Exportando...' : '⬇ CSV'}
-            </button>
+            <Button variant="primary" onClick={carregar}>Filtrar</Button>
+            <Button
+              variant="secondary"
+              icon={<Download size={14} />}
+              onClick={exportarCSV}
+              disabled={exportando || logsFiltrados.length === 0}
+            >
+              {exportando ? 'Exportando...' : 'CSV'}
+            </Button>
           </div>
-        </div>
+        </Card>
 
-        {/* Tabela */}
-        <div style={{ background: 'white', borderRadius: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-          <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '0.95rem' }}>
+        <Card className="overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4">
+            <span className="text-sm font-bold text-ink">
               {loading ? 'Carregando...' : `${logsFiltrados.length} registro${logsFiltrados.length !== 1 ? 's' : ''}`}
             </span>
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>Carregando registros...</div>
+            <div className="p-16 text-center text-ink-faint">Carregando registros...</div>
           ) : logsFiltrados.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '4rem' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📭</div>
-              <p style={{ color: '#64748b' }}>Nenhum registro encontrado.</p>
+            <div className="p-16 text-center">
+              <Inbox size={36} className="mx-auto mb-3 text-ink-faint opacity-50" />
+              <p className="text-ink-muted">Nenhum registro encontrado.</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  <tr>
                     {['Data/Hora', 'Cliente', 'Evento', 'Detalhe'].map(h => (
-                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                        {h}
-                      </th>
+                      <th key={h} className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-ink-faint">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {logsFiltrados.map((log, idx) => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
-                      <td style={{ padding: '0.875rem 1rem', fontSize: '0.8rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                  {logsFiltrados.map((log) => (
+                    <tr key={log.id} className="transition-colors hover:bg-surface-2">
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-ink-faint">
                         {new Date(log.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td style={{ padding: '0.875rem 1rem', fontSize: '0.875rem', fontWeight: '600', color: '#1e293b' }}>
-                        {log.aluno_nome || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>—</span>}
+                      <td className="px-4 py-3 text-sm font-semibold text-ink">
+                        {log.aluno_nome || <span className="italic text-ink-faint">—</span>}
                       </td>
-                      <td style={{ padding: '0.875rem 1rem' }}>
-                        <span style={{
-                          fontSize: '0.8rem', fontWeight: '600', padding: '0.25rem 0.75rem',
-                          borderRadius: '999px', whiteSpace: 'nowrap',
-                          background: log.acao.includes('exclu') ? '#fef2f2' : log.acao.includes('cria') ? '#f0fdf4' : '#f0f9ff',
-                          color: log.acao.includes('exclu') ? '#dc2626' : log.acao.includes('cria') ? '#16a34a' : '#0369a1',
-                        }}>
-                          {ACOES_LABELS[log.acao] || log.acao}
-                        </span>
+                      <td className="px-4 py-3">
+                        <Badge tone={tonFor(log.acao)}>{ACOES_LABELS[log.acao] || log.acao}</Badge>
                       </td>
-                      <td style={{ padding: '0.875rem 1rem', fontSize: '0.85rem', color: '#475569', maxWidth: '360px' }}>
-                        {log.detalhe || <span style={{ color: '#cbd5e1' }}>—</span>}
+                      <td className="max-w-[360px] px-4 py-3 text-sm text-ink-muted">
+                        {log.detalhe || <span className="text-ink-faint">—</span>}
                       </td>
                     </tr>
                   ))}
@@ -204,9 +196,8 @@ export default function AuditoriaPage() {
               </table>
             </div>
           )}
-        </div>
-
-      </main>
+        </Card>
+      </div>
     </div>
   )
 }

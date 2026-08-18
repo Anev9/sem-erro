@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, UserPlus, Building2 } from 'lucide-react'
+import { Building2 } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 interface Empresa {
   id: string
   nome_fantasia: string
 }
+
+const inputClass = 'w-full rounded-xl bg-surface-2 px-4 py-2.5 text-sm outline-none transition-colors focus:ring-2 focus:ring-surface-2'
+const labelClass = 'mb-1.5 flex items-center text-sm font-medium text-ink-muted'
 
 export default function CriarColaboradorAdminPage() {
   const router = useRouter()
@@ -77,85 +83,43 @@ export default function CriarColaboradorAdminPage() {
     setTimeout(() => router.push('/organizacao/colaboradores'), 1500)
   }
 
-  const inputStyle = {
-    width: '100%',
-    padding: '0.75rem 1rem',
-    border: '1px solid #e5e7eb',
-    borderRadius: '0.5rem',
-    fontSize: '0.95rem',
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-    backgroundColor: 'white',
-  }
-
-  const labelStyle = {
-    display: 'block',
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: '0.375rem',
-  }
-
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[640px] px-6 py-8">
+        <PageHeader
+          title="Novo Colaborador"
+          subtitle="Cadastre um colaborador em qualquer empresa"
+          backHref="/organizacao/colaboradores"
+        />
 
-        <button
-          onClick={() => router.push('/organizacao/colaboradores')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.5rem 1rem', backgroundColor: 'white',
-            border: '1px solid #e5e7eb', borderRadius: '0.5rem',
-            cursor: 'pointer', marginBottom: '2rem', color: '#374151'
-          }}
-        >
-          <ArrowLeft size={18} />
-          Voltar
-        </button>
-
-        <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-            <div style={{ width: '3rem', height: '3rem', borderRadius: '0.75rem', backgroundColor: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <UserPlus size={24} style={{ color: '#8b5cf6' }} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-                Novo Colaborador
-              </h1>
-              <p style={{ color: '#6b7280', margin: 0, fontSize: '0.875rem' }}>
-                Cadastre um colaborador em qualquer empresa
-              </p>
-            </div>
-          </div>
-
+        <Card className="p-6">
           {sucesso && (
-            <div style={{ padding: '1rem', backgroundColor: '#d1fae5', borderRadius: '0.5rem', color: '#065f46', marginBottom: '1.5rem', fontWeight: '500' }}>
+            <div className="mb-5 rounded-xl bg-teal-tint p-3.5 text-sm font-medium text-teal">
               Colaborador criado com sucesso! Redirecionando...
             </div>
           )}
 
           {erro && (
-            <div style={{ padding: '1rem', backgroundColor: '#fee2e2', borderRadius: '0.5rem', color: '#991b1b', marginBottom: '1.5rem' }}>
+            <div className="mb-5 rounded-xl bg-coral-tint p-3.5 text-sm text-coral">
               {erro}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
             <div>
-              <label style={labelStyle}>
-                <Building2 size={14} style={{ display: 'inline', marginRight: '0.375rem', verticalAlign: 'middle' }} />
+              <label className={labelClass}>
+                <Building2 size={14} className="mr-1.5" />
                 Empresa *
               </label>
               {loadingEmpresas ? (
-                <div style={{ ...inputStyle, color: '#9ca3af' }}>Carregando empresas...</div>
+                <div className={`${inputClass} text-ink-faint`}>Carregando empresas...</div>
               ) : (
                 <select
                   name="empresa_id"
                   value={form.empresa_id}
                   onChange={handleChange}
-                  style={inputStyle}
+                  className={`${inputClass} cursor-pointer bg-white`}
                   required
                 >
                   <option value="">Selecione uma empresa...</option>
@@ -167,96 +131,89 @@ export default function CriarColaboradorAdminPage() {
             </div>
 
             <div>
-              <label style={labelStyle}>Nome completo *</label>
+              <label className={labelClass}>Nome completo *</label>
               <input
                 name="nome"
                 type="text"
                 placeholder="Ex: João da Silva"
                 value={form.nome}
                 onChange={handleChange}
-                style={inputStyle}
+                className={inputClass}
                 required
               />
             </div>
 
             <div>
-              <label style={labelStyle}>E-mail *</label>
+              <label className={labelClass}>E-mail *</label>
               <input
                 name="email"
                 type="email"
                 placeholder="colaborador@email.com"
                 value={form.email}
                 onChange={handleChange}
-                style={inputStyle}
+                className={inputClass}
                 required
               />
             </div>
 
             <div>
-              <label style={labelStyle}>Senha *</label>
+              <label className={labelClass}>Senha *</label>
               <input
                 name="senha"
                 type="password"
                 placeholder="Mínimo 6 caracteres"
                 value={form.senha}
                 onChange={handleChange}
-                style={inputStyle}
+                className={inputClass}
                 required
               />
             </div>
 
             <div>
-              <label style={labelStyle}>Cargo *</label>
+              <label className={labelClass}>Cargo *</label>
               <input
                 name="cargo"
                 type="text"
                 placeholder="Ex: Gerente, Supervisor, Atendente..."
                 value={form.cargo}
                 onChange={handleChange}
-                style={inputStyle}
+                className={inputClass}
                 required
               />
             </div>
 
             <div>
-              <label style={labelStyle}>Celular <span style={{ fontWeight: '400', color: '#9ca3af' }}>(opcional)</span></label>
+              <label className={labelClass}>Celular <span className="ml-1 font-normal text-ink-faint">(opcional)</span></label>
               <input
                 name="celular"
                 type="tel"
                 placeholder="(11) 99999-9999"
                 value={form.celular}
                 onChange={handleChange}
-                style={inputStyle}
+                className={inputClass}
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', paddingTop: '0.5rem' }}>
-              <button
+            <div className="flex gap-3 pt-2">
+              <Button
                 type="button"
+                variant="secondary"
+                className="flex-1"
                 onClick={() => router.push('/organizacao/colaboradores')}
-                style={{
-                  flex: 1, padding: '0.875rem', backgroundColor: 'white',
-                  color: '#374151', border: '1px solid #e5e7eb',
-                  borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500'
-                }}
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
+                variant="primary"
+                className="flex-[2]"
                 disabled={saving || sucesso}
-                style={{
-                  flex: 2, padding: '0.875rem', backgroundColor: saving || sucesso ? '#a78bfa' : '#8b5cf6',
-                  color: 'white', border: 'none', borderRadius: '0.5rem',
-                  cursor: saving || sucesso ? 'not-allowed' : 'pointer',
-                  fontSize: '0.95rem', fontWeight: '600'
-                }}
               >
                 {saving ? 'Salvando...' : sucesso ? 'Salvo!' : 'Criar Colaborador'}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
       </div>
     </div>
   )

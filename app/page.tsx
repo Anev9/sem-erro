@@ -69,8 +69,6 @@ export default function PerformeSeumercadoLanding() {
         .card-hover:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.12); }
         .btn-primary { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(249,115,22,0.45) !important; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
       `}</style>
 
       <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>

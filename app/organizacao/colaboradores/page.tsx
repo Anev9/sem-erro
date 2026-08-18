@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Search, UserCheck, UserX, Building2 } from 'lucide-react'
+import { Plus, Search, UserCheck, UserX, Building2 } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface Colaborador {
   id: string
@@ -48,70 +52,39 @@ export default function ColaboradoresAdminPage() {
   })
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-
-        <button
-          onClick={() => router.push('/organizacao')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.5rem 1rem', backgroundColor: 'white',
-            border: '1px solid #e5e7eb', borderRadius: '0.5rem',
-            cursor: 'pointer', marginBottom: '2rem', color: '#374151'
-          }}
-        >
-          <ArrowLeft size={18} />
-          Voltar
-        </button>
-
-        <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.25rem' }}>
-                Colaboradores
-              </h1>
-              <p style={{ color: '#6b7280' }}>
-                {colaboradores.length} colaborador{colaboradores.length !== 1 ? 'es' : ''} cadastrado{colaboradores.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <button
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1400px] px-6 py-8">
+        <PageHeader
+          title="Colaboradores"
+          subtitle={`${colaboradores.length} colaborador${colaboradores.length !== 1 ? 'es' : ''} cadastrado${colaboradores.length !== 1 ? 's' : ''}`}
+          backHref="/dashboard-admin"
+          actions={
+            <Button
+              variant="primary"
+              icon={<Plus size={16} />}
               onClick={() => router.push('/organizacao/colaboradores/criar')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                padding: '0.75rem 1.5rem', backgroundColor: '#10b981',
-                color: 'white', border: 'none', borderRadius: '0.5rem',
-                cursor: 'pointer', fontWeight: '600', fontSize: '0.95rem'
-              }}
             >
-              <Plus size={18} />
               Novo Colaborador
-            </button>
-          </div>
+            </Button>
+          }
+        />
 
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
-              <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+        <Card className="p-6">
+          <div className="mb-5 flex flex-wrap gap-3">
+            <div className="relative min-w-[240px] flex-1">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
               <input
                 type="text"
                 placeholder="Buscar por nome, email, cargo ou empresa..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem',
-                  border: '1px solid #e5e7eb', borderRadius: '0.5rem',
-                  fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box'
-                }}
+                className="w-full rounded-xl bg-surface-2 py-2.5 pl-9 pr-3 text-sm outline-none placeholder:text-ink-faint"
               />
             </div>
             <select
               value={ativoFilter}
               onChange={(e) => setAtivoFilter(e.target.value)}
-              style={{
-                padding: '0.75rem 1rem', border: '1px solid #e5e7eb',
-                borderRadius: '0.5rem', fontSize: '0.95rem',
-                outline: 'none', cursor: 'pointer', backgroundColor: 'white'
-              }}
+              className="cursor-pointer rounded-xl bg-surface-2 px-3 py-2.5 text-sm outline-none"
             >
               <option value="todos">Todos</option>
               <option value="ativos">Apenas ativos</option>
@@ -120,59 +93,45 @@ export default function ColaboradoresAdminPage() {
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>Carregando...</div>
+            <div className="py-12 text-center text-ink-faint">Carregando...</div>
           ) : filtrados.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>
+            <div className="py-12 text-center text-ink-faint">
               {searchTerm || ativoFilter !== 'todos' ? 'Nenhum colaborador encontrado para esse filtro.' : 'Nenhum colaborador cadastrado ainda.'}
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: '0.75rem' }}>
+            <div className="grid gap-2">
               {filtrados.map((c) => (
                 <div
                   key={c.id}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '1rem',
-                    padding: '1.25rem 1.5rem', border: '1px solid #e5e7eb',
-                    borderRadius: '0.75rem', backgroundColor: '#f9fafb',
-                    flexWrap: 'wrap'
-                  }}
+                  className="flex flex-wrap items-center gap-4 rounded-2xl bg-surface-2 px-5 py-4"
                 >
                   <div
-                    style={{
-                      width: '3rem', height: '3rem', borderRadius: '50%',
-                      backgroundColor: c.ativo ? '#d1fae5' : '#fee2e2',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0
-                    }}
+                    className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full ${
+                      c.ativo ? 'bg-teal-tint' : 'bg-coral-tint'
+                    }`}
                   >
                     {c.ativo
-                      ? <UserCheck size={22} style={{ color: '#10b981' }} />
-                      : <UserX size={22} style={{ color: '#ef4444' }} />
+                      ? <UserCheck size={20} className="text-teal" />
+                      : <UserX size={20} className="text-coral" />
                     }
                   </div>
 
-                  <div style={{ flex: 1, minWidth: '180px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: '600', color: '#1f2937', fontSize: '1rem' }}>{c.nome}</span>
-                      <span style={{
-                        padding: '0.125rem 0.625rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '500',
-                        backgroundColor: c.ativo ? '#d1fae5' : '#fee2e2',
-                        color: c.ativo ? '#065f46' : '#991b1b'
-                      }}>
-                        {c.ativo ? 'Ativo' : 'Inativo'}
-                      </span>
+                  <div className="min-w-[180px] flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-ink">{c.nome}</span>
+                      <Badge tone={c.ativo ? 'success' : 'danger'}>{c.ativo ? 'Ativo' : 'Inativo'}</Badge>
                     </div>
-                    <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.25rem 0 0' }}>
+                    <p className="mt-0.5 text-sm text-ink-muted">
                       {c.cargo} • {c.email}
                     </p>
                     {c.celular && (
-                      <p style={{ color: '#9ca3af', fontSize: '0.8rem', margin: '0.125rem 0 0' }}>{c.celular}</p>
+                      <p className="mt-0.5 text-xs text-ink-faint">{c.celular}</p>
                     )}
                   </div>
 
                   {c.empresas && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: '#6b7280', fontSize: '0.875rem' }}>
-                      <Building2 size={16} style={{ color: '#8b5cf6' }} />
+                    <div className="flex items-center gap-1.5 text-sm text-ink-muted">
+                      <Building2 size={15} className="text-ink-faint" />
                       {c.empresas.nome_fantasia}
                     </div>
                   )}
@@ -180,7 +139,7 @@ export default function ColaboradoresAdminPage() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )

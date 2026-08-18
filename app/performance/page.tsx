@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, TrendingUp, Building2, CheckSquare, AlertTriangle, Search, Download, Printer } from 'lucide-react'
+import { TrendingUp, Building2, CheckSquare, AlertTriangle, Search, Download, Printer } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface ClientePerformance {
   aluno_id: number
@@ -14,6 +18,8 @@ interface ClientePerformance {
   checklists: { total: number; concluidos: number; mes: number }
   acoes: { total: number; concluidas: number; atrasadas: number; mes: number }
 }
+
+const inputClass = 'rounded-xl bg-surface-2 px-3.5 py-2 text-sm outline-none placeholder:text-ink-faint'
 
 export default function PerformancePage() {
   const router = useRouter()
@@ -104,7 +110,7 @@ export default function PerformancePage() {
       d.ultimo_login ? new Date(d.ultimo_login).toLocaleDateString('pt-BR') : '—',
     ])
     const csv = [headers, ...rows].map(r => r.join(';')).join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -113,79 +119,63 @@ export default function PerformancePage() {
     URL.revokeObjectURL(url)
   }
 
+  const stats = [
+    { label: 'Total de Clientes', value: totais.clientes, cls: 'text-ink' },
+    { label: 'Clientes Ativos', value: totais.ativos, cls: 'text-teal' },
+    { label: 'Checklists Criados', value: totais.checklistsTotal, cls: 'text-violet' },
+    { label: 'Ações este Mês', value: totais.acoesMes, cls: 'text-blue' },
+    { label: 'Ações Atrasadas', value: totais.atrasadasTotal, cls: 'text-coral' },
+  ]
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f3f4f6' }}>
-      {/* Header */}
-      <nav style={{ backgroundColor: '#334155', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 1.5rem', display: 'flex', alignItems: 'center', height: '4rem', gap: '1rem' }}>
-          <button
-            onClick={() => router.push('/dashboard-admin')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem 0.875rem', color: 'white', cursor: 'pointer', fontSize: '0.875rem' }}
-          >
-            <ArrowLeft size={16} />
-            Voltar
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <TrendingUp size={20} style={{ color: '#93c5fd' }} />
-            <span style={{ color: 'white', fontWeight: '700', fontSize: '1.1rem' }}>Relatório de Performance</span>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1400px] px-6 py-8">
+        <PageHeader
+          title="Relatório de Performance"
+          subtitle="Uso, checklists e ações por cliente"
+          backHref="/dashboard-admin"
+        />
 
-      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-
-        {/* Cards de totais */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          {[
-            { label: 'Total de Clientes', value: totais.clientes, color: '#3b82f6', bg: '#eff6ff', icon: '👥' },
-            { label: 'Clientes Ativos', value: totais.ativos, color: '#10b981', bg: '#f0fdf4', icon: '✅' },
-            { label: 'Checklists Criados', value: totais.checklistsTotal, color: '#6366f1', bg: '#eef2ff', icon: '📋' },
-            { label: 'Ações este Mês', value: totais.acoesMes, color: '#8b5cf6', bg: '#f5f3ff', icon: '⚡' },
-            { label: 'Ações Atrasadas', value: totais.atrasadasTotal, color: '#ef4444', bg: '#fef2f2', icon: '🔴' },
-          ].map(card => (
-            <div key={card.label} style={{ background: card.bg, borderRadius: '0.75rem', padding: '1.125rem 1.25rem', border: `1px solid ${card.color}25` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem' }}>
-                <span style={{ fontSize: '1rem' }}>{card.icon}</span>
-                <span style={{ fontSize: '0.75rem', color: card.color, fontWeight: '600' }}>{card.label}</span>
-              </div>
-              <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: '800', color: card.color }}>{card.value}</p>
-            </div>
+        <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
+          {stats.map(s => (
+            <Card key={s.label} className="p-4">
+              <p className="text-xs font-semibold text-ink-muted">{s.label}</p>
+              <p className={`mt-1 font-display text-2xl font-bold ${s.cls}`}>{s.value}</p>
+            </Card>
           ))}
         </div>
 
-        {/* Filtros e Ações */}
-        <div style={{ background: 'white', borderRadius: '1rem', padding: '1rem 1.25rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Busca */}
-            <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: '0.625rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+        <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
               <input
                 type="text"
                 placeholder="Buscar cliente..."
                 value={busca}
                 onChange={e => setBusca(e.target.value)}
-                style={{ paddingLeft: '2rem', paddingRight: '0.75rem', paddingTop: '0.5rem', paddingBottom: '0.5rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', width: '200px' }}
+                className={`${inputClass} w-[200px] pl-9`}
               />
             </div>
 
-            {/* Filtro ativo/inativo */}
-            <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '0.375rem', padding: '2px', gap: '2px' }}>
+            <div className="flex gap-0.5 rounded-xl bg-surface-2 p-1">
               {(['todos', 'ativo', 'inativo'] as const).map(f => (
                 <button
                   key={f}
                   onClick={() => setFiltroAtivo(f)}
-                  style={{ padding: '0.3rem 0.75rem', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', background: filtroAtivo === f ? 'white' : 'transparent', color: filtroAtivo === f ? '#334155' : '#6b7280', boxShadow: filtroAtivo === f ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    filtroAtivo === f ? 'bg-white text-ink shadow-soft-sm' : 'text-ink-muted'
+                  }`}
                 >
                   {f === 'todos' ? 'Todos' : f === 'ativo' ? 'Ativos' : 'Inativos'}
                 </button>
               ))}
             </div>
 
-            {/* Ordenação */}
             <select
               value={ordenacao}
               onChange={e => setOrdenacao(e.target.value as typeof ordenacao)}
-              style={{ padding: '0.5rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', background: 'white' }}
+              className={`${inputClass} cursor-pointer`}
             >
               <option value="nome">Ordenar: Nome</option>
               <option value="checklists">Ordenar: + Checklists</option>
@@ -194,108 +184,89 @@ export default function PerformancePage() {
             </select>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              onClick={exportarCSV}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
-            >
-              <Download size={15} />
-              CSV
-            </button>
-            <button
-              onClick={() => window.print()}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: '#1d4ed8', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
-            >
-              <Printer size={15} />
-              PDF
-            </button>
+          <div className="flex gap-2">
+            <Button variant="secondary" icon={<Download size={14} />} onClick={exportarCSV}>CSV</Button>
+            <Button variant="primary" icon={<Printer size={14} />} onClick={() => window.print()}>PDF</Button>
           </div>
-        </div>
+        </Card>
 
-        {/* Tabela */}
-        <div style={{ background: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+        <Card className="overflow-hidden">
           {loading ? (
-            <div style={{ padding: '4rem', textAlign: 'center', color: '#9ca3af' }}>
-              <div style={{ width: '36px', height: '36px', border: '3px solid #f3f4f6', borderTopColor: '#334155', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
+            <div className="p-16 text-center text-ink-faint">
+              <div className="mx-auto mb-4 h-9 w-9 animate-spin rounded-full border-[3px] border-surface-2 border-t-teal" />
               Carregando dados...
             </div>
           ) : dadosFiltrados.length === 0 ? (
-            <div style={{ padding: '4rem', textAlign: 'center', color: '#9ca3af' }}>
-              <TrendingUp size={40} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
+            <div className="p-16 text-center text-ink-faint">
+              <TrendingUp size={40} className="mx-auto mb-4 opacity-30" />
               <p>Nenhum cliente encontrado</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  <tr>
                     {['Cliente', 'Status', 'Empresas', 'Checklists', '% Concluído', 'Ações', 'Atrasadas', 'Atividade Mês', 'Último Login'].map(h => (
-                      <th key={h} style={{ padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-ink-faint">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {dadosFiltrados.map((d, idx) => {
+                  {dadosFiltrados.map((d) => {
                     const pctChecklist = calcPct(d.checklists.concluidos, d.checklists.total)
                     const atividadeMes = d.checklists.mes + d.acoes.mes
+                    const pctTone = pctChecklist >= 70 ? 'text-teal' : pctChecklist >= 40 ? 'text-amber' : 'text-coral'
+                    const pctBar = pctChecklist >= 70 ? 'bg-teal' : pctChecklist >= 40 ? 'bg-amber' : 'bg-coral'
                     return (
                       <tr
                         key={d.aluno_id}
                         onClick={() => router.push(`/dashboard-admin/cliente/${d.aluno_id}`)}
-                        style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#fafafa', cursor: 'pointer' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f0f9ff' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = idx % 2 === 0 ? 'white' : '#fafafa' }}
+                        className="cursor-pointer transition-colors hover:bg-surface-2"
                       >
-                        <td style={{ padding: '0.875rem 1rem' }}>
-                          <p style={{ margin: 0, fontWeight: '600', color: '#1d4ed8', fontSize: '0.875rem' }}>{d.nome}</p>
-                          {d.email && <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.75rem' }}>{d.email}</p>}
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-semibold text-blue">{d.nome}</p>
+                          {d.email && <p className="text-xs text-ink-faint">{d.email}</p>}
                         </td>
-                        <td style={{ padding: '0.875rem 1rem' }}>
-                          <span style={{ padding: '0.25rem 0.625rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600', background: d.ativo ? '#d1fae5' : '#fee2e2', color: d.ativo ? '#059669' : '#dc2626' }}>
-                            {d.ativo ? 'Ativo' : 'Inativo'}
-                          </span>
+                        <td className="px-4 py-3">
+                          <Badge tone={d.ativo ? 'success' : 'danger'}>{d.ativo ? 'Ativo' : 'Inativo'}</Badge>
                         </td>
-                        <td style={{ padding: '0.875rem 1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                            <Building2 size={14} style={{ color: '#6b7280' }} />
-                            <span style={{ fontSize: '0.875rem', color: '#374151', fontWeight: '600' }}>{d.empresas}</span>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <Building2 size={14} className="text-ink-faint" />
+                            <span className="text-sm font-semibold text-ink-muted">{d.empresas}</span>
                           </div>
                         </td>
-                        <td style={{ padding: '0.875rem 1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                            <CheckSquare size={14} style={{ color: '#6366f1' }} />
-                            <span style={{ fontSize: '0.875rem', color: '#374151', fontWeight: '600' }}>{d.checklists.total}</span>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <CheckSquare size={14} className="text-violet" />
+                            <span className="text-sm font-semibold text-ink-muted">{d.checklists.total}</span>
                           </div>
                         </td>
-                        <td style={{ padding: '0.875rem 1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <div style={{ flex: 1, minWidth: '60px', height: '6px', borderRadius: '999px', background: '#e2e8f0', overflow: 'hidden' }}>
-                              <div style={{ width: `${pctChecklist}%`, height: '100%', background: pctChecklist >= 70 ? '#10b981' : pctChecklist >= 40 ? '#f59e0b' : '#ef4444', borderRadius: '999px' }} />
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 min-w-[60px] flex-1 overflow-hidden rounded-full bg-surface-2">
+                              <div className={`h-full rounded-full ${pctBar}`} style={{ width: `${pctChecklist}%` }} />
                             </div>
-                            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: pctChecklist >= 70 ? '#059669' : pctChecklist >= 40 ? '#d97706' : '#dc2626', minWidth: '32px' }}>{pctChecklist}%</span>
+                            <span className={`min-w-[32px] text-xs font-bold ${pctTone}`}>{pctChecklist}%</span>
                           </div>
                         </td>
-                        <td style={{ padding: '0.875rem 1rem' }}>
-                          <span style={{ fontSize: '0.875rem', color: '#374151', fontWeight: '600' }}>{d.acoes.total}</span>
-                        </td>
-                        <td style={{ padding: '0.875rem 1rem' }}>
+                        <td className="px-4 py-3 text-sm font-semibold text-ink-muted">{d.acoes.total}</td>
+                        <td className="px-4 py-3">
                           {d.acoes.atrasadas > 0 ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <AlertTriangle size={14} style={{ color: '#ef4444' }} />
-                              <span style={{ fontSize: '0.875rem', color: '#dc2626', fontWeight: '700' }}>{d.acoes.atrasadas}</span>
+                            <div className="flex items-center gap-1">
+                              <AlertTriangle size={14} className="text-coral" />
+                              <span className="text-sm font-bold text-coral">{d.acoes.atrasadas}</span>
                             </div>
                           ) : (
-                            <span style={{ fontSize: '0.875rem', color: '#10b981', fontWeight: '600' }}>—</span>
+                            <span className="text-sm font-semibold text-teal">—</span>
                           )}
                         </td>
-                        <td style={{ padding: '0.875rem 1rem' }}>
-                          <span style={{ padding: '0.2rem 0.5rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700', background: atividadeMes > 0 ? '#eff6ff' : '#f9fafb', color: atividadeMes > 0 ? '#1d4ed8' : '#9ca3af' }}>
+                        <td className="px-4 py-3">
+                          <Badge tone={atividadeMes > 0 ? 'info' : 'neutral'}>
                             {atividadeMes > 0 ? `${atividadeMes} itens` : 'Sem atividade'}
-                          </span>
+                          </Badge>
                         </td>
-                        <td style={{ padding: '0.875rem 1rem' }}>
-                          <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{formatarUltimoLogin(d.ultimo_login)}</span>
-                        </td>
+                        <td className="px-4 py-3 text-xs text-ink-muted">{formatarUltimoLogin(d.ultimo_login)}</td>
                       </tr>
                     )
                   })}
@@ -303,20 +274,16 @@ export default function PerformancePage() {
               </table>
             </div>
           )}
-        </div>
+        </Card>
 
-        <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem', marginTop: '1rem' }}>
+        <p className="mt-4 text-center text-xs text-ink-faint">
           {dadosFiltrados.length} cliente{dadosFiltrados.length !== 1 ? 's' : ''} exibido{dadosFiltrados.length !== 1 ? 's' : ''}
         </p>
-      </main>
+      </div>
 
       <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @media print {
           nav, button, .no-print { display: none !important; }
-          body { background: white !important; }
-          main { padding: 0 !important; max-width: 100% !important; }
-          div[style*="overflow: hidden"] { overflow: visible !important; }
           table { page-break-inside: auto; }
           tr { page-break-inside: avoid; }
         }

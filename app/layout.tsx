@@ -18,6 +18,8 @@ export default function RootLayout({
       <head>
         {/* Inicializa tema antes do render para evitar flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})();` }} />
+        {/* Inicializa tamanho de fonte antes do render para evitar flash */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var s=localStorage.getItem('fontSize');if(s)document.documentElement.style.fontSize=s+'px';})();` }} />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#f97316" />
         <meta name="mobile-web-app-capable" content="yes" />
