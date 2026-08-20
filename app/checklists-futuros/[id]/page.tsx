@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Calendar, CheckCircle, XCircle, MinusCircle, Clock, AlertCircle, PlayCircle, ClipboardList, Building2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { diaBrasil, hojeBrasil } from '@/lib/periodo'
 
 interface ChecklistFuturo {
   id: string
@@ -37,6 +38,7 @@ interface Resposta {
   resposta: 'sim' | 'nao' | 'na' | null
   observacao?: string | null
   foto_url?: string | null
+  respondido_em?: string | null
 }
 
 export default function DetalhesChecklistFuturoPage() {
@@ -46,7 +48,8 @@ export default function DetalhesChecklistFuturoPage() {
 
   const [checklist, setChecklist] = useState<ChecklistFuturo | null>(null)
   const [itens, setItens] = useState<Item[]>([])
-  const [respostas, setRespostas] = useState<Record<string, Resposta>>({})
+  const [respostasTodas, setRespostasTodas] = useState<Resposta[]>([])
+  const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [fotoExpandida, setFotoExpandida] = useState<string | null>(null)
 
@@ -104,22 +107,30 @@ export default function DetalhesChecklistFuturoPage() {
       const listaItens: Item[] = (itensData || []) as unknown as Item[]
       setItens(listaItens)
 
-      // Buscar respostas do funcionário (se houver)
+      // Buscar respostas do funcionário (se houver) — todo o histórico,
+      // para permitir navegar dia a dia em checklists recorrentes
       const { data: respostasData } = await supabase
         .from('checklist_respostas')
         .select('*')
         .eq('checklist_futuro_id', checklistId)
+        .order('respondido_em', { ascending: true })
 
-      const mapaRespostas: Record<string, Resposta> = {}
-      ;(respostasData || []).forEach((r: any) => {
-        mapaRespostas[r.item_id] = {
-          item_id: r.item_id,
-          resposta: r.resposta,
-          observacao: r.observacao,
-          foto_url: r.foto_url
-        }
-      })
-      setRespostas(mapaRespostas)
+      const listaRespostas: Resposta[] = (respostasData || []).map((r: any) => ({
+        item_id: r.item_id,
+        resposta: r.resposta,
+        observacao: r.observacao,
+        foto_url: r.foto_url,
+        respondido_em: r.respondido_em
+      }))
+      setRespostasTodas(listaRespostas)
+
+      // Para checklists recorrentes, seleciona por padrão o dia mais recente com respostas
+      const ehRecorrente = checklistData.recorrencia && checklistData.recorrencia !== 'nenhuma'
+      if (ehRecorrente) {
+        const dias = Array.from(new Set(listaRespostas.map(r => diaBrasil(r.respondido_em)).filter(Boolean))) as string[]
+        dias.sort().reverse()
+        setDiaSelecionado(dias[0] || hojeBrasil())
+      }
     } catch (error) {
       console.error('Erro ao carregar checklist:', error)
       toast.error('Erro ao carregar checklist.')
@@ -143,10 +154,31 @@ export default function DetalhesChecklistFuturoPage() {
     }
   }
 
+  const ehRecorrente = !!(checklist?.recorrencia && checklist.recorrencia !== 'nenhuma')
+
+  // Dias com respostas registradas, do mais recente para o mais antigo
+  const diasDisponiveis = Array.from(
+    new Set(respostasTodas.map(r => diaBrasil(r.respondido_em)).filter(Boolean))
+  ).sort().reverse() as string[]
+
+  // Respostas do dia selecionado (ou todas, se o checklist não for recorrente)
+  const respostasDoDia = ehRecorrente
+    ? respostasTodas.filter(r => diaBrasil(r.respondido_em) === diaSelecionado)
+    : respostasTodas
+
+  const respostas: Record<string, Resposta> = {}
+  respostasDoDia.forEach(r => { respostas[r.item_id] = r })
+
   const totalRespondidos = Object.values(respostas).filter(r => r.resposta !== null).length
   const conformes = Object.values(respostas).filter(r => r.resposta === 'sim').length
   const naoConformes = Object.values(respostas).filter(r => r.resposta === 'nao').length
   const naAplicavel = Object.values(respostas).filter(r => r.resposta === 'na').length
+
+  function formatarDia(dia: string) {
+    const [ano, mes, diaNum] = dia.split('-')
+    const label = `${diaNum}/${mes}/${ano}`
+    return dia === hojeBrasil() ? `Hoje (${diaNum}/${mes})` : label
+  }
 
   if (loading) {
     return (
@@ -231,6 +263,44 @@ export default function DetalhesChecklistFuturoPage() {
               )}
             </div>
           </div>
+
+          {/* Seletor de dia (checklists recorrentes) */}
+          {ehRecorrente && (
+            <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1rem 1.5rem', marginBottom: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
+              <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: '0 0 0.75rem', fontWeight: '600' }}>
+                Ver histórico do dia
+              </p>
+              {diasDisponiveis.length === 0 ? (
+                <p style={{ color: '#9ca3af', fontSize: '0.9rem', margin: 0 }}>
+                  Ainda não há respostas registradas para este checklist.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {diasDisponiveis.map(dia => {
+                    const ativo = dia === diaSelecionado
+                    return (
+                      <button
+                        key={dia}
+                        onClick={() => setDiaSelecionado(dia)}
+                        style={{
+                          padding: '0.5rem 0.9rem',
+                          borderRadius: '9999px',
+                          border: ativo ? '1px solid #3b82f6' : '1px solid #e5e7eb',
+                          backgroundColor: ativo ? '#3b82f6' : 'white',
+                          color: ativo ? 'white' : '#374151',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {formatarDia(dia)}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Resumo de respostas (se houver) */}
           {totalRespondidos > 0 && (

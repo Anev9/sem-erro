@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Calendar, Clock, CheckCircle, AlertCircle, PlayCircle,
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { calcularAlertaHorario } from '@/lib/prazo-horario'
+import { inicioPeriodo } from '@/lib/periodo'
 
 type ChecklistFuturo = {
   id: string
@@ -79,10 +80,21 @@ export default function ChecklistsFuturosPage() {
 
       const checklistsFormatados = await Promise.all(
         (data || []).map(async (checklist) => {
-          const { count: respondidos } = await supabase
+          // Para checklists recorrentes, conta só as respostas do período atual
+          // (dia/semana/mês); senão o progresso acumula respostas de dias
+          // anteriores e passa de 100%.
+          const periodoInicio = inicioPeriodo(checklist.recorrencia ?? null)
+
+          let queryRespondidos = supabase
             .from('checklist_respostas')
             .select('*', { count: 'exact', head: true })
             .eq('checklist_futuro_id', checklist.id)
+
+          if (periodoInicio) {
+            queryRespondidos = queryRespondidos.gte('respondido_em', periodoInicio)
+          }
+
+          const { count: respondidos } = await queryRespondidos
 
           const totalItens = checklist.itens?.[0]?.count || 0
           const itensRespondidos = respondidos || 0
