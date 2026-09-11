@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     .from('checklists_futuros')
     .insert([{
       ...resto,
-      titulo: `Cópia de ${original.titulo}`,
+      nome: `Cópia de ${original.nome}`,
       status: 'pendente',
       chave_compartilhamento: crypto.randomUUID(),
     }])
@@ -77,5 +77,5 @@ export async function POST(request: NextRequest) {
     await supabase.from('checklist_futuro_itens').insert(novosItens)
   }
 
-  return NextResponse.json({ id: novo.id, titulo: novo.titulo })
+  return NextResponse.json({ id: novo.id, nome: novo.nome })
 }

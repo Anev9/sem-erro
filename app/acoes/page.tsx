@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+interface Colaborador { id: string; nome: string; empresa_id: string | null; celular: string | null; telefone: string | null }
+
 interface AcaoCorretiva {
   id: string;
   empresa_id: string;
@@ -12,6 +14,7 @@ interface AcaoCorretiva {
   titulo: string;
   descricao: string | null;
   responsavel: string | null;
+  colaborador_id: string | null;
   prazo: string | null;
   status: 'aguardando' | 'em_andamento' | 'concluida' | 'atrasada';
   prioridade: 'baixa' | 'media' | 'alta';
@@ -30,6 +33,7 @@ interface EditForm {
   titulo: string;
   descricao: string;
   responsavel: string;
+  colaborador_id: string;
   prazo: string;
   status: AcaoCorretiva['status'];
   prioridade: AcaoCorretiva['prioridade'];
@@ -53,6 +57,7 @@ export default function ListaAcoes() {
   });
   const [ordenacao, setOrdenacao] = useState<'loja' | 'data'>('data');
   const [empresas, setEmpresas] = useState<{ id: string; nome_fantasia: string }[]>([]);
+  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [alunoId, setAlunoId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'lista' | 'kanban'>('lista');
   const [acaoEditando, setAcaoEditando] = useState<AcaoCorretiva | null>(null);
@@ -76,6 +81,7 @@ export default function ListaAcoes() {
     }
     setAlunoId(user.id);
     await carregarDados(user.id);
+    carregarColaboradores();
   }
 
   async function carregarDados(alunoId: string) {
@@ -93,12 +99,19 @@ export default function ListaAcoes() {
     }
   }
 
+  async function carregarColaboradores() {
+    const res = await fetch('/api/aluno/colaboradores');
+    const data = res.ok ? await res.json() : [];
+    setColaboradores(data);
+  }
+
   function abrirEdicao(acao: AcaoCorretiva) {
     setAcaoEditando(acao);
     setEditForm({
       titulo: acao.titulo,
       descricao: acao.descricao || '',
       responsavel: acao.responsavel || '',
+      colaborador_id: acao.colaborador_id || '',
       prazo: acao.prazo ? acao.prazo.split('T')[0] : '',
       status: acao.status,
       prioridade: acao.prioridade,
@@ -118,6 +131,7 @@ export default function ListaAcoes() {
         titulo: editForm.titulo,
         descricao: editForm.descricao || null,
         responsavel: editForm.responsavel || null,
+        colaborador_id: editForm.colaborador_id || null,
         prazo: editForm.prazo || null,
         status: editForm.status,
         prioridade: editForm.prioridade,
@@ -673,8 +687,22 @@ export default function ListaAcoes() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Responsável</label>
-                  <input value={editForm.responsavel} onChange={e => setEditForm({ ...editForm, responsavel: e.target.value })}
-                    style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem', boxSizing: 'border-box' as const }} />
+                  <select
+                    value={editForm.colaborador_id}
+                    onChange={e => {
+                      const colaboradorId = e.target.value;
+                      const colaborador = colaboradores.find(c => c.id === colaboradorId);
+                      setEditForm({ ...editForm, colaborador_id: colaboradorId, responsavel: colaborador ? colaborador.nome : editForm.responsavel });
+                    }}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1.5px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.9rem' }}
+                  >
+                    <option value="">{editForm.responsavel ? editForm.responsavel : 'Nenhum'}</option>
+                    {colaboradores.filter(c => c.empresa_id === acaoEditando?.empresa_id).map(col => (
+                      <option key={col.id} value={col.id}>
+                        {col.nome}{!(col.celular || col.telefone) ? ' (sem telefone cadastrado)' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#555', display: 'block', marginBottom: '0.375rem' }}>Prazo</label>

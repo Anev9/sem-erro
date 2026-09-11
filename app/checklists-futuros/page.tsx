@@ -7,6 +7,9 @@ import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { calcularAlertaHorario } from '@/lib/prazo-horario'
 import { inicioPeriodo } from '@/lib/periodo'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 type ChecklistFuturo = {
   id: string
@@ -24,6 +27,19 @@ type ChecklistFuturo = {
   dias_tolerancia?: number | null
   prazo_alerta?: string | null
   hora_limite?: string | null
+}
+
+const statusInfo = {
+  concluido: { tone: 'success' as const, icon: CheckCircle, label: 'Concluído' },
+  em_andamento: { tone: 'info' as const, icon: PlayCircle, label: 'Em Andamento' },
+  pendente: { tone: 'warning' as const, icon: Clock, label: 'Pendente' },
+  atrasado: { tone: 'danger' as const, icon: AlertCircle, label: 'Atrasado' },
+}
+
+const labelRecorrencia: Record<string, string> = {
+  diaria: '🔄 Diária',
+  semanal: '🔄 Semanal',
+  mensal: '🔄 Mensal'
 }
 
 export default function ChecklistsFuturosPage() {
@@ -49,13 +65,13 @@ export default function ChecklistsFuturosPage() {
 
     const user = JSON.parse(userData)
     setUserId(user.id)
-    
+
     // Se for funcionário, redireciona para /meus-checklists
     if (user.role !== 'admin' && user.role !== 'aluno') {
       router.push('/meus-checklists')
       return
     }
-    
+
     setUserRole(user.role === 'admin' ? 'admin' : 'aluno')
     buscarChecklists(user.role === 'admin', user.id)
   }, [router])
@@ -187,12 +203,6 @@ export default function ChecklistsFuturosPage() {
     }
   }
 
-  const labelRecorrencia: Record<string, string> = {
-    diaria: '🔄 Diária',
-    semanal: '🔄 Semanal',
-    mensal: '🔄 Mensal'
-  }
-
   function obterAlertaPrazo(prazoAlerta: string | null | undefined): { nivel: 'vencido' | 'proximo' | null; diasRestantes: number } {
     if (!prazoAlerta) return { nivel: null, diasRestantes: 0 }
     const hoje = new Date()
@@ -205,349 +215,148 @@ export default function ChecklistsFuturosPage() {
     return { nivel: null, diasRestantes: diff }
   }
 
-  function obterCorStatus(status: string) {
-    switch (status) {
-      case 'concluido':
-        return { bg: '#dcfce7', text: '#166534', icon: CheckCircle, label: 'Concluído' }
-      case 'em_andamento':
-        return { bg: '#dbeafe', text: '#1e40af', icon: PlayCircle, label: 'Em Andamento' }
-      case 'pendente':
-        return { bg: '#fef3c7', text: '#92400e', icon: Clock, label: 'Pendente' }
-      case 'atrasado':
-        return { bg: '#fee2e2', text: '#991b1b', icon: AlertCircle, label: 'Atrasado' }
-      default:
-        return { bg: '#f3f4f6', text: '#374151', icon: Clock, label: status }
-    }
-  }
-
   return (
-    <>
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1320px] px-6 py-8">
 
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-          
-          {/* Header */}
-          <div style={{ marginBottom: '2rem' }}>
-            <button
-              onClick={() => router.push(userRole === 'admin' ? '/dashboard-admin' : '/dashboard-aluno')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 1rem',
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                marginBottom: '1.5rem',
-                color: '#374151',
-                fontSize: '0.95rem'
-              }}
-            >
-              <ArrowLeft size={18} />
-              Voltar para Dashboard
-            </button>
+        {/* Header */}
+        <div className="mb-6">
+          <button
+            onClick={() => router.push(userRole === 'admin' ? '/dashboard-admin' : '/dashboard-aluno')}
+            className="mb-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-sm font-medium text-ink-muted shadow-soft-sm transition-colors hover:text-ink cursor-pointer"
+          >
+            <ArrowLeft size={16} />
+            Voltar para Dashboard
+          </button>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
-                  Checklists Futuros
-                </h1>
-                <p style={{ color: '#6b7280' }}>
-                  Gerencie os checklists que você criou
-                </p>
-              </div>
-
-              <button
-                onClick={() => router.push('/checklists-futuros/criar')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '0.95rem'
-                }}
-              >
-                <Plus size={20} />
-                Criar Novo Checklist
-              </button>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="font-display text-2xl font-bold text-ink">Checklists Futuros</h1>
+              <p className="mt-1 text-sm text-ink-muted">Gerencie os checklists que você criou</p>
             </div>
+
+            <Button variant="primary" onClick={() => router.push('/checklists-futuros/criar')} icon={<Plus size={18} />}>
+              Criar Novo Checklist
+            </Button>
           </div>
+        </div>
 
-          {/* Loading */}
-          {loading ? (
-            <div style={{ 
-              backgroundColor: 'white',
-              borderRadius: '1rem',
-              padding: '4rem',
-              textAlign: 'center',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
-            }}>
-              <div style={{ 
-                width: '50px',
-                height: '50px',
-                border: '4px solid #f3f4f6',
-                borderTopColor: '#3b82f6',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-                margin: '0 auto 1.5rem'
-              }} />
-              <p style={{ color: '#6b7280', fontSize: '1rem' }}>Carregando checklists...</p>
+        {/* Loading */}
+        {loading ? (
+          <Card className="p-16 text-center">
+            <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-surface-2 border-t-brand" />
+            <p className="text-sm text-ink-muted">Carregando checklists...</p>
+          </Card>
+        ) : checklists.length === 0 ? (
+          /* Vazio */
+          <Card className="px-6 py-16 text-center">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-tint">
+              <Calendar size={36} className="text-brand" />
             </div>
-          ) : checklists.length === 0 ? (
-            /* Vazio */
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '1rem',
-              padding: '4rem',
-              textAlign: 'center',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
-            }}>
-              <Calendar size={64} style={{ margin: '0 auto 1.5rem', color: '#d1d5db' }} />
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937', marginBottom: '0.5rem' }}>
-                Nenhum checklist criado
-              </h3>
-              <p style={{ color: '#6b7280', marginBottom: '2rem' }}>
-                Comece criando seu primeiro checklist futuro
-              </p>
-              <button
-                onClick={() => router.push('/checklists-futuros/criar')}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  fontWeight: '600'
-                }}
-              >
-                <Plus size={20} />
-                Criar Primeiro Checklist
-              </button>
-            </div>
-          ) : (
-            /* Lista de Checklists */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {checklists.map((checklist) => {
-                const statusInfo = obterCorStatus(checklist.status || 'pendente')
-                const StatusIcon = statusInfo.icon
-                const progresso = checklist.progresso_percentual || 0
-                const alertaPrazo = obterAlertaPrazo(checklist.prazo_alerta)
-                const alertaHorario = checklist.status !== 'concluido' ? calcularAlertaHorario(checklist.hora_limite) : null
+            <h3 className="font-display text-xl font-bold text-ink">Nenhum checklist criado</h3>
+            <p className="mt-2 mb-6 text-sm text-ink-muted">Comece criando seu primeiro checklist futuro</p>
+            <Button variant="primary" onClick={() => router.push('/checklists-futuros/criar')} icon={<Plus size={18} />}>
+              Criar Primeiro Checklist
+            </Button>
+          </Card>
+        ) : (
+          /* Lista de Checklists */
+          <div className="flex flex-col gap-4">
+            {checklists.map((checklist) => {
+              const info = statusInfo[(checklist.status || 'pendente') as keyof typeof statusInfo] || statusInfo.pendente
+              const StatusIcon = info.icon
+              const progresso = checklist.progresso_percentual || 0
+              const alertaPrazo = obterAlertaPrazo(checklist.prazo_alerta)
+              const alertaHorario = checklist.status !== 'concluido' ? calcularAlertaHorario(checklist.hora_limite) : null
 
-                return (
-                  <div
-                    key={checklist.id}
-                    style={{
-                      backgroundColor: 'white',
-                      borderRadius: '1rem',
-                      padding: '1.5rem',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                      border: '1px solid #e5e7eb',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
-                      e.currentTarget.style.borderColor = '#3b82f6'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'
-                      e.currentTarget.style.borderColor = '#e5e7eb'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937', marginBottom: '0.5rem' }}>
-                          {checklist.nome}
-                        </h3>
-                        {checklist.descricao && (
-                          <p style={{ color: '#6b7280', fontSize: '0.95rem', lineHeight: '1.5' }}>
-                            {checklist.descricao}
-                          </p>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {alertaPrazo.nivel === 'vencido' && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: '0.8rem', fontWeight: '700', border: '1.5px solid #fca5a5' }}>
-                            ⚠️ Prazo vencido
-                          </span>
-                        )}
-                        {alertaPrazo.nivel === 'proximo' && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: '0.8rem', fontWeight: '700', border: '1.5px solid #fcd34d' }}>
-                            ⏰ Vence em {alertaPrazo.diasRestantes === 0 ? 'hoje' : `${alertaPrazo.diasRestantes}d`}
-                          </span>
-                        )}
-                        {alertaHorario?.nivel === 'vencido' && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: '0.8rem', fontWeight: '700', border: '1.5px solid #fca5a5' }}>
-                            ⏰ Prazo de hoje vencido ({alertaHorario.horaFormatada})
-                          </span>
-                        )}
-                        {alertaHorario?.nivel === 'proximo' && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: '0.8rem', fontWeight: '700', border: '1.5px solid #fcd34d' }}>
-                            ⏰ Prazo em {alertaHorario.minutosRestantes} min ({alertaHorario.horaFormatada})
-                          </span>
-                        )}
-                        <span style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '9999px',
-                          backgroundColor: statusInfo.bg,
-                          color: statusInfo.text,
-                          fontSize: '0.875rem',
-                          fontWeight: '600'
-                        }}>
-                          <StatusIcon size={16} />
-                          {statusInfo.label}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Barra de Progresso */}
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Progresso</span>
-                        <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1f2937' }}>
-                          {checklist.itens_respondidos || 0} / {checklist.total_itens || 0} itens ({progresso}%)
-                        </span>
-                      </div>
-                      <div style={{
-                        width: '100%',
-                        height: '0.5rem',
-                        backgroundColor: '#e5e7eb',
-                        borderRadius: '9999px',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{
-                          width: `${progresso}%`,
-                          height: '100%',
-                          backgroundColor: progresso === 100 ? '#22c55e' : '#3b82f6',
-                          transition: 'width 0.3s ease'
-                        }} />
-                      </div>
-                    </div>
-
-                    {/* Informações */}
-                    <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                        <Calendar size={16} />
-                        {formatarData(checklist.proxima_execucao)}
-                      </div>
-                      {checklist.tipo_negocio && (
-                        <div>📋 {checklist.tipo_negocio}</div>
-                      )}
-                      {checklist.departamento && (
-                        <div>🏢 {checklist.departamento}</div>
-                      )}
-                      {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
-                        <span style={{
-                          padding: '0.2rem 0.6rem',
-                          backgroundColor: '#eff6ff',
-                          color: '#1d4ed8',
-                          borderRadius: '9999px',
-                          fontWeight: '600',
-                          fontSize: '0.8rem',
-                          border: '1px solid #bfdbfe'
-                        }}>
-                          {labelRecorrencia[checklist.recorrencia] || checklist.recorrencia}
-                        </span>
-                      )}
-                      {(checklist.dias_tolerancia ?? 0) > 0 && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6b7280' }}>
-                          🕐 Janela: {(() => {
-                            const j = calcularJanela(checklist.proxima_execucao ?? '', checklist.dias_tolerancia!)
-                            return `${j.inicio} – ${j.fim}`
-                          })()}
-                        </span>
-                      )}
-                      {checklist.hora_limite && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6b7280' }}>
-                          ⏰ Até {checklist.hora_limite.slice(0, 5)}
-                        </span>
+              return (
+                <Card key={checklist.id} className="p-6">
+                  <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-ink">{checklist.nome}</h3>
+                      {checklist.descricao && (
+                        <p className="mt-1 text-sm leading-relaxed text-ink-muted">{checklist.descricao}</p>
                       )}
                     </div>
 
-                    {/* Botões */}
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => router.push(`/checklists-futuros/${checklist.id}`)}
-                        style={{
-                          padding: '0.625rem 1.25rem',
-                          backgroundColor: '#3b82f6',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontWeight: '600',
-                          fontSize: '0.95rem'
-                        }}
-                      >
-                        Ver Detalhes
-                      </button>
-                      <button
-                        onClick={() => router.push(`/checklists-futuros/editar/${checklist.id}`)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.625rem 1.25rem',
-                          backgroundColor: 'transparent',
-                          color: '#3b82f6',
-                          border: '1px solid #3b82f6',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontWeight: '600',
-                          fontSize: '0.95rem'
-                        }}
-                      >
-                        <Pencil size={16} />
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => excluirChecklist(checklist.id, checklist.nome)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.625rem 1.25rem',
-                          backgroundColor: 'transparent',
-                          color: '#ef4444',
-                          border: '1px solid #ef4444',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontWeight: '600',
-                          fontSize: '0.95rem'
-                        }}
-                      >
-                        <Trash2 size={16} />
-                        Excluir
-                      </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {alertaPrazo.nivel === 'vencido' && (
+                        <Badge tone="danger">⚠️ Prazo vencido</Badge>
+                      )}
+                      {alertaPrazo.nivel === 'proximo' && (
+                        <Badge tone="warning">⏰ Vence em {alertaPrazo.diasRestantes === 0 ? 'hoje' : `${alertaPrazo.diasRestantes}d`}</Badge>
+                      )}
+                      {alertaHorario?.nivel === 'vencido' && (
+                        <Badge tone="danger">⏰ Prazo de hoje vencido ({alertaHorario.horaFormatada})</Badge>
+                      )}
+                      {alertaHorario?.nivel === 'proximo' && (
+                        <Badge tone="warning">⏰ Prazo em {alertaHorario.minutosRestantes} min ({alertaHorario.horaFormatada})</Badge>
+                      )}
+                      <Badge tone={info.tone}>
+                        <StatusIcon size={13} />
+                        {info.label}
+                      </Badge>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+
+                  {/* Barra de Progresso */}
+                  <div className="mb-4">
+                    <div className="mb-1.5 flex justify-between text-sm">
+                      <span className="text-ink-muted">Progresso</span>
+                      <span className="font-semibold text-ink">
+                        {checklist.itens_respondidos || 0} / {checklist.total_itens || 0} itens ({progresso}%)
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+                      <div
+                        className={`h-full rounded-full transition-[width] duration-300 ${progresso === 100 ? 'bg-teal' : 'bg-brand'}`}
+                        style={{ width: `${progresso}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Informações */}
+                  <div className="mb-4 flex flex-wrap gap-4 text-sm text-ink-muted">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={15} />
+                      {formatarData(checklist.proxima_execucao)}
+                    </div>
+                    {checklist.tipo_negocio && <div>📋 {checklist.tipo_negocio}</div>}
+                    {checklist.departamento && <div>🏢 {checklist.departamento}</div>}
+                    {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
+                      <Badge tone="info">{labelRecorrencia[checklist.recorrencia] || checklist.recorrencia}</Badge>
+                    )}
+                    {(checklist.dias_tolerancia ?? 0) > 0 && (
+                      <span className="flex items-center gap-1">
+                        🕐 Janela: {(() => {
+                          const j = calcularJanela(checklist.proxima_execucao ?? '', checklist.dias_tolerancia!)
+                          return `${j.inicio} – ${j.fim}`
+                        })()}
+                      </span>
+                    )}
+                    {checklist.hora_limite && (
+                      <span className="flex items-center gap-1">⏰ Até {checklist.hora_limite.slice(0, 5)}</span>
+                    )}
+                  </div>
+
+                  {/* Botões */}
+                  <div className="flex flex-wrap gap-2.5">
+                    <Button variant="primary" onClick={() => router.push(`/checklists-futuros/${checklist.id}`)}>
+                      Ver Detalhes
+                    </Button>
+                    <Button variant="secondary" onClick={() => router.push(`/checklists-futuros/editar/${checklist.id}`)} icon={<Pencil size={16} />}>
+                      Editar
+                    </Button>
+                    <Button variant="danger" onClick={() => excluirChecklist(checklist.id, checklist.nome)} icon={<Trash2 size={16} />}>
+                      Excluir
+                    </Button>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        )}
       </div>
-    </>
+    </div>
   )
 }

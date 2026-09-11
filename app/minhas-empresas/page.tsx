@@ -3,19 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import {
-  Building2,
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Info,
-  ArrowLeft,
-  CheckCircle,
-  X,
-  Camera,
-  Loader2
-} from 'lucide-react'
+import { Building2, Plus, Search, Edit, Trash2, Info, CheckCircle, X, Camera, Loader2 } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface Empresa {
   id: string
@@ -29,6 +21,9 @@ interface Empresa {
   ativo: boolean
   logo_url?: string | null
 }
+
+const inputClass = 'w-full rounded-xl bg-surface-2 px-3.5 py-2.5 text-sm outline-none'
+const labelClass = 'mb-2 block text-sm font-semibold text-ink-muted'
 
 export default function MinhasEmpresas() {
   const router = useRouter()
@@ -268,295 +263,100 @@ export default function MinhasEmpresas() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <style>{`
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .table-row { transition: all 0.2s ease; }
-        .table-row:hover { background-color: #f8fafc; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1320px] px-6 py-8">
+        <PageHeader
+          title="Minhas Empresas"
+          subtitle="Gerencie as empresas do seu grupo"
+          backHref="/dashboard-aluno"
+          actions={
+            <Button variant="primary" onClick={() => { resetForm(); setShowAddModal(true) }} icon={<Plus size={18} />}>
+              Nova Empresa
+            </Button>
+          }
+        />
 
-      {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-        padding: '2rem',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-      }}>
-        <div style={{
-          maxWidth: '1400px',
-          margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1.5rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button
-              onClick={() => router.push('/dashboard-aluno')}
-              type="button"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.625rem 1.25rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontSize: '0.95rem',
-                fontWeight: '500'
-              }}
-            >
-              <ArrowLeft size={18} />
-              Voltar
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '3.5rem',
-                height: '3.5rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                borderRadius: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Building2 size={32} style={{ color: 'white' }} />
-              </div>
-              <div>
-                <h1 style={{
-                  fontSize: '2rem',
-                  fontWeight: 'bold',
-                  color: 'white',
-                  margin: 0
-                }}>
-                  Minhas Empresas
-                </h1>
-                <p style={{
-                  fontSize: '0.95rem',
-                  color: 'rgba(255, 255, 255, 0.9)',
-                  margin: '0.25rem 0 0 0'
-                }}>
-                  Gerencie as empresas do seu grupo
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              resetForm()
-              setShowAddModal(true)
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.625rem',
-              padding: '0.875rem 1.75rem',
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.75rem',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: '600',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-            }}
-          >
-            <Plus size={20} />
-            Nova Empresa
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
         {/* Stats */}
-        <div className="fade-in" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '1.5rem',
-          marginBottom: '2rem'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '1.5rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-            border: '2px solid #8b5cf6'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '3rem',
-                height: '3rem',
-                backgroundColor: '#ede9fe',
-                borderRadius: '0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Building2 size={24} style={{ color: '#8b5cf6' }} />
+        <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Card className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-tint">
+                <Building2 size={24} className="text-violet" />
               </div>
               <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-                  Total de Empresas
-                </p>
-                <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-                  {empresas.length}
-                </p>
+                <p className="text-sm text-ink-muted">Total de Empresas</p>
+                <p className="font-display text-2xl font-bold text-ink">{empresas.length}</p>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '1.5rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-            gridColumn: 'span 2'
-          }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={20} style={{
-                position: 'absolute',
-                left: '1rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#9ca3af'
-              }} />
+          <Card className="p-5 sm:col-span-2">
+            <div className="relative">
+              <Search size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint" />
               <input
                 type="text"
                 placeholder="Pesquisar por nome ou CNPJ..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1rem 0.875rem 3rem',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '0.75rem',
-                  fontSize: '0.95rem',
-                  outline: 'none'
-                }}
+                className="w-full rounded-xl bg-surface-2 py-2.5 pl-10 pr-3.5 text-sm outline-none"
               />
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Info */}
-        <div className="fade-in" style={{
-          backgroundColor: '#eff6ff',
-          border: '1px solid #bfdbfe',
-          borderRadius: '1rem',
-          padding: '1.25rem',
-          marginBottom: '2rem',
-          display: 'flex',
-          gap: '1rem'
-        }}>
-          <div style={{
-            backgroundColor: '#3b82f6',
-            borderRadius: '0.5rem',
-            padding: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Info size={20} style={{ color: 'white' }} />
+        <div className="mb-5 flex gap-3 rounded-2xl bg-blue-tint p-4">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-blue">
+            <Info size={18} className="text-white" />
           </div>
           <div>
-            <h3 style={{
-              fontSize: '0.95rem',
-              fontWeight: '600',
-              color: '#1e40af',
-              margin: '0 0 0.375rem 0'
-            }}>
-              Sobre o cadastro de empresas
-            </h3>
-            <p style={{ fontSize: '0.875rem', color: '#1e40af', margin: 0 }}>
+            <h3 className="mb-1 text-sm font-semibold text-blue">Sobre o cadastro de empresas</h3>
+            <p className="text-sm text-blue">
               Cadastre as empresas do seu grupo para atribuir checklists e acompanhar o desempenho de seus colaboradores.
             </p>
           </div>
         </div>
 
         {/* Table */}
-        <div className="fade-in" style={{
-          backgroundColor: 'white',
-          borderRadius: '1rem',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-          overflow: 'hidden'
-        }}>
+        <Card className="overflow-hidden">
           {loading && empresas.length === 0 ? (
-            <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-              <p>Carregando empresas...</p>
-            </div>
+            <div className="py-16 text-center text-sm text-ink-muted">Carregando empresas...</div>
           ) : filteredEmpresas.length === 0 ? (
-            <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-              <div style={{
-                width: '80px',
-                height: '80px',
-                backgroundColor: '#f3f4f6',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 1.5rem'
-              }}>
-                <Building2 size={40} style={{ color: '#9ca3af' }} />
+            <div className="px-6 py-16 text-center">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-tint">
+                <Building2 size={36} className="text-brand" />
               </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937', margin: '0 0 0.5rem 0' }}>
+              <h3 className="font-display text-xl font-bold text-ink">
                 {searchTerm ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa cadastrada'}
               </h3>
-              <p style={{ fontSize: '0.95rem', color: '#6b7280', margin: '0 0 1.5rem 0' }}>
+              <p className="mt-2 mb-6 text-sm text-ink-muted">
                 {searchTerm ? 'Tente pesquisar com outros termos' : 'Comece adicionando a primeira empresa'}
               </p>
               {!searchTerm && (
-                <button
-                  onClick={() => {
-                    resetForm()
-                    setShowAddModal(true)
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#8b5cf6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.95rem',
-                    fontWeight: '600'
-                  }}
-                >
-                  <Plus size={18} />
+                <Button variant="primary" onClick={() => { resetForm(); setShowAddModal(true) }} icon={<Plus size={18} />}>
                   Adicionar Primeira Empresa
-                </button>
+                </Button>
               )}
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
                 <thead>
-                  <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                    <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151', width: '5rem' }}>Logo</th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Nome Fantasia</th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>CNPJ</th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Cidade/Estado</th>
-                    <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Status</th>
-                    <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Ações</th>
+                  <tr className="border-b border-surface-2 bg-surface-2">
+                    <th className="w-20 p-4 text-center text-sm font-semibold text-ink-muted">Logo</th>
+                    <th className="p-4 text-left text-sm font-semibold text-ink-muted">Nome Fantasia</th>
+                    <th className="p-4 text-left text-sm font-semibold text-ink-muted">CNPJ</th>
+                    <th className="p-4 text-left text-sm font-semibold text-ink-muted">Cidade/Estado</th>
+                    <th className="p-4 text-center text-sm font-semibold text-ink-muted">Status</th>
+                    <th className="p-4 text-center text-sm font-semibold text-ink-muted">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEmpresas.map((empresa) => (
-                    <tr key={empresa.id} className="table-row" style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '1rem', textAlign: 'center' }}>
+                    <tr key={empresa.id} className="border-b border-surface-2 transition-colors last:border-0 hover:bg-surface-2">
+                      <td className="p-4 text-center">
                         <div
-                          style={{ position: 'relative', display: 'inline-block', cursor: 'pointer' }}
+                          className="relative inline-block cursor-pointer"
                           onClick={() => document.getElementById(`logo-input-${empresa.id}`)?.click()}
                           title="Clique para alterar o logo"
                         >
@@ -564,107 +364,56 @@ export default function MinhasEmpresas() {
                             <img
                               src={empresa.logo_url}
                               alt={empresa.nome_fantasia}
-                              style={{ width: '3rem', height: '3rem', borderRadius: '0.5rem', objectFit: 'cover', border: '2px solid #e5e7eb' }}
+                              className="h-12 w-12 rounded-xl object-cover"
                             />
                           ) : (
-                            <div style={{ width: '3rem', height: '3rem', backgroundColor: '#ede9fe', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Building2 size={20} style={{ color: '#8b5cf6' }} />
+                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-tint">
+                              <Building2 size={20} className="text-violet" />
                             </div>
                           )}
-                          <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', backgroundColor: '#8b5cf6', borderRadius: '50%', width: '1.2rem', height: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white' }}>
+                          <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-violet">
                             {uploadingLogoId === empresa.id
-                              ? <Loader2 size={8} style={{ color: 'white', animation: 'spin 1s linear infinite' }} />
-                              : <Camera size={8} style={{ color: 'white' }} />}
+                              ? <Loader2 size={9} className="animate-spin text-white" />
+                              : <Camera size={9} className="text-white" />}
                           </div>
                         </div>
                         <input
                           id={`logo-input-${empresa.id}`}
                           type="file"
                           accept="image/jpeg,image/png,image/webp"
-                          style={{ display: 'none' }}
+                          className="hidden"
                           onChange={(e) => handleLogoUpload(e, empresa)}
                         />
                       </td>
-                      <td style={{ padding: '1rem' }}>
-                        <div style={{ fontWeight: '600', color: '#1f2937' }}>{empresa.nome_fantasia}</div>
+                      <td className="p-4">
+                        <div className="font-semibold text-ink">{empresa.nome_fantasia}</div>
                         {empresa.razao_social && (
-                          <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                            {empresa.razao_social}
-                          </div>
+                          <div className="mt-0.5 text-sm text-ink-muted">{empresa.razao_social}</div>
                         )}
                       </td>
-                      <td style={{ padding: '1rem', color: '#6b7280' }}>{empresa.cnpj || '-'}</td>
-                      <td style={{ padding: '1rem', color: '#6b7280' }}>
+                      <td className="p-4 text-sm text-ink-muted">{empresa.cnpj || '-'}</td>
+                      <td className="p-4 text-sm text-ink-muted">
                         {empresa.cidade && empresa.estado ? `${empresa.cidade}/${empresa.estado}` : '-'}
                       </td>
-                      <td style={{ padding: '1rem', textAlign: 'center' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '0.375rem 0.875rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          backgroundColor: empresa.ativo ? '#d1fae5' : '#fee2e2',
-                          color: empresa.ativo ? '#065f46' : '#991b1b'
-                        }}>
-                          {empresa.ativo ? 'Ativa' : 'Inativa'}
-                        </span>
+                      <td className="p-4 text-center">
+                        <Badge tone={empresa.ativo ? 'success' : 'danger'}>{empresa.ativo ? 'Ativa' : 'Inativa'}</Badge>
                       </td>
-                      <td style={{ padding: '1rem' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                          <button
-                            onClick={() => editarEmpresa(empresa)}
-                            style={{
-                              padding: '0.5rem 0.875rem',
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '0.375rem',
-                              cursor: 'pointer',
-                              fontSize: '0.875rem',
-                              fontWeight: '500',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.375rem'
-                            }}
-                          >
-                            <Edit size={14} />
+                      <td className="p-4">
+                        <div className="flex flex-wrap justify-center gap-2">
+                          <Button variant="secondary" size="sm" onClick={() => editarEmpresa(empresa)} icon={<Edit size={14} />}>
                             Editar
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className={empresa.ativo ? 'text-amber' : 'text-teal'}
                             onClick={() => toggleAtivo(empresa.id, empresa.ativo)}
-                            style={{
-                              padding: '0.5rem 0.875rem',
-                              backgroundColor: empresa.ativo ? '#f59e0b' : '#10b981',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '0.375rem',
-                              cursor: 'pointer',
-                              fontSize: '0.875rem',
-                              fontWeight: '500'
-                            }}
                           >
                             {empresa.ativo ? 'Desativar' : 'Ativar'}
-                          </button>
-                          <button
-                            onClick={() => deletarEmpresa(empresa.id, empresa.nome_fantasia)}
-                            style={{
-                              padding: '0.5rem 0.875rem',
-                              backgroundColor: '#ef4444',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '0.375rem',
-                              cursor: 'pointer',
-                              fontSize: '0.875rem',
-                              fontWeight: '500',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.375rem'
-                            }}
-                          >
-                            <Trash2 size={14} />
+                          </Button>
+                          <Button variant="danger" size="sm" onClick={() => deletarEmpresa(empresa.id, empresa.nome_fantasia)} icon={<Trash2 size={14} />}>
                             Excluir
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -673,238 +422,96 @@ export default function MinhasEmpresas() {
               </table>
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* Modal */}
       {showAddModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem',
-          zIndex: 50
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            maxWidth: '600px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-          }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-[600px] overflow-auto rounded-3xl bg-white shadow-soft">
             {/* Modal Header */}
-            <div style={{
-              padding: '1.5rem',
-              borderBottom: '1px solid #e5e7eb',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{
-                  width: '2.5rem',
-                  height: '2.5rem',
-                  backgroundColor: '#ede9fe',
-                  borderRadius: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <Building2 size={20} style={{ color: '#8b5cf6' }} />
+            <div className="flex items-center justify-between gap-3 border-b border-surface-2 p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-tint">
+                  <Building2 size={20} className="text-violet" />
                 </div>
-                <h2 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: '700',
-                  color: '#1f2937',
-                  margin: 0
-                }}>
+                <h2 className="font-display text-lg font-bold text-ink">
                   {editingId ? 'Editar Empresa' : 'Nova Empresa'}
                 </h2>
               </div>
               <button
-                onClick={() => {
-                  setShowAddModal(false)
-                  resetForm()
-                }}
-                style={{
-                  padding: '0.5rem',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#6b7280',
-                  borderRadius: '0.375rem'
-                }}
+                onClick={() => { setShowAddModal(false); resetForm() }}
+                className="rounded-lg p-2 text-ink-muted hover:bg-surface-2"
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'grid', gap: '1.25rem' }}>
-                {/* Nome Fantasia */}
+            <div className="p-6">
+              <div className="grid gap-5">
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Nome Fantasia <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
+                  <label className={labelClass}>Nome Fantasia <span className="text-coral">*</span></label>
                   <input
                     type="text"
                     value={formData.nome_fantasia}
                     onChange={(e) => setFormData({ ...formData, nome_fantasia: e.target.value })}
                     placeholder="Digite o nome fantasia"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.95rem',
-                      outline: 'none'
-                    }}
+                    className={inputClass}
                   />
                 </div>
 
-                {/* Razão Social */}
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Razão Social
-                  </label>
+                  <label className={labelClass}>Razão Social</label>
                   <input
                     type="text"
                     value={formData.razao_social}
                     onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })}
                     placeholder="Digite a razão social"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.95rem',
-                      outline: 'none'
-                    }}
+                    className={inputClass}
                   />
                 </div>
 
-                {/* CNPJ */}
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    CNPJ <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
+                  <label className={labelClass}>CNPJ <span className="text-coral">*</span></label>
                   <input
                     type="text"
                     value={formData.cnpj}
                     onChange={(e) => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })}
                     placeholder="00.000.000/0000-00"
                     maxLength={18}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.95rem',
-                      outline: 'none'
-                    }}
+                    className={inputClass}
                   />
                 </div>
 
-                {/* Endereço */}
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Endereço
-                  </label>
+                  <label className={labelClass}>Endereço</label>
                   <input
                     type="text"
                     value={formData.endereco}
                     onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
                     placeholder="Rua, número, complemento"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.95rem',
-                      outline: 'none'
-                    }}
+                    className={inputClass}
                   />
                 </div>
 
-                {/* Cidade e Estado */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+                <div className="grid grid-cols-[2fr_1fr] gap-4">
                   <div>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      marginBottom: '0.5rem'
-                    }}>
-                      Cidade
-                    </label>
+                    <label className={labelClass}>Cidade</label>
                     <input
                       type="text"
                       value={formData.cidade}
                       onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
                       placeholder="Digite a cidade"
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.95rem',
-                        outline: 'none'
-                      }}
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151',
-                      marginBottom: '0.5rem'
-                    }}>
-                      Estado
-                    </label>
+                    <label className={labelClass}>Estado</label>
                     <select
                       value={formData.estado}
                       onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '2px solid #e5e7eb',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.95rem',
-                        outline: 'none',
-                        backgroundColor: 'white'
-                      }}
+                      className={`${inputClass} cursor-pointer`}
                     >
                       <option value="">UF</option>
                       {estados.map(uf => (
@@ -914,119 +521,40 @@ export default function MinhasEmpresas() {
                   </div>
                 </div>
 
-                {/* Telefone */}
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Telefone
-                  </label>
+                  <label className={labelClass}>Telefone</label>
                   <input
                     type="text"
                     value={formData.telefone}
                     onChange={(e) => setFormData({ ...formData, telefone: formatPhone(e.target.value) })}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.95rem',
-                      outline: 'none'
-                    }}
+                    className={inputClass}
                   />
                 </div>
 
-                {/* Status */}
                 <div>
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    cursor: 'pointer'
-                  }}>
+                  <label className="flex cursor-pointer items-center gap-2">
                     <input
                       type="checkbox"
                       checked={formData.ativo}
                       onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-                      style={{
-                        width: '1.25rem',
-                        height: '1.25rem',
-                        cursor: 'pointer'
-                      }}
+                      className="h-5 w-5 cursor-pointer accent-brand"
                     />
-                    <span style={{
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      color: '#374151'
-                    }}>
-                      Empresa ativa
-                    </span>
+                    <span className="text-sm font-semibold text-ink-muted">Empresa ativa</span>
                   </label>
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div style={{
-              padding: '1.5rem',
-              borderTop: '1px solid #e5e7eb',
-              display: 'flex',
-              gap: '1rem',
-              justifyContent: 'flex-end'
-            }}>
-              <button
-                onClick={() => {
-                  setShowAddModal(false)
-                  resetForm()
-                }}
-                disabled={loading}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#f3f4f6',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  opacity: loading ? 0.6 : 1
-                }}
-              >
+            <div className="flex justify-end gap-3 border-t border-surface-2 p-6">
+              <Button variant="secondary" onClick={() => { setShowAddModal(false); resetForm() }} disabled={loading}>
                 Cancelar
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  opacity: loading ? 0.6 : 1
-                }}
-              >
-                {loading ? (
-                  <>Salvando...</>
-                ) : (
-                  <>
-                    <CheckCircle size={18} />
-                    {editingId ? 'Atualizar' : 'Cadastrar'}
-                  </>
-                )}
-              </button>
+              </Button>
+              <Button variant="primary" onClick={handleSubmit} disabled={loading} icon={!loading ? <CheckCircle size={18} /> : undefined}>
+                {loading ? 'Salvando...' : editingId ? 'Atualizar' : 'Cadastrar'}
+              </Button>
             </div>
           </div>
         </div>

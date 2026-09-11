@@ -10,9 +10,15 @@ import {
   LogOut,
   User,
   Building2,
-  Calendar
+  Calendar,
+  Bell,
+  Smartphone,
+  History
 } from 'lucide-react'
 import { calcularAlertaHorario } from '@/lib/prazo-horario'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface Empresa {
   nome_fantasia: string
@@ -44,6 +50,98 @@ interface Checklist {
   recorrencia?: string | null
   dias_tolerancia?: number | null
   hora_limite?: string | null
+}
+
+const labelRecorrencia: Record<string, string> = {
+  diaria: '🔄 Diária',
+  semanal: '🔄 Semanal',
+  mensal: '🔄 Mensal'
+}
+
+const STATUS_CONFIG = {
+  pendente: { label: 'Pendente', tone: 'warning' as const, cta: 'Iniciar Agora →', ctaBg: 'bg-amber', border: 'border-amber/25' },
+  em_andamento: { label: 'Em Andamento', tone: 'info' as const, cta: 'Continuar →', ctaBg: 'bg-blue', border: 'border-blue/25' },
+  atrasado: { label: 'Atrasado', tone: 'danger' as const, cta: 'Responder Agora →', ctaBg: 'bg-coral', border: 'border-coral/30' },
+  concluido: { label: 'Concluído', tone: 'success' as const, cta: 'Ver Respostas →', ctaBg: 'bg-teal', border: 'border-teal/25' },
+}
+
+function calcularJanela(dataStr: string, dias: number) {
+  const data = new Date(dataStr)
+  const inicio = new Date(data)
+  inicio.setDate(inicio.getDate() - dias)
+  const fim = new Date(data)
+  fim.setDate(fim.getDate() + dias)
+  return {
+    inicio: inicio.toLocaleDateString('pt-BR'),
+    fim: fim.toLocaleDateString('pt-BR')
+  }
+}
+
+function ChecklistCard({
+  checklist, isNovo, onClick,
+}: { checklist: Checklist; isNovo: boolean; onClick: () => void }) {
+  const config = STATUS_CONFIG[checklist.status]
+  const alertaHorario = checklist.status !== 'concluido' ? calcularAlertaHorario(checklist.hora_limite) : null
+  const borderClass = alertaHorario?.nivel === 'vencido' ? 'border-coral/40' : alertaHorario?.nivel === 'proximo' ? 'border-amber/40' : config.border
+
+  return (
+    <Card interactive onClick={onClick} className={`border-2 p-6 ${borderClass}`}>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <h3 className="flex-1 text-base font-bold text-ink">{checklist.nome}</h3>
+        <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
+          {isNovo && <Badge tone="info">🔔 NOVO</Badge>}
+          {alertaHorario?.nivel === 'vencido' && <Badge tone="danger">⏰ Prazo vencido</Badge>}
+          {alertaHorario?.nivel === 'proximo' && <Badge tone="warning">⏰ {alertaHorario.minutosRestantes} min restantes</Badge>}
+          <Badge tone={config.tone}>{config.label}</Badge>
+        </div>
+      </div>
+
+      {checklist.descricao && <p className="mb-4 text-sm text-ink-muted">{checklist.descricao}</p>}
+
+      {checklist.status === 'em_andamento' && (
+        <div className="mb-4 rounded-xl bg-surface-2 p-3">
+          <div className="mb-1.5 flex justify-between text-sm">
+            <span className="text-ink-muted">Progresso</span>
+            <span className="font-semibold text-blue">{checklist.respostas_count}/{checklist.total_perguntas}</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-white">
+            <div
+              className="h-full rounded-full bg-blue transition-[width] duration-300"
+              style={{ width: `${(checklist.respostas_count / (checklist.total_perguntas || 1)) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {(checklist.status === 'pendente' || checklist.status === 'atrasado') && (
+        <div className="flex flex-col gap-1.5 text-sm text-ink-muted">
+          <div className="flex items-center gap-2">
+            <Calendar size={14} />
+            {checklist.proxima_execucao ? `Execução: ${new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}` : ''}
+          </div>
+          {checklist.status === 'pendente' && (checklist.dias_tolerancia ?? 0) > 0 && checklist.proxima_execucao && (
+            <div>🕐 {(() => { const j = calcularJanela(checklist.proxima_execucao!, checklist.dias_tolerancia!); return `Disponível: ${j.inicio} – ${j.fim}` })()}</div>
+          )}
+          {checklist.status === 'pendente' && checklist.hora_limite && (
+            <div className={alertaHorario?.nivel ? 'font-semibold text-amber' : ''}>
+              ⏰ Responder até {checklist.hora_limite.slice(0, 5)}
+            </div>
+          )}
+          {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
+            <Badge tone="info">{labelRecorrencia[checklist.recorrencia] || checklist.recorrencia}</Badge>
+          )}
+          <div className="flex items-center gap-2">
+            <ClipboardList size={14} />
+            {checklist.total_perguntas} perguntas
+          </div>
+        </div>
+      )}
+
+      <div className={`mt-4 rounded-xl py-3 text-center text-sm font-semibold text-white ${config.ctaBg}`}>
+        {config.cta}
+      </div>
+    </Card>
+  )
 }
 
 export default function DashboardColaborador() {
@@ -250,134 +348,48 @@ export default function DashboardColaborador() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checklistsComPrazoProximo.map(c => c.id).join(','), notifPermissao, colaborador])
 
-  const labelRecorrencia: Record<string, string> = {
-    diaria: '🔄 Diária',
-    semanal: '🔄 Semanal',
-    mensal: '🔄 Mensal'
-  }
-
-  function calcularJanela(dataStr: string, dias: number) {
-    const data = new Date(dataStr)
-    const inicio = new Date(data)
-    inicio.setDate(inicio.getDate() - dias)
-    const fim = new Date(data)
-    fim.setDate(fim.getDate() + dias)
-    return {
-      inicio: inicio.toLocaleDateString('pt-BR'),
-      fim: fim.toLocaleDateString('pt-BR')
-    }
-  }
-
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <style>{`
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .card { 
-          transition: all 0.2s ease;
-          cursor: pointer;
-        }
-        .card:hover { 
-          transform: translateY(-4px);
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-        }
-      `}</style>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1400px] px-6 py-6">
 
-      {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        padding: '2rem',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-      }}>
-        <div style={{
-          maxWidth: '1400px',
-          margin: '0 auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1.5rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        {/* Top bar */}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white p-4 shadow-soft-sm">
+          <div className="flex items-center gap-4">
             {colaborador?.foto_url ? (
               <img
                 src={colaborador.foto_url}
                 alt={colaborador.nome}
-                style={{
-                  width: '4rem',
-                  height: '4rem',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '3px solid rgba(255, 255, 255, 0.4)',
-                  cursor: 'pointer'
-                }}
+                className="h-14 w-14 cursor-pointer rounded-full border-2 border-surface-2 object-cover"
                 onClick={() => router.push('/perfil')}
                 onError={(e) => { e.currentTarget.style.display = 'none' }}
               />
             ) : (
-              <div style={{
-                width: '4rem',
-                height: '4rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }} onClick={() => router.push('/perfil')}>
-                <User size={32} style={{ color: 'white' }} />
+              <div
+                className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-brand-tint"
+                onClick={() => router.push('/perfil')}
+              >
+                <User size={26} className="text-brand" />
               </div>
             )}
             <div>
-              <h1 style={{
-                fontSize: '1.75rem',
-                fontWeight: 'bold',
-                color: 'white',
-                margin: 0
-              }}>
-                Olá, {colaborador?.nome || 'Colaborador'}!
-              </h1>
-              <p style={{
-                fontSize: '0.95rem',
-                color: 'rgba(255, 255, 255, 0.9)',
-                margin: '0.25rem 0 0 0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <Building2 size={16} />
+              <h1 className="font-display text-xl font-bold text-ink">Olá, {colaborador?.nome || 'Colaborador'}!</h1>
+              <p className="mt-0.5 flex items-center gap-1.5 text-sm text-ink-muted">
+                <Building2 size={14} />
                 {colaborador?.empresas?.nome_fantasia}
                 {colaborador?.cargo && ` • ${colaborador.cargo}`}
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
-              onClick={() => router.push('/perfil')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.5rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                color: 'white',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontSize: '0.95rem',
-                fontWeight: '500'
-              }}
-            >
-              <User size={18} />
+          <div className="flex flex-wrap gap-2.5">
+            <Button variant="secondary" onClick={() => router.push('/perfil')} icon={<User size={16} />}>
               Meu Perfil
-            </button>
+            </Button>
 
             {deferredInstall && !appInstalado && (
-              <button
+              <Button
+                variant="secondary"
+                className="bg-amber-tint text-amber"
                 onClick={async () => {
                   const prompt = deferredInstall as any
                   prompt.prompt()
@@ -385,568 +397,176 @@ export default function DashboardColaborador() {
                   if (outcome === 'accepted') setAppInstalado(true)
                   setDeferredInstall(null)
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem', color: '#1e293b', backgroundColor: '#fbbf24', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '700' }}
+                icon={<Smartphone size={16} />}
               >
-                📲 Instalar App
-              </button>
+                Instalar App
+              </Button>
             )}
 
-            <button
-              onClick={() => router.push('/historico-funcionario')}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}
-            >
-              <Clock size={18} />
+            <Button variant="secondary" onClick={() => router.push('/historico-funcionario')} icon={<History size={16} />}>
               Histórico
-            </button>
+            </Button>
 
-            <button
-              onClick={handleLogout}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.5rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                color: 'white',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontSize: '0.95rem',
-                fontWeight: '500'
-              }}
-            >
-              <LogOut size={18} />
+            <Button variant="danger" onClick={handleLogout} icon={<LogOut size={16} />}>
               Sair
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
 
         {/* Banner de novos checklists */}
         {!notifDescartada && checklistsNovos.length > 0 && (
-          <div className="fade-in" style={{ background: '#eff6ff', border: '2px solid #3b82f6', borderRadius: '0.875rem', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>🔔</span>
+          <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl bg-blue-tint p-4">
+            <div className="flex items-center gap-3">
+              <Bell size={22} className="text-blue" />
               <div>
-                <p style={{ margin: 0, fontWeight: '700', color: '#1d4ed8', fontSize: '0.95rem' }}>
+                <p className="text-sm font-bold text-blue">
                   {checklistsNovos.length === 1 ? 'Você tem 1 novo checklist atribuído!' : `Você tem ${checklistsNovos.length} novos checklists atribuídos!`}
                 </p>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#3b82f6' }}>Confira abaixo os checklists marcados com 🔔 NOVO.</p>
+                <p className="text-xs text-blue">Confira abaixo os checklists marcados com 🔔 NOVO.</p>
               </div>
             </div>
-            <button onClick={() => setNotifDescartada(true)}
-              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '1.25rem', lineHeight: 1, flexShrink: 0 }}>×</button>
+            <button onClick={() => setNotifDescartada(true)} className="flex-shrink-0 text-lg leading-none text-blue">×</button>
           </div>
         )}
 
         {/* Banner de prazo por horário próximo ou vencido */}
         {(checklistsComPrazoVencidoHoje.length > 0 || checklistsComPrazoProximo.length > 0) && (
-          <div className="fade-in" style={{
-            background: checklistsComPrazoVencidoHoje.length > 0 ? '#fef2f2' : '#fffbeb',
-            border: `2px solid ${checklistsComPrazoVencidoHoje.length > 0 ? '#ef4444' : '#f59e0b'}`,
-            borderRadius: '0.875rem',
-            padding: '1rem 1.25rem',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>⏰</span>
+          <div className={`mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4 ${checklistsComPrazoVencidoHoje.length > 0 ? 'bg-coral-tint' : 'bg-amber-tint'}`}>
+            <div className="flex items-center gap-3">
+              <Clock size={22} className={checklistsComPrazoVencidoHoje.length > 0 ? 'text-coral' : 'text-amber'} />
               <div>
-                <p style={{ margin: 0, fontWeight: '700', color: checklistsComPrazoVencidoHoje.length > 0 ? '#991b1b' : '#92400e', fontSize: '0.95rem' }}>
+                <p className={`text-sm font-bold ${checklistsComPrazoVencidoHoje.length > 0 ? 'text-coral' : 'text-amber'}`}>
                   {checklistsComPrazoVencidoHoje.length > 0
                     ? `${checklistsComPrazoVencidoHoje.length} checklist(s) com o prazo de hoje vencido!`
                     : `${checklistsComPrazoProximo.length} checklist(s) com prazo próximo!`}
                 </p>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: checklistsComPrazoVencidoHoje.length > 0 ? '#b91c1c' : '#b45309' }}>
+                <p className={`text-xs ${checklistsComPrazoVencidoHoje.length > 0 ? 'text-coral' : 'text-amber'}`}>
                   Confira os checklists com o horário limite destacado abaixo.
                 </p>
               </div>
             </div>
             {notifPermissao === 'default' && (
-              <button
-                onClick={ativarNotificacoesPrazo}
-                style={{ padding: '0.5rem 1rem', backgroundColor: 'white', border: '1px solid #d1d5db', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}
-              >
-                🔔 Ativar notificações
-              </button>
+              <Button variant="secondary" size="sm" onClick={ativarNotificacoesPrazo} icon={<Bell size={14} />}>
+                Ativar notificações
+              </Button>
             )}
           </div>
         )}
 
         {/* Stats */}
-        <div className="fade-in" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '1.5rem',
-          marginBottom: '2rem'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '1.5rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '3rem',
-                height: '3rem',
-                backgroundColor: '#dbeafe',
-                borderRadius: '0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <ClipboardList size={24} style={{ color: '#3b82f6' }} />
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Card className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-tint">
+                <ClipboardList size={24} className="text-blue" />
               </div>
               <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-                  Total de Checklists
-                </p>
-                <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-                  {checklists.length}
-                </p>
+                <p className="text-sm text-ink-muted">Total de Checklists</p>
+                <p className="font-display text-2xl font-bold text-ink">{checklists.length}</p>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '1.5rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '3rem',
-                height: '3rem',
-                backgroundColor: '#fef3c7',
-                borderRadius: '0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Clock size={24} style={{ color: '#f59e0b' }} />
+          <Card className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-tint">
+                <Clock size={24} className="text-amber" />
               </div>
               <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-                  Pendentes
-                </p>
-                <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-                  {checklistsPendentes.length}
-                </p>
+                <p className="text-sm text-ink-muted">Pendentes</p>
+                <p className="font-display text-2xl font-bold text-ink">{checklistsPendentes.length}</p>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '1.5rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '3rem',
-                height: '3rem',
-                backgroundColor: '#d1fae5',
-                borderRadius: '0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <CheckCircle size={24} style={{ color: '#10b981' }} />
+          <Card className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-tint">
+                <CheckCircle size={24} className="text-teal" />
               </div>
               <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-                  Concluídos
-                </p>
-                <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-                  {checklistsConcluidos.length}
-                </p>
+                <p className="text-sm text-ink-muted">Concluídos</p>
+                <p className="font-display text-2xl font-bold text-ink">{checklistsConcluidos.length}</p>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Checklists */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-            <p style={{ color: '#6b7280' }}>Carregando seus checklists...</p>
-          </div>
+          <div className="py-16 text-center text-sm text-ink-muted">Carregando seus checklists...</div>
         ) : erroChecklists ? (
-          <div className="fade-in" style={{
-            backgroundColor: '#fef2f2',
-            borderRadius: '1rem',
-            padding: '2rem',
-            textAlign: 'center',
-            border: '1px solid #fecaca'
-          }}>
-            <p style={{ color: '#dc2626', marginBottom: '1rem' }}>
-              Não foi possível carregar os checklists. Verifique sua conexão.
-            </p>
-            <button
+          <Card className="p-8 text-center">
+            <p className="mb-4 text-sm text-coral">Não foi possível carregar os checklists. Verifique sua conexão.</p>
+            <Button
+              variant="primary"
               onClick={() => { setErroChecklists(false); colaborador && carregarChecklists(colaborador.id) }}
-              style={{ padding: '0.5rem 1.5rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
             >
               Tentar novamente
-            </button>
-          </div>
+            </Button>
+          </Card>
         ) : checklists.length === 0 ? (
-          <div className="fade-in" style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '4rem 2rem',
-            textAlign: 'center',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
-          }}>
-            <div style={{
-              width: '80px',
-              height: '80px',
-              backgroundColor: '#f3f4f6',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1.5rem'
-            }}>
-              <ClipboardList size={40} style={{ color: '#9ca3af' }} />
+          <Card className="px-6 py-16 text-center">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-tint">
+              <ClipboardList size={36} className="text-brand" />
             </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937', margin: '0 0 0.5rem 0' }}>
-              Nenhum checklist disponível
-            </h3>
-            <p style={{ fontSize: '0.95rem', color: '#6b7280', margin: 0 }}>
-              Quando seu gestor atribuir checklists para você, eles aparecerão aqui.
-            </p>
-          </div>
+            <h3 className="font-display text-xl font-bold text-ink">Nenhum checklist disponível</h3>
+            <p className="mt-2 text-sm text-ink-muted">Quando seu gestor atribuir checklists para você, eles aparecerão aqui.</p>
+          </Card>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div className="flex flex-col gap-8">
             {/* Pendentes */}
             {checklistsPendentes.length > 0 && (
-              <div className="fade-in">
-                <h2 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: '600',
-                  color: '#1f2937',
-                  margin: '0 0 1rem 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <Clock size={20} style={{ color: '#f59e0b' }} />
-                  Pendentes ({checklistsPendentes.length})
+              <div>
+                <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
+                  <Clock size={20} className="text-amber" /> Pendentes ({checklistsPendentes.length})
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                  {checklistsPendentes.map(checklist => {
-                    const alertaHorario = calcularAlertaHorario(checklist.hora_limite)
-                    return (
-                    <div
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {checklistsPendentes.map(checklist => (
+                    <ChecklistCard
                       key={checklist.id}
-                      className="card"
+                      checklist={checklist}
+                      isNovo={checklistsNovos.includes(checklist.id)}
                       onClick={() => responderChecklist(checklist.id)}
-                      style={{
-                        backgroundColor: 'white',
-                        borderRadius: '1rem',
-                        padding: '1.5rem',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-                        border: alertaHorario?.nivel === 'vencido' ? '2px solid #fca5a5' : alertaHorario?.nivel === 'proximo' ? '2px solid #fcd34d' : '2px solid #fef3c7'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem', gap: '0.5rem' }}>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0, flex: 1 }}>
-                          {checklist.nome}
-                        </h3>
-                        <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, flexDirection: 'column', alignItems: 'flex-end' }}>
-                          {checklistsNovos.includes(checklist.id) && (
-                            <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#3b82f6', color: 'white', whiteSpace: 'nowrap' }}>
-                              🔔 NOVO
-                            </span>
-                          )}
-                          {alertaHorario?.nivel === 'vencido' && (
-                            <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#ef4444', color: 'white', whiteSpace: 'nowrap' }}>
-                              ⏰ Prazo vencido
-                            </span>
-                          )}
-                          {alertaHorario?.nivel === 'proximo' && (
-                            <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#f59e0b', color: 'white', whiteSpace: 'nowrap' }}>
-                              ⏰ {alertaHorario.minutosRestantes} min restantes
-                            </span>
-                          )}
-                          <span style={{
-                            padding: '0.375rem 0.75rem',
-                            borderRadius: '9999px',
-                            fontSize: '0.75rem',
-                            fontWeight: '600',
-                            backgroundColor: '#fef3c7',
-                            color: '#92400e'
-                          }}>
-                            Pendente
-                          </span>
-                        </div>
-                      </div>
-                      {checklist.descricao && (
-                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
-                          {checklist.descricao}
-                        </p>
-                      )}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Calendar size={14} />
-                          {checklist.proxima_execucao ? `Execução: ${new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}` : ''}
-                        </div>
-                        {(checklist.dias_tolerancia ?? 0) > 0 && checklist.proxima_execucao && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            🕐 {(() => { const j = calcularJanela(checklist.proxima_execucao, checklist.dias_tolerancia!); return `Disponível: ${j.inicio} – ${j.fim}` })()}
-                          </div>
-                        )}
-                        {checklist.hora_limite && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: alertaHorario?.nivel === 'vencido' ? '#dc2626' : alertaHorario?.nivel === 'proximo' ? '#b45309' : '#6b7280', fontWeight: alertaHorario?.nivel ? '600' : '400' }}>
-                            ⏰ Responder até {checklist.hora_limite.slice(0, 5)}
-                          </div>
-                        )}
-                        {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ padding: '0.15rem 0.5rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '9999px', fontWeight: '600', fontSize: '0.75rem', border: '1px solid #bfdbfe' }}>
-                              {labelRecorrencia[checklist.recorrencia] || checklist.recorrencia}
-                            </span>
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <ClipboardList size={14} />
-                          {checklist.total_perguntas} perguntas
-                        </div>
-                      </div>
-                      <div style={{
-                        marginTop: '1rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#f59e0b',
-                        color: 'white',
-                        borderRadius: '0.5rem',
-                        textAlign: 'center',
-                        fontWeight: '600',
-                        fontSize: '0.95rem'
-                      }}>
-                        Iniciar Agora →
-                      </div>
-                    </div>
-                    )
-                  })}
+                    />
+                  ))}
                 </div>
               </div>
             )}
 
             {/* Em Andamento */}
             {checklistsEmAndamento.length > 0 && (
-              <div className="fade-in">
-                <h2 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: '600',
-                  color: '#1f2937',
-                  margin: '0 0 1rem 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <AlertCircle size={20} style={{ color: '#3b82f6' }} />
-                  Em Andamento ({checklistsEmAndamento.length})
+              <div>
+                <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
+                  <AlertCircle size={20} className="text-blue" /> Em Andamento ({checklistsEmAndamento.length})
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                  {checklistsEmAndamento.map(checklist => {
-                    const alertaHorario = calcularAlertaHorario(checklist.hora_limite)
-                    return (
-                    <div
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {checklistsEmAndamento.map(checklist => (
+                    <ChecklistCard
                       key={checklist.id}
-                      className="card"
+                      checklist={checklist}
+                      isNovo={checklistsNovos.includes(checklist.id)}
                       onClick={() => responderChecklist(checklist.id)}
-                      style={{
-                        backgroundColor: 'white',
-                        borderRadius: '1rem',
-                        padding: '1.5rem',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-                        border: alertaHorario?.nivel === 'vencido' ? '2px solid #fca5a5' : alertaHorario?.nivel === 'proximo' ? '2px solid #fcd34d' : '2px solid #dbeafe'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem', gap: '0.5rem' }}>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0, flex: 1 }}>
-                          {checklist.nome}
-                        </h3>
-                        <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, flexDirection: 'column', alignItems: 'flex-end' }}>
-                          {alertaHorario?.nivel === 'vencido' && (
-                            <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#ef4444', color: 'white', whiteSpace: 'nowrap' }}>
-                              ⏰ Prazo vencido
-                            </span>
-                          )}
-                          {alertaHorario?.nivel === 'proximo' && (
-                            <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: '#f59e0b', color: 'white', whiteSpace: 'nowrap' }}>
-                              ⏰ {alertaHorario.minutosRestantes} min restantes
-                            </span>
-                          )}
-                          <span style={{
-                            padding: '0.375rem 0.75rem',
-                            borderRadius: '9999px',
-                            fontSize: '0.75rem',
-                            fontWeight: '600',
-                            backgroundColor: '#dbeafe',
-                            color: '#1e40af'
-                          }}>
-                            Em Andamento
-                          </span>
-                        </div>
-                      </div>
-                      {checklist.descricao && (
-                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
-                          {checklist.descricao}
-                        </p>
-                      )}
-                      <div style={{
-                        marginBottom: '1rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#f3f4f6',
-                        borderRadius: '0.5rem'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
-                          <span style={{ color: '#6b7280' }}>Progresso</span>
-                          <span style={{ color: '#3b82f6', fontWeight: '600' }}>
-                            {checklist.respostas_count}/{checklist.total_perguntas}
-                          </span>
-                        </div>
-                        <div style={{
-                          width: '100%',
-                          height: '8px',
-                          backgroundColor: '#e5e7eb',
-                          borderRadius: '9999px',
-                          overflow: 'hidden'
-                        }}>
-                          <div style={{
-                            width: `${(checklist.respostas_count / (checklist.total_perguntas || 1)) * 100}%`,
-                            height: '100%',
-                            backgroundColor: '#3b82f6',
-                            borderRadius: '9999px',
-                            transition: 'width 0.3s ease'
-                          }} />
-                        </div>
-                      </div>
-                      {(checklist.recorrencia && checklist.recorrencia !== 'nenhuma') || (checklist.dias_tolerancia ?? 0) > 0 || checklist.hora_limite ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', fontSize: '0.8rem', color: '#6b7280' }}>
-                          {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
-                            <span style={{ padding: '0.15rem 0.5rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '9999px', fontWeight: '600', border: '1px solid #bfdbfe' }}>
-                              {labelRecorrencia[checklist.recorrencia] || checklist.recorrencia}
-                            </span>
-                          )}
-                          {(checklist.dias_tolerancia ?? 0) > 0 && checklist.proxima_execucao && (
-                            <span>
-                              🕐 {(() => { const j = calcularJanela(checklist.proxima_execucao, checklist.dias_tolerancia!); return `${j.inicio} – ${j.fim}` })()}
-                            </span>
-                          )}
-                          {checklist.hora_limite && (
-                            <span style={{ fontWeight: alertaHorario?.nivel ? '700' : '400', color: alertaHorario?.nivel === 'vencido' ? '#dc2626' : alertaHorario?.nivel === 'proximo' ? '#b45309' : '#6b7280' }}>
-                              ⏰ Até {checklist.hora_limite.slice(0, 5)}
-                            </span>
-                          )}
-                        </div>
-                      ) : null}
-                      <div style={{
-                        marginTop: '1rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        borderRadius: '0.5rem',
-                        textAlign: 'center',
-                        fontWeight: '600',
-                        fontSize: '0.95rem'
-                      }}>
-                        Continuar →
-                      </div>
-                    </div>
-                    )
-                  })}
+                    />
+                  ))}
                 </div>
               </div>
             )}
 
             {/* Atrasados */}
             {checklistsAtrasados.length > 0 && (
-              <div className="fade-in">
-                <h2 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: '600',
-                  color: '#1f2937',
-                  margin: '0 0 1rem 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <AlertCircle size={20} style={{ color: '#ef4444' }} />
-                  Atrasados ({checklistsAtrasados.length})
+              <div>
+                <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
+                  <AlertCircle size={20} className="text-coral" /> Atrasados ({checklistsAtrasados.length})
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {checklistsAtrasados.map(checklist => (
-                    <div
+                    <ChecklistCard
                       key={checklist.id}
-                      className="card"
+                      checklist={checklist}
+                      isNovo={checklistsNovos.includes(checklist.id)}
                       onClick={() => responderChecklist(checklist.id)}
-                      style={{
-                        backgroundColor: 'white',
-                        borderRadius: '1rem',
-                        padding: '1.5rem',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-                        border: '2px solid #fecaca'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0, flex: 1 }}>
-                          {checklist.nome}
-                        </h3>
-                        <span style={{
-                          padding: '0.375rem 0.75rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          backgroundColor: '#fee2e2',
-                          color: '#991b1b'
-                        }}>
-                          Atrasado
-                        </span>
-                      </div>
-                      {checklist.descricao && (
-                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
-                          {checklist.descricao}
-                        </p>
-                      )}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Calendar size={14} />
-                          {checklist.proxima_execucao ? `Execução: ${new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}` : ''}
-                        </div>
-                        {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
-                          <span style={{ padding: '0.15rem 0.5rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '9999px', fontWeight: '600', fontSize: '0.75rem', border: '1px solid #bfdbfe', alignSelf: 'flex-start' }}>
-                            {labelRecorrencia[checklist.recorrencia] || checklist.recorrencia}
-                          </span>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <ClipboardList size={14} />
-                          {checklist.total_perguntas} perguntas
-                        </div>
-                      </div>
-                      <div style={{
-                        marginTop: '1rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#ef4444',
-                        color: 'white',
-                        borderRadius: '0.5rem',
-                        textAlign: 'center',
-                        fontWeight: '600',
-                        fontSize: '0.95rem'
-                      }}>
-                        Responder Agora →
-                      </div>
-                    </div>
+                    />
                   ))}
                 </div>
               </div>
@@ -954,70 +574,18 @@ export default function DashboardColaborador() {
 
             {/* Concluídos */}
             {checklistsConcluidos.length > 0 && (
-              <div className="fade-in">
-                <h2 style={{
-                  fontSize: '1.25rem',
-                  fontWeight: '600',
-                  color: '#1f2937',
-                  margin: '0 0 1rem 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <CheckCircle size={20} style={{ color: '#10b981' }} />
-                  Concluídos ({checklistsConcluidos.length})
+              <div>
+                <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
+                  <CheckCircle size={20} className="text-teal" /> Concluídos ({checklistsConcluidos.length})
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {checklistsConcluidos.map(checklist => (
-                    <div
+                    <ChecklistCard
                       key={checklist.id}
-                      className="card"
+                      checklist={checklist}
+                      isNovo={false}
                       onClick={() => responderChecklist(checklist.id)}
-                      style={{
-                        backgroundColor: 'white',
-                        borderRadius: '1rem',
-                        padding: '1.5rem',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-                        border: '2px solid #d1fae5'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: 0, flex: 1 }}>
-                          {checklist.nome}
-                        </h3>
-                        <span style={{
-                          padding: '0.375rem 0.75rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          backgroundColor: '#d1fae5',
-                          color: '#065f46',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.25rem'
-                        }}>
-                          <CheckCircle size={12} />
-                          Concluído
-                        </span>
-                      </div>
-                      {checklist.descricao && (
-                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
-                          {checklist.descricao}
-                        </p>
-                      )}
-                      <div style={{
-                        marginTop: '1rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#10b981',
-                        color: 'white',
-                        borderRadius: '0.5rem',
-                        textAlign: 'center',
-                        fontWeight: '600',
-                        fontSize: '0.95rem'
-                      }}>
-                        Ver Respostas →
-                      </div>
-                    </div>
+                    />
                   ))}
                 </div>
               </div>
@@ -1028,4 +596,3 @@ export default function DashboardColaborador() {
     </div>
   )
 }
-

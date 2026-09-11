@@ -2,6 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  Calendar, Building2, ClipboardList, Download, Check, RotateCcw,
+  GitCompare, TrendingUp, TrendingDown, Minus, Trophy, PieChart, BarChart3, LineChart, Search
+} from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 interface Empresa {
   id: string;
@@ -33,7 +40,9 @@ interface Filtros {
   questionario: string;
 }
 
-const CORES_CHECKLIST = ['#5E6AD2', '#4CAF50', '#FF9800', '#ef5350', '#9C27B0', '#00BCD4', '#FF5722', '#607D8B'];
+const CORES_CHECKLIST = ['#ff7a3d', '#8a6ff2', '#16b88a', '#fb5c66', '#f5a524', '#4c8bff'];
+const inputClass = 'w-full rounded-xl bg-surface-2 px-3.5 py-2.5 text-sm outline-none cursor-pointer';
+const labelClass = 'mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink-muted';
 
 export default function AnaliseQualidade() {
   const router = useRouter();
@@ -152,7 +161,7 @@ export default function AnaliseQualidade() {
     const csv = [headers, ...rows]
       .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
       .join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -229,94 +238,34 @@ export default function AnaliseQualidade() {
   const delta = taxaConformidade - taxaComp;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #e3f2fd 100%)', padding: '2rem' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-
-        {/* Botão Voltar */}
-        <button
-          onClick={() => router.back()}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white',
-            border: '2px solid #e0e0e0', borderRadius: '0.75rem', padding: '0.75rem 1.25rem',
-            fontSize: '0.875rem', fontWeight: '600', color: '#5E6AD2', cursor: 'pointer',
-            marginBottom: '1.5rem', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f5f5'; e.currentTarget.style.borderColor = '#5E6AD2'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = '#e0e0e0'; }}
-        >
-          <span style={{ fontSize: '1.25rem' }}>←</span>
-          <span>Voltar</span>
-        </button>
-
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-              <div style={{ padding: '0.75rem', background: 'linear-gradient(135deg, #5E6AD2 0%, #4C52B2 100%)', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(94,106,210,0.3)' }}>
-                <span style={{ fontSize: '1.5rem' }}>📊</span>
-              </div>
-              <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#1a1a1a', margin: 0 }}>
-                Análise de Qualidade
-              </h1>
-            </div>
-            <p style={{ color: '#666', fontSize: '1rem', margin: 0 }}>
-              Acompanhamento e análise de indicadores de desempenho
-            </p>
-          </div>
-
-          <button
-            onClick={exportarCSV}
-            disabled={respostas.length === 0}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-              background: respostas.length === 0 ? '#ccc' : 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
-              color: 'white', border: 'none', borderRadius: '0.75rem', padding: '0.875rem 1.5rem',
-              fontSize: '0.875rem', fontWeight: '700', cursor: respostas.length === 0 ? 'not-allowed' : 'pointer',
-              boxShadow: respostas.length === 0 ? 'none' : '0 4px 12px rgba(76,175,80,0.4)', transition: 'all 0.2s'
-            }}
-          >
-            <span style={{ fontSize: '1rem' }}>📥</span>
-            Exportar CSV
-          </button>
-        </div>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1320px] px-6 py-8">
+        <PageHeader
+          title="Análise de Qualidade"
+          subtitle="Acompanhamento e análise de indicadores de desempenho"
+          backHref="/dashboard-aluno"
+          actions={
+            <Button variant="secondary" onClick={exportarCSV} disabled={respostas.length === 0} icon={<Download size={16} />}>
+              Exportar CSV
+            </Button>
+          }
+        />
 
         {/* Card de Filtros */}
-        <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
-
-            {/* Período */}
-            <div style={{ gridColumn: 'span 2' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '1rem' }}>📅</span> Período de Análise
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.75rem', alignItems: 'center' }}>
-                <input
-                  type="date"
-                  value={filtros.dataInicio}
-                  onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem' }}
-                />
-                <span style={{ color: '#999', fontWeight: '600' }}>→</span>
-                <input
-                  type="date"
-                  value={filtros.dataFim}
-                  onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem' }}
-                />
+        <Card className="mb-6 p-6 sm:p-8">
+          <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2">
+              <label className={labelClass}><Calendar size={15} /> Período de Análise</label>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <input type="date" value={filtros.dataInicio} onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })} className={inputClass} />
+                <span className="font-semibold text-ink-faint">→</span>
+                <input type="date" value={filtros.dataFim} onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })} className={inputClass} />
               </div>
             </div>
 
-            {/* Empresa */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '1rem' }}>🏢</span> Empresa
-              </label>
-              <select
-                value={filtros.empresa}
-                onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })}
-                disabled={loadingFiltros}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', cursor: 'pointer', background: 'white' }}
-              >
+              <label className={labelClass}><Building2 size={15} /> Empresa</label>
+              <select value={filtros.empresa} onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })} disabled={loadingFiltros} className={inputClass}>
                 <option value="">{loadingFiltros ? 'Carregando...' : 'Todas as empresas'}</option>
                 {empresas.map(emp => (
                   <option key={emp.id} value={emp.id}>{emp.nome_fantasia}</option>
@@ -324,17 +273,9 @@ export default function AnaliseQualidade() {
               </select>
             </div>
 
-            {/* Questionário */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '1rem' }}>📋</span> Questionário
-              </label>
-              <select
-                value={filtros.questionario}
-                onChange={(e) => setFiltros({ ...filtros, questionario: e.target.value })}
-                disabled={loadingFiltros}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', cursor: 'pointer', background: 'white' }}
-              >
+              <label className={labelClass}><ClipboardList size={15} /> Questionário</label>
+              <select value={filtros.questionario} onChange={(e) => setFiltros({ ...filtros, questionario: e.target.value })} disabled={loadingFiltros} className={inputClass}>
                 <option value="">{loadingFiltros ? 'Carregando...' : 'Todos os questionários'}</option>
                 {checklists.map(cl => (
                   <option key={cl.id} value={cl.id}>{cl.titulo}</option>
@@ -343,100 +284,73 @@ export default function AnaliseQualidade() {
             </div>
           </div>
 
-          {/* Botões de Ação */}
-          <div style={{ display: 'flex', gap: '1rem', paddingTop: '1rem', borderTop: '2px solid #f0f0f0' }}>
-            <button
+          <div className="flex gap-3 border-t border-surface-2 pt-5">
+            <Button
+              variant="primary"
+              className="flex-1 justify-center py-3"
               onClick={aplicarFiltros}
               disabled={loading || loadingFiltros}
-              style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                background: (loading || loadingFiltros) ? '#ccc' : 'linear-gradient(135deg, #5E6AD2 0%, #4C52B2 100%)',
-                color: 'white', border: 'none', borderRadius: '0.75rem', padding: '1rem',
-                fontSize: '0.875rem', fontWeight: '700',
-                cursor: (loading || loadingFiltros) ? 'not-allowed' : 'pointer',
-                boxShadow: '0 4px 12px rgba(94,106,210,0.4)', transition: 'all 0.2s'
-              }}
+              icon={<Check size={16} />}
             >
-              <span style={{ fontSize: '1rem' }}>{loading ? '⏳' : '✓'}</span>
               {loading ? 'Buscando...' : 'Aplicar Filtros'}
-            </button>
-
-            <button
-              onClick={limparFiltros}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                background: 'white', color: '#666', border: '2px solid #e0e0e0', borderRadius: '0.75rem',
-                padding: '1rem 2rem', fontSize: '0.875rem', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f5f5'; e.currentTarget.style.borderColor = '#999'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = '#e0e0e0'; }}
-            >
-              <span style={{ fontSize: '1rem' }}>🔄</span>
+            </Button>
+            <Button variant="secondary" className="px-8" onClick={limparFiltros} icon={<RotateCcw size={16} />}>
               Limpar Filtros
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
 
         {/* Comparativo entre períodos */}
         {mostrarResultados && validas > 0 && (
-          <div style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem 2rem', marginBottom: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', border: '2px solid #e0e7ff' }}>
+          <Card className="mb-6 p-6 sm:px-8">
             <button
               onClick={() => setMostrarComparativo(!mostrarComparativo)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+              className="flex w-full items-center justify-between text-left"
             >
-              <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#5E6AD2', margin: 0 }}>
-                🔀 Comparativo entre Períodos
+              <h3 className="flex items-center gap-2 font-display text-base font-bold text-violet">
+                <GitCompare size={18} /> Comparativo entre Períodos
               </h3>
-              <span style={{ fontSize: '0.875rem', color: '#5E6AD2', fontWeight: '600' }}>
-                {mostrarComparativo ? '▲ Fechar' : '▼ Abrir'}
-              </span>
+              <span className="text-sm font-semibold text-violet">{mostrarComparativo ? '▲ Fechar' : '▼ Abrir'}</span>
             </button>
 
             {mostrarComparativo && (
-              <div style={{ marginTop: '1.5rem' }}>
-                <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1rem' }}>
-                  Compare o período atual com outro período de referência.
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="mt-6">
+                <p className="mb-4 text-sm text-ink-muted">Compare o período atual com outro período de referência.</p>
+                <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#333', display: 'block', marginBottom: '0.375rem' }}>Início do período de referência</label>
-                    <input type="date" value={filtrosComp.dataInicio} onChange={(e) => setFiltrosComp({ ...filtrosComp, dataInicio: e.target.value })}
-                      style={{ width: '100%', padding: '0.625rem', border: '2px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.875rem' }} />
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Início do período de referência</label>
+                    <input type="date" value={filtrosComp.dataInicio} onChange={(e) => setFiltrosComp({ ...filtrosComp, dataInicio: e.target.value })} className={inputClass} />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#333', display: 'block', marginBottom: '0.375rem' }}>Fim do período de referência</label>
-                    <input type="date" value={filtrosComp.dataFim} onChange={(e) => setFiltrosComp({ ...filtrosComp, dataFim: e.target.value })}
-                      style={{ width: '100%', padding: '0.625rem', border: '2px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.875rem' }} />
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Fim do período de referência</label>
+                    <input type="date" value={filtrosComp.dataFim} onChange={(e) => setFiltrosComp({ ...filtrosComp, dataFim: e.target.value })} className={inputClass} />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <button
-                      onClick={buscarComparativo}
-                      disabled={loadingComp}
-                      style={{ width: '100%', padding: '0.625rem 1rem', background: loadingComp ? '#ccc' : '#5E6AD2', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '700', cursor: loadingComp ? 'not-allowed' : 'pointer' }}
-                    >
+                  <div className="flex items-end">
+                    <Button variant="primary" className="w-full justify-center py-2.5" onClick={buscarComparativo} disabled={loadingComp}>
                       {loadingComp ? 'Buscando...' : 'Comparar'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
                 {validasComp > 0 && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginTop: '1.25rem' }}>
-                    <div style={{ background: '#f1f5f9', borderRadius: '0.75rem', padding: '1.25rem', textAlign: 'center' }}>
-                      <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 0.375rem' }}>Período Atual</p>
-                      <p style={{ fontSize: '2.5rem', fontWeight: '900', color: '#5E6AD2', margin: 0 }}>{taxaConformidade}%</p>
-                      <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0' }}>{filtros.dataInicio} → {filtros.dataFim}</p>
+                  <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="rounded-2xl bg-surface-2 p-5 text-center">
+                      <p className="mb-1.5 text-xs text-ink-muted">Período Atual</p>
+                      <p className="font-display text-3xl font-bold text-violet">{taxaConformidade}%</p>
+                      <p className="mt-1 text-xs text-ink-faint">{filtros.dataInicio} → {filtros.dataFim}</p>
                     </div>
-                    <div style={{ background: '#f1f5f9', borderRadius: '0.75rem', padding: '1.25rem', textAlign: 'center' }}>
-                      <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 0.375rem' }}>Período de Referência</p>
-                      <p style={{ fontSize: '2.5rem', fontWeight: '900', color: '#64748b', margin: 0 }}>{taxaComp}%</p>
-                      <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0' }}>{filtrosComp.dataInicio} → {filtrosComp.dataFim}</p>
+                    <div className="rounded-2xl bg-surface-2 p-5 text-center">
+                      <p className="mb-1.5 text-xs text-ink-muted">Período de Referência</p>
+                      <p className="font-display text-3xl font-bold text-ink-muted">{taxaComp}%</p>
+                      <p className="mt-1 text-xs text-ink-faint">{filtrosComp.dataInicio} → {filtrosComp.dataFim}</p>
                     </div>
-                    <div style={{ background: delta > 0 ? '#d1fae5' : delta < 0 ? '#fee2e2' : '#f3f4f6', borderRadius: '0.75rem', padding: '1.25rem', textAlign: 'center', border: `2px solid ${delta > 0 ? '#6ee7b7' : delta < 0 ? '#fca5a5' : '#e5e7eb'}` }}>
-                      <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 0.375rem' }}>Variação</p>
-                      <p style={{ fontSize: '2.5rem', fontWeight: '900', color: delta > 0 ? '#059669' : delta < 0 ? '#dc2626' : '#374151', margin: 0 }}>
+                    <div className={`rounded-2xl p-5 text-center ${delta > 0 ? 'bg-teal-tint' : delta < 0 ? 'bg-coral-tint' : 'bg-surface-2'}`}>
+                      <p className="mb-1.5 text-xs text-ink-muted">Variação</p>
+                      <p className={`font-display text-3xl font-bold ${delta > 0 ? 'text-teal' : delta < 0 ? 'text-coral' : 'text-ink-muted'}`}>
                         {delta > 0 ? '+' : ''}{delta}%
                       </p>
-                      <p style={{ fontSize: '0.8rem', fontWeight: '600', color: delta > 0 ? '#059669' : delta < 0 ? '#dc2626' : '#374151', margin: '0.25rem 0 0' }}>
+                      <p className={`mt-1 flex items-center justify-center gap-1 text-xs font-semibold ${delta > 0 ? 'text-teal' : delta < 0 ? 'text-coral' : 'text-ink-muted'}`}>
+                        {delta > 0 ? <TrendingUp size={13} /> : delta < 0 ? <TrendingDown size={13} /> : <Minus size={13} />}
                         {delta > 0 ? 'Melhora' : delta < 0 ? 'Queda' : 'Estável'}
                       </p>
                     </div>
@@ -444,80 +358,77 @@ export default function AnaliseQualidade() {
                 )}
               </div>
             )}
-          </div>
+          </Card>
         )}
 
         {/* Resultados */}
         {mostrarResultados ? (
           total === 0 ? (
-            <div style={{ background: 'white', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔍</div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#333', marginBottom: '0.5rem' }}>
-                Nenhuma resposta encontrada
-              </h3>
-              <p style={{ color: '#666', fontSize: '1rem' }}>
-                Tente ajustar o período ou os filtros selecionados.
-              </p>
-            </div>
+            <Card className="px-6 py-16 text-center">
+              <Search size={48} className="mx-auto mb-4 text-ink-faint" />
+              <h3 className="mb-2 font-display text-xl font-bold text-ink">Nenhuma resposta encontrada</h3>
+              <p className="text-sm text-ink-muted">Tente ajustar o período ou os filtros selecionados.</p>
+            </Card>
           ) : (
             <>
               {/* KPI Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                <div style={{ background: 'linear-gradient(135deg, #5E6AD2 0%, #4C52B2 100%)', borderRadius: '1rem', padding: '1.5rem', color: 'white', boxShadow: '0 4px 12px rgba(94,106,210,0.3)' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
-                  <p style={{ fontSize: '0.75rem', opacity: 0.9, margin: '0 0 0.5rem 0' }}>Taxa de Conformidade</p>
-                  <p style={{ fontSize: '3rem', fontWeight: '900', margin: 0 }}>{taxaConformidade}%</p>
-                </div>
+              <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Card className="bg-brand p-6 shadow-[0_8px_16px_-8px_rgba(255,122,61,0.6)]">
+                  <Check size={26} className="mb-2 text-white" />
+                  <p className="mb-1.5 text-xs text-white/85">Taxa de Conformidade</p>
+                  <p className="font-display text-4xl font-bold text-white">{taxaConformidade}%</p>
+                </Card>
 
-                <div style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 8px rgba(0,0,0,0.08)' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📊</div>
-                  <p style={{ fontSize: '0.75rem', color: '#666', margin: '0 0 0.5rem 0' }}>Total de Respostas</p>
-                  <p style={{ fontSize: '2.5rem', fontWeight: '900', color: '#333', margin: 0 }}>{total}</p>
-                </div>
+                <Card className="p-6">
+                  <BarChart3 size={26} className="mb-2 text-ink-faint" />
+                  <p className="mb-1.5 text-xs text-ink-muted">Total de Respostas</p>
+                  <p className="font-display text-3xl font-bold text-ink">{total}</p>
+                </Card>
 
-                <div style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 8px rgba(0,0,0,0.08)' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✓</div>
-                  <p style={{ fontSize: '0.75rem', color: '#666', margin: '0 0 0.5rem 0' }}>Conformes</p>
-                  <p style={{ fontSize: '2.5rem', fontWeight: '900', color: '#4CAF50', margin: 0 }}>{conformes}</p>
-                </div>
+                <Card className="p-6">
+                  <Check size={26} className="mb-2 text-teal" />
+                  <p className="mb-1.5 text-xs text-ink-muted">Conformes</p>
+                  <p className="font-display text-3xl font-bold text-teal">{conformes}</p>
+                </Card>
 
-                <div style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 8px rgba(0,0,0,0.08)' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✗</div>
-                  <p style={{ fontSize: '0.75rem', color: '#666', margin: '0 0 0.5rem 0' }}>Não Conformes</p>
-                  <p style={{ fontSize: '2.5rem', fontWeight: '900', color: '#ef5350', margin: 0 }}>{naoConformes}</p>
-                </div>
+                <Card className="p-6">
+                  <TrendingDown size={26} className="mb-2 text-coral" />
+                  <p className="mb-1.5 text-xs text-ink-muted">Não Conformes</p>
+                  <p className="font-display text-3xl font-bold text-coral">{naoConformes}</p>
+                </Card>
               </div>
 
               {/* Ranking de Lojas/Empresas */}
               {rankingEmpresas.length > 1 && (
-                <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#333', marginBottom: '1.5rem' }}>
-                    🏆 Ranking de Lojas
+                <Card className="mb-6 p-6 sm:p-8">
+                  <h3 className="mb-5 flex items-center gap-2 font-display text-lg font-bold text-ink">
+                    <Trophy size={20} className="text-amber" /> Ranking de Lojas
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div className="flex flex-col gap-2.5">
                     {rankingEmpresas.map((emp, idx) => {
                       const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}º`
-                      const cor = emp.taxa >= 85 ? '#4CAF50' : emp.taxa >= 70 ? '#FF9800' : '#ef5350'
+                      const tone = emp.taxa >= 85 ? 'text-teal' : emp.taxa >= 70 ? 'text-amber' : 'text-coral'
+                      const barTone = emp.taxa >= 85 ? 'bg-teal' : emp.taxa >= 70 ? 'bg-amber' : 'bg-coral'
                       const isLast = idx === rankingEmpresas.length - 1 && rankingEmpresas.length > 3
                       return (
-                        <div key={emp.nome} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1rem', borderRadius: '0.75rem', backgroundColor: idx === 0 ? '#fffbeb' : '#f9fafb', border: idx === 0 ? '1.5px solid #fcd34d' : '1.5px solid #e5e7eb' }}>
-                          <span style={{ fontSize: idx < 3 ? '1.5rem' : '1rem', fontWeight: '700', color: '#6b7280', minWidth: '2rem', textAlign: 'center' }}>{medal}</span>
-                          <div style={{ flex: 1 }}>
-                            <p style={{ margin: 0, fontWeight: '700', color: '#1f2937', fontSize: '0.95rem' }}>{emp.nome}</p>
-                            <p style={{ margin: '0.125rem 0 0', fontSize: '0.8rem', color: '#6b7280' }}>{emp.conforme} conformes / {emp.naoConforme} não conformes ({emp.total} respostas)</p>
+                        <div key={emp.nome} className={`flex items-center gap-4 rounded-xl p-3.5 ${idx === 0 ? 'bg-amber-tint' : 'bg-surface-2'}`}>
+                          <span className={`min-w-[2rem] text-center font-bold text-ink-muted ${idx < 3 ? 'text-xl' : 'text-sm'}`}>{medal}</span>
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-ink">{emp.nome}</p>
+                            <p className="mt-0.5 text-xs text-ink-muted">{emp.conforme} conformes / {emp.naoConforme} não conformes ({emp.total} respostas)</p>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '100px', height: '8px', backgroundColor: '#e5e7eb', borderRadius: '999px', overflow: 'hidden' }}>
-                              <div style={{ width: `${emp.taxa}%`, height: '100%', backgroundColor: cor, borderRadius: '999px' }} />
+                          <div className="flex items-center gap-3">
+                            <div className="h-2 w-24 overflow-hidden rounded-full bg-white">
+                              <div className={`h-full rounded-full ${barTone}`} style={{ width: `${emp.taxa}%` }} />
                             </div>
-                            <span style={{ fontSize: '1.25rem', fontWeight: '900', color: cor, minWidth: '3rem', textAlign: 'right' }}>{emp.taxa}%</span>
-                            {isLast && <span style={{ fontSize: '0.75rem', color: '#ef5350', fontWeight: '600' }}>↓ Atenção</span>}
+                            <span className={`min-w-[3rem] text-right text-lg font-bold ${tone}`}>{emp.taxa}%</span>
+                            {isLast && <span className="text-xs font-semibold text-coral">↓ Atenção</span>}
                           </div>
                         </div>
                       )
                     })}
                   </div>
-                </div>
+                </Card>
               )}
 
               {/* Gráfico de Pizza — Conformidade */}
@@ -534,67 +445,63 @@ export default function AnaliseQualidade() {
                   return <path d={`M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`} fill={color} />
                 }
                 return (
-                  <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#333', width: '100%', marginBottom: '0.5rem' }}>🥧 Distribuição de Respostas</h3>
-                    <svg viewBox="0 0 180 180" style={{ width: '180px', height: '180px', flexShrink: 0 }}>
-                      {arc(0, conf, '#4CAF50')}
-                      {arc(conf, conf + nConf, '#ef5350')}
+                  <Card className="mb-6 flex flex-wrap items-center gap-8 p-6 sm:p-8">
+                    <h3 className="flex w-full items-center gap-2 font-display text-lg font-bold text-ink">
+                      <PieChart size={20} className="text-violet" /> Distribuição de Respostas
+                    </h3>
+                    <svg viewBox="0 0 180 180" className="h-[180px] w-[180px] flex-shrink-0">
+                      {arc(0, conf, '#16b88a')}
+                      {arc(conf, conf + nConf, '#fb5c66')}
                       <circle cx={cx} cy={cy} r={r * 0.55} fill="white" />
-                      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="18" fontWeight="900" fill="#5E6AD2">{taxaConformidade}%</text>
-                      <text x={cx} y={cy + 12} textAnchor="middle" fontSize="10" fill="#9ca3af">conformidade</text>
+                      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="18" fontWeight="900" fill="#ff7a3d">{taxaConformidade}%</text>
+                      <text x={cx} y={cy + 12} textAnchor="middle" fontSize="10" fill="#9aa9be">conformidade</text>
                     </svg>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: '14px', height: '14px', borderRadius: '3px', backgroundColor: '#4CAF50' }} />
-                        <span style={{ fontSize: '0.95rem', color: '#333' }}><strong>{conformes}</strong> conformes ({validas > 0 ? Math.round(conformes/validas*100) : 0}%)</span>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-3.5 w-3.5 rounded-sm bg-teal" />
+                        <span className="text-sm text-ink"><strong>{conformes}</strong> conformes ({validas > 0 ? Math.round(conformes/validas*100) : 0}%)</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: '14px', height: '14px', borderRadius: '3px', backgroundColor: '#ef5350' }} />
-                        <span style={{ fontSize: '0.95rem', color: '#333' }}><strong>{naoConformes}</strong> não conformes ({validas > 0 ? Math.round(naoConformes/validas*100) : 0}%)</span>
+                      <div className="flex items-center gap-3">
+                        <div className="h-3.5 w-3.5 rounded-sm bg-coral" />
+                        <span className="text-sm text-ink"><strong>{naoConformes}</strong> não conformes ({validas > 0 ? Math.round(naoConformes/validas*100) : 0}%)</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: '14px', height: '14px', borderRadius: '3px', backgroundColor: '#e0e0e0' }} />
-                        <span style={{ fontSize: '0.95rem', color: '#333' }}><strong>{total - validas}</strong> N/A ou sem resposta</span>
+                      <div className="flex items-center gap-3">
+                        <div className="h-3.5 w-3.5 rounded-sm bg-surface-2" />
+                        <span className="text-sm text-ink"><strong>{total - validas}</strong> N/A ou sem resposta</span>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 )
               })()}
 
               {/* Análise por Checklist */}
               {checklistAnalise.length > 0 && (
-                <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#333', marginBottom: '1.5rem' }}>
-                    📋 Análise por Checklist
+                <Card className="mb-6 p-6 sm:p-8">
+                  <h3 className="mb-5 flex items-center gap-2 font-display text-lg font-bold text-ink">
+                    <ClipboardList size={20} className="text-brand" /> Análise por Checklist
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div className="flex flex-col gap-5">
                     {checklistAnalise.map((item) => (
                       <div key={item.titulo}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: item.cor, flexShrink: 0 }} />
-                            <span style={{ fontWeight: '700', fontSize: '0.9rem', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {item.titulo}
-                            </span>
-                            <span style={{ fontSize: '0.8rem', color: '#666', flexShrink: 0 }}>
-                              ({item.conforme + item.naoConforme} resp.)
-                            </span>
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="h-3 w-3 flex-shrink-0 rounded-full" style={{ background: item.cor }} />
+                            <span className="truncate text-sm font-bold text-ink">{item.titulo}</span>
+                            <span className="flex-shrink-0 text-xs text-ink-muted">({item.conforme + item.naoConforme} resp.)</span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexShrink: 0 }}>
-                            <span style={{ fontSize: '0.875rem', color: '#4CAF50', fontWeight: '600' }}>✓ {item.conforme}</span>
-                            <span style={{ fontSize: '0.875rem', color: '#ef5350', fontWeight: '600' }}>✗ {item.naoConforme}</span>
-                            <span style={{ fontSize: '1.5rem', fontWeight: '900', color: item.cor, minWidth: '60px', textAlign: 'right' }}>
-                              {item.taxa}%
-                            </span>
+                          <div className="flex flex-shrink-0 items-center gap-4">
+                            <span className="text-sm font-semibold text-teal">✓ {item.conforme}</span>
+                            <span className="text-sm font-semibold text-coral">✗ {item.naoConforme}</span>
+                            <span className="min-w-[60px] text-right text-xl font-bold" style={{ color: item.cor }}>{item.taxa}%</span>
                           </div>
                         </div>
-                        <div style={{ width: '100%', height: '20px', background: '#f0f0f0', borderRadius: '10px', overflow: 'hidden' }}>
-                          <div style={{ width: `${item.taxa}%`, height: '100%', background: item.cor, borderRadius: '10px', transition: 'width 1s ease' }} />
+                        <div className="h-3 w-full overflow-hidden rounded-full bg-surface-2">
+                          <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${item.taxa}%`, background: item.cor }} />
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
+                </Card>
               )}
 
               {/* Evolução por Data — linha SVG */}
@@ -612,20 +519,20 @@ export default function AnaliseQualidade() {
                 const area = `${padL},${padT + innerH} ` + pts.map(p => `${p.x},${p.y}`).join(' ') + ` ${padL + innerW},${padT + innerH}`
                 const tendencia = evolucao.length >= 2 ? evolucao[evolucao.length - 1].taxa - evolucao[0].taxa : 0
                 return (
-                  <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#333', margin: 0 }}>
-                        📈 Evolução da Taxa de Conformidade
+                  <Card className="p-6 sm:p-8">
+                    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+                        <LineChart size={20} className="text-violet" /> Evolução da Taxa de Conformidade
                       </h3>
-                      <span style={{ padding: '0.375rem 1rem', borderRadius: '999px', fontSize: '0.875rem', fontWeight: '700', backgroundColor: tendencia > 0 ? '#d1fae5' : tendencia < 0 ? '#fee2e2' : '#f3f4f6', color: tendencia > 0 ? '#065f46' : tendencia < 0 ? '#991b1b' : '#374151' }}>
+                      <span className={`rounded-full px-4 py-1.5 text-sm font-bold ${tendencia > 0 ? 'bg-teal-tint text-teal' : tendencia < 0 ? 'bg-coral-tint text-coral' : 'bg-surface-2 text-ink-muted'}`}>
                         {tendencia > 0 ? '↑' : tendencia < 0 ? '↓' : '→'} {tendencia > 0 ? '+' : ''}{tendencia}% no período
                       </span>
                     </div>
-                    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
+                    <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full overflow-visible">
                       <defs>
                         <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#5E6AD2" stopOpacity="0.25" />
-                          <stop offset="100%" stopColor="#5E6AD2" stopOpacity="0.02" />
+                          <stop offset="0%" stopColor="#8a6ff2" stopOpacity="0.25" />
+                          <stop offset="100%" stopColor="#8a6ff2" stopOpacity="0.02" />
                         </linearGradient>
                       </defs>
                       {/* Grade horizontal */}
@@ -634,47 +541,40 @@ export default function AnaliseQualidade() {
                         return (
                           <g key={v}>
                             <line x1={padL} y1={y} x2={padL + innerW} y2={y} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4 4" />
-                            <text x={padL - 6} y={y + 4} textAnchor="end" fontSize="10" fill="#9ca3af">{v}%</text>
+                            <text x={padL - 6} y={y + 4} textAnchor="end" fontSize="10" fill="#9aa9be">{v}%</text>
                           </g>
                         )
                       })}
                       {/* Área preenchida */}
                       <polygon points={area} fill="url(#areaGrad)" />
                       {/* Linha */}
-                      <polyline points={polyline} fill="none" stroke="#5E6AD2" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                      <polyline points={polyline} fill="none" stroke="#8a6ff2" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
                       {/* Pontos */}
                       {pts.map((p, i) => (
                         <g key={i}>
-                          <circle cx={p.x} cy={p.y} r="5" fill="white" stroke="#5E6AD2" strokeWidth="2.5" />
-                          <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize="10" fontWeight="700" fill="#5E6AD2">{p.taxa}%</text>
-                          <text x={p.x} y={padT + innerH + 16} textAnchor="middle" fontSize="10" fill="#6b7280">{p.dia}</text>
+                          <circle cx={p.x} cy={p.y} r="5" fill="white" stroke="#8a6ff2" strokeWidth="2.5" />
+                          <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize="10" fontWeight="700" fill="#8a6ff2">{p.taxa}%</text>
+                          <text x={p.x} y={padT + innerH + 16} textAnchor="middle" fontSize="10" fill="#64758c">{p.dia}</text>
                         </g>
                       ))}
                     </svg>
-                  </div>
+                  </Card>
                 )
               })()}
             </>
           )
         ) : (
-          <div style={{ background: 'white', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-            <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-              <div style={{
-                width: '120px', height: '120px',
-                background: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)',
-                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 2rem', border: '4px solid #90CAF9'
-              }}>
-                <span style={{ fontSize: '4rem' }}>📊</span>
+          <Card className="px-6 py-16 text-center">
+            <div className="mx-auto max-w-[500px]">
+              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-violet-tint">
+                <BarChart3 size={40} className="text-violet" />
               </div>
-              <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#333', marginBottom: '1rem' }}>
-                Configure os Filtros de Análise
-              </h3>
-              <p style={{ color: '#666', fontSize: '1rem', margin: 0, lineHeight: 1.6 }}>
+              <h3 className="mb-3 font-display text-xl font-bold text-ink">Configure os Filtros de Análise</h3>
+              <p className="text-sm leading-relaxed text-ink-muted">
                 Selecione o período e empresa para visualizar os indicadores de qualidade e desempenho.
               </p>
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>

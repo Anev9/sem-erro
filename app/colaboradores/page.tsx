@@ -3,17 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import {
-  ArrowLeft,
-  Users,
-  UserPlus,
-  Edit,
-  Trash2,
-  Mail,
-  Briefcase,
-  Building2,
-  KeyRound
-} from 'lucide-react'
+import { Users, UserPlus, Edit, Trash2, Mail, Briefcase, Building2, KeyRound } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 interface Colaborador {
   id: string
@@ -97,234 +90,89 @@ export default function ColaboradoresPage() {
   }
 
   return (
-    <>
-      <style>{`
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .card-colab { transition: box-shadow 0.2s ease; }
-        .card-colab:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-      `}</style>
-
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
-
-          {/* Top bar */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '2rem',
-            flexWrap: 'wrap',
-            gap: '1rem'
-          }}>
-            <button
-              onClick={() => router.push('/dashboard-aluno')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 1rem',
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                color: '#374151',
-                fontSize: '0.95rem'
-              }}
-            >
-              <ArrowLeft size={18} />
-              Voltar
-            </button>
-
-            <button
-              onClick={() => router.push('/colaboradores/novo')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.5rem',
-                background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontSize: '0.95rem',
-                fontWeight: '600'
-              }}
-            >
-              <UserPlus size={20} />
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1320px] px-6 py-8">
+        <PageHeader
+          title="Colaboradores"
+          subtitle={`${colaboradores.length} colaborador${colaboradores.length !== 1 ? 'es' : ''} cadastrado${colaboradores.length !== 1 ? 's' : ''}`}
+          backHref="/dashboard-aluno"
+          actions={
+            <Button variant="primary" onClick={() => router.push('/colaboradores/novo')} icon={<UserPlus size={18} />}>
               Novo Colaborador
-            </button>
-          </div>
+            </Button>
+          }
+        />
 
-          {/* Main card */}
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '2rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
-          }}>
-            <div style={{ marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                <Users size={28} style={{ color: '#2196F3' }} />
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-                  Colaboradores
-                </h1>
+        <Card className="p-6 sm:p-8">
+          {loading ? (
+            <div className="py-16 text-center text-sm text-ink-muted">Carregando colaboradores...</div>
+          ) : colaboradores.length === 0 ? (
+            <div className="py-16 text-center">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-tint">
+                <Users size={36} className="text-brand" />
               </div>
-              <p style={{ color: '#6b7280', margin: 0, fontSize: '0.95rem' }}>
-                {colaboradores.length} colaborador{colaboradores.length !== 1 ? 'es' : ''} cadastrado{colaboradores.length !== 1 ? 's' : ''}
-              </p>
+              <h3 className="font-display text-xl font-bold text-ink">Nenhum colaborador cadastrado</h3>
+              <p className="mt-2 mb-6 text-sm text-ink-muted">Comece adicionando colaboradores às suas empresas</p>
+              <Button variant="primary" onClick={() => router.push('/colaboradores/novo')} icon={<UserPlus size={18} />}>
+                Cadastrar Primeiro Colaborador
+              </Button>
             </div>
-
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-                <p style={{ color: '#6b7280', fontSize: '1.1rem' }}>Carregando colaboradores...</p>
-              </div>
-            ) : colaboradores.length === 0 ? (
-              <div className="fade-in" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-                <Users size={64} style={{ color: '#9ca3af', margin: '0 auto 1.5rem' }} />
-                <h3 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                  Nenhum colaborador cadastrado
-                </h3>
-                <p style={{ color: '#6b7280', marginBottom: '2rem', fontSize: '1rem' }}>
-                  Comece adicionando colaboradores às suas empresas
-                </p>
-                <button
-                  onClick={() => router.push('/colaboradores/novo')}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.875rem 2rem',
-                    background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    fontWeight: '600'
-                  }}
-                >
-                  <UserPlus size={20} />
-                  Cadastrar Primeiro Colaborador
-                </button>
-              </div>
-            ) : (
-              <div className="fade-in" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-                gap: '1rem'
-              }}>
-                {colaboradores.map(colab => (
-                  <div
-                    key={colab.id}
-                    className="card-colab"
-                    style={{
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '0.75rem',
-                      padding: '1.25rem',
-                      border: '1px solid #e5e7eb'
-                    }}
-                  >
-                    <div style={{ marginBottom: '1rem' }}>
-                      <h3 style={{
-                        fontSize: '1.1rem',
-                        fontWeight: '600',
-                        color: '#1f2937',
-                        margin: '0 0 0.5rem 0'
-                      }}>
-                        {colab.nome}
-                      </h3>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-                        <Mail size={14} />
-                        {colab.email}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-                        <Briefcase size={14} />
-                        {colab.cargo}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                        <Building2 size={14} />
-                        {colab.empresas?.nome_fantasia || 'Sem empresa'}
-                      </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {colaboradores.map(colab => (
+                <div key={colab.id} className="rounded-2xl bg-surface-2 p-5">
+                  <div className="mb-4">
+                    <h3 className="mb-1.5 text-base font-bold text-ink">{colab.nome}</h3>
+                    <div className="mb-1 flex items-center gap-2 text-sm text-ink-muted">
+                      <Mail size={14} />
+                      {colab.email}
                     </div>
-
-                    <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => router.push(`/colaboradores/editar/${colab.id}`)}
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                          padding: '0.625rem',
-                          backgroundColor: 'white',
-                          color: '#2196F3',
-                          border: '1.5px solid #2196F3',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: '600'
-                        }}
-                      >
-                        <Edit size={16} />
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleResetSenha(colab.id, colab.nome)}
-                        title="Resetar senha para 123mudar"
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                          padding: '0.625rem',
-                          backgroundColor: 'white',
-                          color: '#f97316',
-                          border: '1.5px solid #f97316',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: '600'
-                        }}
-                      >
-                        <KeyRound size={16} />
-                        Reset Senha
-                      </button>
-                      <button
-                        onClick={() => handleDelete(colab.id, colab.nome)}
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                          padding: '0.625rem',
-                          backgroundColor: 'white',
-                          color: '#ef4444',
-                          border: '1.5px solid #ef4444',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: '600'
-                        }}
-                      >
-                        <Trash2 size={16} />
-                        Excluir
-                      </button>
+                    <div className="mb-1 flex items-center gap-2 text-sm text-ink-muted">
+                      <Briefcase size={14} />
+                      {colab.cargo}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-ink-muted">
+                      <Building2 size={14} />
+                      {colab.empresas?.nome_fantasia || 'Sem empresa'}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+
+                  <div className="flex flex-wrap gap-2 border-t border-white pt-4">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1 justify-center"
+                      onClick={() => router.push(`/colaboradores/editar/${colab.id}`)}
+                      icon={<Edit size={14} />}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1 justify-center text-amber"
+                      onClick={() => handleResetSenha(colab.id, colab.nome)}
+                      title="Resetar senha para 123mudar"
+                      icon={<KeyRound size={14} />}
+                    >
+                      Reset Senha
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      className="flex-1 justify-center"
+                      onClick={() => handleDelete(colab.id, colab.nome)}
+                      icon={<Trash2 size={14} />}
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
       </div>
-    </>
+    </div>
   )
 }

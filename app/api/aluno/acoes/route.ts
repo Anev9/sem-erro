@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { getAlunoId } from '@/lib/auth'
+import { notificarResponsavelWhatsapp } from '@/lib/notificar-whatsapp'
 
 const getServiceClient = createAdminClient
 
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Verificar que a empresa pertence ao aluno autenticado
     const { data: empresa } = await supabase
       .from('empresas')
-      .select('id')
+      .select('id, nome_fantasia')
       .eq('id', body.empresa_id)
       .eq('aluno_id', alunoId)
       .single()
@@ -72,6 +73,16 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase.from('acoes_corretivas').insert([body]).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    await notificarResponsavelWhatsapp({
+      db: supabase,
+      colaboradorId: data.colaborador_id,
+      titulo: data.titulo,
+      empresaNome: empresa.nome_fantasia,
+      prazo: data.prazo,
+      urgente: data.urgente,
+    })
+
     return NextResponse.json(data)
   } catch {
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
@@ -90,21 +101,34 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const supabase = getServiceClient()
 
-    const { data: acao } = await supabase.from('acoes_corretivas').select('empresa_id').eq('id', id).single()
+    const { data: acao } = await supabase.from('acoes_corretivas').select('empresa_id, colaborador_id').eq('id', id).single()
     if (!acao) return NextResponse.json({ error: 'Ação não encontrada' }, { status: 404 })
 
-    const { data: empresa } = await supabase.from('empresas').select('id').eq('id', acao.empresa_id).eq('aluno_id', alunoId).single()
+    const { data: empresa } = await supabase.from('empresas').select('id, nome_fantasia').eq('id', acao.empresa_id).eq('aluno_id', alunoId).single()
     if (!empresa) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
-    const { titulo, descricao, responsavel, prazo, status, prioridade, categoria, orcamento, valor_pago, observacoes, urgente } = body
+    const { titulo, descricao, responsavel, colaborador_id, prazo, status, prioridade, categoria, orcamento, valor_pago, observacoes, urgente } = body
     const { data, error } = await supabase
       .from('acoes_corretivas')
-      .update({ titulo, descricao, responsavel, prazo, status, prioridade, categoria, orcamento, valor_pago, observacoes, urgente })
+      .update({ titulo, descricao, responsavel, colaborador_id, prazo, status, prioridade, categoria, orcamento, valor_pago, observacoes, urgente })
       .eq('id', id)
       .select('*, empresas(nome_fantasia), checklists_futuros(titulo), checklist_futuro_itens(titulo)')
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Só notifica se o responsável está sendo trocado/definido agora
+    if (colaborador_id && colaborador_id !== acao.colaborador_id) {
+      await notificarResponsavelWhatsapp({
+        db: supabase,
+        colaboradorId: colaborador_id,
+        titulo: data.titulo,
+        empresaNome: empresa.nome_fantasia,
+        prazo: data.prazo,
+        urgente: data.urgente,
+      })
+    }
+
     return NextResponse.json(data)
   } catch {
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })

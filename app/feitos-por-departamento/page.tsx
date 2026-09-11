@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Calendar, Building2, Briefcase, Check, BarChart3, CheckCircle, XCircle, TrendingUp, Trophy, AlertTriangle } from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 interface PerformanceDepartamento {
   departamento: string;
@@ -18,6 +22,15 @@ interface Totais {
   conformes: number;
   naoConformes: number;
   taxaMedia: number;
+}
+
+const inputClass = 'w-full rounded-xl bg-surface-2 px-3.5 py-2.5 text-sm outline-none cursor-pointer';
+const labelClass = 'mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink-muted';
+
+function taxaTone(taxa: number) {
+  if (taxa >= 90) return { text: 'text-teal', bar: 'bg-teal' };
+  if (taxa >= 75) return { text: 'text-blue', bar: 'bg-blue' };
+  return { text: 'text-amber', bar: 'bg-amber' };
 }
 
 export default function RelatorioPerformanceDepartamento() {
@@ -97,71 +110,30 @@ export default function RelatorioPerformanceDepartamento() {
   const pior = dados[dados.length - 1];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f7fa', padding: '2rem' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-
-        {/* Botão Voltar */}
-        <button
-          onClick={() => router.back()}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            background: 'white', border: '2px solid #e0e0e0', borderRadius: '0.75rem',
-            padding: '0.75rem 1.25rem', fontSize: '0.875rem', fontWeight: '600',
-            color: '#5E6AD2', cursor: 'pointer', marginBottom: '1.5rem',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-          }}
-        >
-          <span style={{ fontSize: '1.25rem' }}>←</span>
-          <span>Voltar</span>
-        </button>
-
-        {/* Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#1a1a1a', margin: '0 0 0.5rem 0' }}>
-            Relatório de Performance por Departamento
-          </h1>
-          <p style={{ color: '#666', fontSize: '1rem', margin: 0 }}>
-            Análise comparativa de desempenho entre departamentos
-          </p>
-        </div>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1400px] px-6 py-8">
+        <PageHeader
+          title="Relatório de Performance por Departamento"
+          subtitle="Análise comparativa de desempenho entre departamentos"
+          backHref="/dashboard-aluno"
+        />
 
         {/* Filtros */}
-        <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
-
+        <Card className="mb-6 p-6 sm:p-8">
+          <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                <span>📅</span> De
-              </label>
-              <input
-                type="date"
-                value={filtros.dataInicio}
-                onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', boxSizing: 'border-box' }}
-              />
+              <label className={labelClass}><Calendar size={15} /> De</label>
+              <input type="date" value={filtros.dataInicio} onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })} className={inputClass} />
             </div>
 
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                <span>📅</span> Até
-              </label>
-              <input
-                type="date"
-                value={filtros.dataFim}
-                onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', boxSizing: 'border-box' }}
-              />
+              <label className={labelClass}><Calendar size={15} /> Até</label>
+              <input type="date" value={filtros.dataFim} onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })} className={inputClass} />
             </div>
 
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                <span>🏢</span> Empresa
-              </label>
-              <select
-                value={filtros.empresa}
-                onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', cursor: 'pointer', boxSizing: 'border-box' }}
-              >
+              <label className={labelClass}><Building2 size={15} /> Empresa</label>
+              <select value={filtros.empresa} onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })} className={inputClass}>
                 <option value="todas">Todas</option>
                 {empresas.map(emp => (
                   <option key={emp.id} value={emp.id}>{emp.nome_fantasia}</option>
@@ -170,14 +142,8 @@ export default function RelatorioPerformanceDepartamento() {
             </div>
 
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                <span>🏬</span> Departamento (Cargo)
-              </label>
-              <select
-                value={filtros.cargo}
-                onChange={(e) => setFiltros({ ...filtros, cargo: e.target.value })}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', cursor: 'pointer', boxSizing: 'border-box' }}
-              >
+              <label className={labelClass}><Briefcase size={15} /> Departamento (Cargo)</label>
+              <select value={filtros.cargo} onChange={(e) => setFiltros({ ...filtros, cargo: e.target.value })} className={inputClass}>
                 <option value="todos">Todos</option>
                 {cargos.map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -186,175 +152,133 @@ export default function RelatorioPerformanceDepartamento() {
             </div>
           </div>
 
-          <button
-            onClick={enviarAtualizar}
-            disabled={carregando}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-              width: '100%', maxWidth: '250px',
-              background: carregando ? '#9ca3af' : 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
-              color: 'white', border: 'none', borderRadius: '0.75rem',
-              padding: '0.875rem', fontSize: '0.875rem', fontWeight: '700',
-              cursor: carregando ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 12px rgba(33,150,243,0.4)'
-            }}
-          >
-            <span>✓</span>
+          <Button variant="primary" onClick={enviarAtualizar} disabled={carregando} icon={<Check size={16} />}>
             {carregando ? 'Carregando...' : 'Enviar / Atualizar'}
-          </button>
-        </div>
+          </Button>
+        </Card>
 
         {/* Resultados */}
         {mostrarResultados ? (
           dados.length === 0 ? (
-            <div style={{ background: 'white', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <p style={{ fontSize: '1.25rem', color: '#6b7280', margin: 0 }}>
-                Nenhuma resposta encontrada no período selecionado.
-              </p>
-            </div>
+            <Card className="px-6 py-16 text-center">
+              <p className="text-lg text-ink-muted">Nenhuma resposta encontrada no período selecionado.</p>
+            </Card>
           ) : (
             <>
               {/* Cards de Resumo */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                <div style={{ background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(33,150,243,0.3)' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📊</div>
-                  <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Total de Respostas</p>
-                  <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{totais.totalRespostas}</p>
-                  <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>no período selecionado</p>
-                </div>
+              <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Card className="bg-brand p-6 shadow-[0_8px_16px_-8px_rgba(255,122,61,0.6)]">
+                  <BarChart3 size={26} className="mb-2 text-white" />
+                  <p className="mb-1.5 text-xs text-white/85">Total de Respostas</p>
+                  <p className="font-display text-4xl font-bold text-white">{totais.totalRespostas}</p>
+                  <p className="mt-1 text-xs text-white/75">no período selecionado</p>
+                </Card>
 
-                <div style={{ background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(76,175,80,0.3)' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
-                  <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Conformes</p>
-                  <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{totais.conformes}</p>
-                  <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>
+                <Card className="p-6">
+                  <CheckCircle size={26} className="mb-2 text-teal" />
+                  <p className="mb-1.5 text-xs font-semibold text-ink-muted">Conformes</p>
+                  <p className="font-display text-3xl font-bold text-teal">{totais.conformes}</p>
+                  <p className="mt-1 text-xs text-ink-faint">
                     {totais.totalRespostas > 0 ? Math.round((totais.conformes / totais.totalRespostas) * 100) : 0}% do total
                   </p>
-                </div>
+                </Card>
 
-                <div style={{ background: 'linear-gradient(135deg, #ef5350 0%, #e53935 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(239,83,80,0.3)' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>❌</div>
-                  <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Não Conformes</p>
-                  <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{totais.naoConformes}</p>
-                  <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>
+                <Card className="p-6">
+                  <XCircle size={26} className="mb-2 text-coral" />
+                  <p className="mb-1.5 text-xs font-semibold text-ink-muted">Não Conformes</p>
+                  <p className="font-display text-3xl font-bold text-coral">{totais.naoConformes}</p>
+                  <p className="mt-1 text-xs text-ink-faint">
                     {totais.totalRespostas > 0 ? Math.round((totais.naoConformes / totais.totalRespostas) * 100) : 0}% do total
                   </p>
-                </div>
+                </Card>
 
-                <div style={{ background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(156,39,176,0.3)' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📈</div>
-                  <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Taxa Média</p>
-                  <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{totais.taxaMedia}%</p>
-                  <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>de conformidade geral</p>
-                </div>
+                <Card className="p-6">
+                  <TrendingUp size={26} className="mb-2 text-violet" />
+                  <p className="mb-1.5 text-xs font-semibold text-ink-muted">Taxa Média</p>
+                  <p className="font-display text-3xl font-bold text-violet">{totais.taxaMedia}%</p>
+                  <p className="mt-1 text-xs text-ink-faint">de conformidade geral</p>
+                </Card>
               </div>
 
               {/* Ranking */}
-              <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#333', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>🏆</span>
-                  Ranking de Performance por Departamento
+              <Card className="mb-6 p-6 sm:p-8">
+                <h3 className="mb-6 flex items-center gap-2 font-display text-lg font-bold text-ink">
+                  <Trophy size={20} className="text-amber" /> Ranking de Performance por Departamento
                 </h3>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div className="flex flex-col gap-6">
                   {dados.map((dept, index) => {
-                    const corBarra = dept.taxa >= 90 ? '#4CAF50' : dept.taxa >= 75 ? '#2196F3' : '#FF9800';
-                    const badges = [
-                      'linear-gradient(135deg, #FFD700, #FFA500)',
-                      'linear-gradient(135deg, #C0C0C0, #A8A8A8)',
-                      'linear-gradient(135deg, #CD7F32, #B8860B)',
-                    ];
-                    const badgeBg = index < 3 ? badges[index] : '#e0e0e0';
+                    const tone = taxaTone(dept.taxa);
+                    const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`;
 
                     return (
                       <div key={dept.departamento}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-                          <div style={{
-                            width: '50px', height: '50px', borderRadius: '50%',
-                            background: badgeBg, display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', fontSize: '1.25rem', fontWeight: '900',
-                            color: 'white', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                          }}>
-                            {index + 1}
+                        <div className="mb-3 flex flex-wrap items-center gap-4">
+                          <div className="flex h-[50px] w-[50px] flex-shrink-0 items-center justify-center rounded-full bg-surface-2 text-xl font-bold text-ink-muted">
+                            {medalha}
                           </div>
 
-                          <div style={{ flex: 1, minWidth: '200px' }}>
-                            <h4 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#333', margin: '0 0 0.25rem 0' }}>
-                              {dept.departamento}
-                            </h4>
-                            <p style={{ fontSize: '0.875rem', color: '#666', margin: 0 }}>
+                          <div className="min-w-[200px] flex-1">
+                            <h4 className="text-base font-bold text-ink">{dept.departamento}</h4>
+                            <p className="text-sm text-ink-muted">
                               {dept.totalRespostas} respostas · {dept.conformes} conformes · {dept.naoConformes} não conformes
                               {dept.naAplicavel > 0 ? ` · ${dept.naAplicavel} N/A` : ''}
                             </p>
                           </div>
 
-                          <div style={{ fontSize: '2rem', fontWeight: '900', color: corBarra, minWidth: '80px', textAlign: 'right' }}>
-                            {dept.taxa}%
-                          </div>
+                          <div className={`min-w-[80px] text-right text-3xl font-bold ${tone.text}`}>{dept.taxa}%</div>
                         </div>
 
-                        <div style={{ width: '100%', height: '20px', background: '#f0f0f0', borderRadius: '10px', overflow: 'hidden' }}>
-                          <div style={{
-                            width: `${dept.taxa}%`, height: '100%', background: corBarra,
-                            borderRadius: '10px', transition: 'width 1s ease',
-                            display: 'flex', alignItems: 'center', paddingLeft: '1rem'
-                          }}>
-                            {dept.taxa >= 20 && (
-                              <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: '700' }}>
-                                {dept.taxa}% de conformidade
-                              </span>
-                            )}
+                        <div className="h-4 w-full overflow-hidden rounded-full bg-surface-2">
+                          <div
+                            className={`flex h-full items-center rounded-full pl-3 transition-[width] duration-700 ${tone.bar}`}
+                            style={{ width: `${dept.taxa}%` }}
+                          >
+                            {dept.taxa >= 20 && <span className="text-xs font-bold text-white">{dept.taxa}% de conformidade</span>}
                           </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </Card>
 
               {/* Melhor e Pior */}
               {dados.length >= 2 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1rem' }}>
-                  <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: '6px solid #4CAF50' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                      <span style={{ fontSize: '2rem' }}>🥇</span>
-                      <h4 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#333', margin: 0 }}>Melhor Performance</h4>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <Card className="border-l-4 border-teal p-6 sm:p-8">
+                    <div className="mb-4 flex items-center gap-3">
+                      <Trophy size={26} className="text-teal" />
+                      <h4 className="text-base font-bold text-ink">Melhor Performance</h4>
                     </div>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '900', color: '#4CAF50', margin: '0 0 0.5rem 0' }}>{melhor.departamento}</p>
-                    <p style={{ fontSize: '0.875rem', color: '#666', margin: 0 }}>Taxa de conformidade: <strong>{melhor.taxa}%</strong></p>
-                    <p style={{ fontSize: '0.875rem', color: '#666', margin: '0.25rem 0 0 0' }}>Total de respostas: <strong>{melhor.totalRespostas}</strong></p>
-                  </div>
+                    <p className="mb-1.5 text-2xl font-bold text-teal">{melhor.departamento}</p>
+                    <p className="text-sm text-ink-muted">Taxa de conformidade: <strong className="text-ink">{melhor.taxa}%</strong></p>
+                    <p className="mt-1 text-sm text-ink-muted">Total de respostas: <strong className="text-ink">{melhor.totalRespostas}</strong></p>
+                  </Card>
 
-                  <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: '6px solid #FF9800' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                      <span style={{ fontSize: '2rem' }}>⚠️</span>
-                      <h4 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#333', margin: 0 }}>Precisa de Atenção</h4>
+                  <Card className="border-l-4 border-amber p-6 sm:p-8">
+                    <div className="mb-4 flex items-center gap-3">
+                      <AlertTriangle size={26} className="text-amber" />
+                      <h4 className="text-base font-bold text-ink">Precisa de Atenção</h4>
                     </div>
-                    <p style={{ fontSize: '1.5rem', fontWeight: '900', color: '#FF9800', margin: '0 0 0.5rem 0' }}>{pior.departamento}</p>
-                    <p style={{ fontSize: '0.875rem', color: '#666', margin: 0 }}>Taxa de conformidade: <strong>{pior.taxa}%</strong></p>
-                    <p style={{ fontSize: '0.875rem', color: '#666', margin: '0.25rem 0 0 0' }}>Não conformes: <strong>{pior.naoConformes}</strong></p>
-                  </div>
+                    <p className="mb-1.5 text-2xl font-bold text-amber">{pior.departamento}</p>
+                    <p className="text-sm text-ink-muted">Taxa de conformidade: <strong className="text-ink">{pior.taxa}%</strong></p>
+                    <p className="mt-1 text-sm text-ink-muted">Não conformes: <strong className="text-ink">{pior.naoConformes}</strong></p>
+                  </Card>
                 </div>
               )}
             </>
           )
         ) : (
-          <div style={{ background: 'white', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <div style={{
-              width: '120px', height: '120px',
-              background: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)',
-              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 2rem', border: '4px solid #90CAF9'
-            }}>
-              <span style={{ fontSize: '4rem' }}>📊</span>
+          <Card className="px-6 py-16 text-center">
+            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-blue-tint">
+              <BarChart3 size={40} className="text-blue" />
             </div>
-            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#333', marginBottom: '1rem' }}>
-              Configure os Filtros
-            </h3>
-            <p style={{ color: '#666', fontSize: '1rem', margin: 0, lineHeight: 1.6 }}>
-              Selecione o período, empresa e departamento desejados, depois clique em "Enviar / Atualizar" para visualizar o relatório.
+            <h3 className="mb-3 font-display text-xl font-bold text-ink">Configure os Filtros</h3>
+            <p className="text-sm leading-relaxed text-ink-muted">
+              Selecione o período, empresa e departamento desejados, depois clique em &quot;Enviar / Atualizar&quot; para visualizar o relatório.
             </p>
-          </div>
+          </Card>
         )}
       </div>
     </div>

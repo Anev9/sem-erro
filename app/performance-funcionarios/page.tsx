@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, TrendingUp, Users } from 'lucide-react'
+import { Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 interface ColaboradorStats {
   nome: string
@@ -12,6 +15,12 @@ interface ColaboradorStats {
   naoConformes: number
   naAplicavel: number
   performance: number
+}
+
+function perfTone(perf: number) {
+  if (perf >= 90) return { text: 'text-teal', bg: 'bg-teal-tint', bar: 'bg-teal' }
+  if (perf >= 75) return { text: 'text-blue', bg: 'bg-blue-tint', bar: 'bg-blue' }
+  return { text: 'text-amber', bg: 'bg-amber-tint', bar: 'bg-amber' }
 }
 
 export default function PerformanceColaboradores() {
@@ -84,43 +93,24 @@ export default function PerformanceColaboradores() {
   const excelentes = colaboradores.filter(c => c.performance >= 90).length
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1200px] px-6 py-8">
+        <PageHeader
+          title="Performance de Colaboradores"
+          subtitle="Desempenho da equipe com base nas respostas dos checklists"
+          backHref="/dashboard-aluno"
+        />
 
-        <button
-          onClick={() => router.back()}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.5rem 1rem', backgroundColor: 'white', border: '1px solid #e5e7eb',
-            borderRadius: '0.5rem', cursor: 'pointer', color: '#374151',
-            fontSize: '0.95rem', marginBottom: '2rem'
-          }}
-        >
-          <ArrowLeft size={18} />
-          Voltar
-        </button>
-
-        <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-
-          <div style={{ marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-              <TrendingUp size={28} style={{ color: '#f97316' }} />
-              <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-                Performance de Colaboradores
-              </h1>
-            </div>
-            <p style={{ color: '#6b7280', margin: 0, fontSize: '0.95rem' }}>
-              Desempenho da equipe com base nas respostas dos checklists
-            </p>
-          </div>
-
+        <Card className="p-6 sm:p-8">
           {loading ? (
-            <p style={{ textAlign: 'center', color: '#6b7280', padding: '3rem 0' }}>Carregando dados...</p>
+            <p className="py-12 text-center text-sm text-ink-muted">Carregando dados...</p>
           ) : erro ? (
-            <div style={{ textAlign: 'center', padding: '3rem 0' }}>
-              <p style={{ color: '#ef4444', fontWeight: '600', marginBottom: '0.5rem' }}>Erro ao carregar dados</p>
-              <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>{erro}</p>
-              <button
+            <div className="py-12 text-center">
+              <p className="mb-1.5 font-semibold text-coral">Erro ao carregar dados</p>
+              <p className="text-sm text-ink-muted">{erro}</p>
+              <Button
+                variant="primary"
+                className="mt-4"
                 onClick={() => {
                   const userData = localStorage.getItem('user')
                   if (userData) {
@@ -128,15 +118,14 @@ export default function PerformanceColaboradores() {
                     carregarDados(user.id || user.aluno_id)
                   }
                 }}
-                style={{ marginTop: '1rem', padding: '0.5rem 1.25rem', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
               >
                 Tentar novamente
-              </button>
+              </Button>
             </div>
           ) : colaboradores.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-              <Users size={56} style={{ color: '#9ca3af', margin: '0 auto 1rem' }} />
-              <p style={{ color: '#6b7280', fontSize: '1rem' }}>
+            <div className="py-16 text-center">
+              <Users size={48} className="mx-auto mb-4 text-ink-faint" />
+              <p className="text-sm text-ink-muted">
                 Nenhum dado disponível ainda.<br />
                 Os dados aparecem conforme os colaboradores respondem checklists.
               </p>
@@ -144,22 +133,22 @@ export default function PerformanceColaboradores() {
           ) : (
             <>
               {/* Resumo */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                <div style={{ backgroundColor: '#fff7ed', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #fed7aa' }}>
-                  <p style={{ fontSize: '0.8rem', color: '#9a3412', margin: '0 0 0.5rem', fontWeight: '600' }}>Colaboradores</p>
-                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#f97316', margin: 0 }}>{colaboradores.length}</p>
+              <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="rounded-2xl bg-brand-tint p-5">
+                  <p className="mb-1.5 text-xs font-semibold text-brand">Colaboradores</p>
+                  <p className="font-display text-3xl font-bold text-brand">{colaboradores.length}</p>
                 </div>
-                <div style={{ backgroundColor: '#f0fdf4', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bbf7d0' }}>
-                  <p style={{ fontSize: '0.8rem', color: '#166534', margin: '0 0 0.5rem', fontWeight: '600' }}>Média Geral</p>
-                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#16a34a', margin: 0 }}>{mediaPerf}%</p>
+                <div className="rounded-2xl bg-teal-tint p-5">
+                  <p className="mb-1.5 text-xs font-semibold text-teal">Média Geral</p>
+                  <p className="font-display text-3xl font-bold text-teal">{mediaPerf}%</p>
                 </div>
-                <div style={{ backgroundColor: '#eff6ff', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bfdbfe' }}>
-                  <p style={{ fontSize: '0.8rem', color: '#1e40af', margin: '0 0 0.5rem', fontWeight: '600' }}>Total Respostas</p>
-                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#3b82f6', margin: 0 }}>{totalRespostas}</p>
+                <div className="rounded-2xl bg-blue-tint p-5">
+                  <p className="mb-1.5 text-xs font-semibold text-blue">Total Respostas</p>
+                  <p className="font-display text-3xl font-bold text-blue">{totalRespostas}</p>
                 </div>
-                <div style={{ backgroundColor: '#fefce8', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #fde68a' }}>
-                  <p style={{ fontSize: '0.8rem', color: '#92400e', margin: '0 0 0.5rem', fontWeight: '600' }}>Excelentes (≥90%)</p>
-                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#d97706', margin: 0 }}>{excelentes}</p>
+                <div className="rounded-2xl bg-amber-tint p-5">
+                  <p className="mb-1.5 text-xs font-semibold text-amber">Excelentes (≥90%)</p>
+                  <p className="font-display text-3xl font-bold text-amber">{excelentes}</p>
                 </div>
               </div>
 
@@ -169,88 +158,82 @@ export default function PerformanceColaboradores() {
                 placeholder="Buscar por nome..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                style={{
-                  width: '100%', padding: '0.75rem 1rem', border: '1px solid #e5e7eb',
-                  borderRadius: '0.5rem', fontSize: '0.95rem', marginBottom: '1.5rem',
-                  outline: 'none', boxSizing: 'border-box'
-                }}
+                className="mb-6 w-full rounded-xl bg-surface-2 px-3.5 py-2.5 text-sm outline-none"
               />
 
               {/* Ranking */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="flex flex-col gap-3">
                 {filtrados.map((c, i) => {
-                  const perfColor = c.performance >= 90 ? '#16a34a' : c.performance >= 75 ? '#3b82f6' : '#f97316'
-                  const perfBg = c.performance >= 90 ? '#f0fdf4' : c.performance >= 75 ? '#eff6ff' : '#fff7ed'
+                  const tone = perfTone(c.performance)
                   const medalha = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`
 
                   return (
-                    <div key={c.nome} style={{ backgroundColor: '#f9fafb', borderRadius: '0.75rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-                      <div style={{ padding: '1.25rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div key={c.nome} className="overflow-hidden rounded-2xl bg-surface-2">
+                      <div className="p-5">
+                        <div className="flex flex-wrap items-center gap-4">
+                          <div className="min-w-[2.5rem] text-center text-xl">{medalha}</div>
 
-                          <div style={{ fontSize: '1.5rem', minWidth: '2.5rem', textAlign: 'center' }}>{medalha}</div>
-
-                          <div style={{ flex: 1, minWidth: '180px' }}>
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 0.2rem', color: '#1f2937' }}>{c.nome}</h3>
-                            <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>{c.empresa}</p>
+                          <div className="min-w-[180px] flex-1">
+                            <h3 className="text-base font-bold text-ink">{c.nome}</h3>
+                            <p className="text-sm text-ink-muted">{c.empresa}</p>
                           </div>
 
-                          <div style={{ display: 'flex', gap: '1.25rem' }}>
-                            <div style={{ textAlign: 'center' }}>
-                              <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: '0 0 0.2rem' }}>Total</p>
-                              <p style={{ fontSize: '1.25rem', fontWeight: '700', margin: 0, color: '#374151' }}>{c.total}</p>
+                          <div className="flex gap-5">
+                            <div className="text-center">
+                              <p className="mb-0.5 text-[11px] text-ink-faint">Total</p>
+                              <p className="text-lg font-bold text-ink-muted">{c.total}</p>
                             </div>
-                            <div style={{ textAlign: 'center' }}>
-                              <p style={{ fontSize: '0.7rem', color: '#16a34a', margin: '0 0 0.2rem' }}>Conformes</p>
-                              <p style={{ fontSize: '1.25rem', fontWeight: '700', margin: 0, color: '#16a34a' }}>{c.conformes}</p>
+                            <div className="text-center">
+                              <p className="mb-0.5 text-[11px] text-teal">Conformes</p>
+                              <p className="text-lg font-bold text-teal">{c.conformes}</p>
                             </div>
-                            <div style={{ textAlign: 'center' }}>
-                              <p style={{ fontSize: '0.7rem', color: '#ef4444', margin: '0 0 0.2rem' }}>Não Conf.</p>
-                              <p style={{ fontSize: '1.25rem', fontWeight: '700', margin: 0, color: '#ef4444' }}>{c.naoConformes}</p>
+                            <div className="text-center">
+                              <p className="mb-0.5 text-[11px] text-coral">Não Conf.</p>
+                              <p className="text-lg font-bold text-coral">{c.naoConformes}</p>
                             </div>
                           </div>
 
-                          <div style={{ textAlign: 'center', padding: '0.75rem 1.25rem', backgroundColor: perfBg, borderRadius: '0.5rem', minWidth: '80px' }}>
-                            <p style={{ fontSize: '2rem', fontWeight: '900', color: perfColor, margin: 0, lineHeight: 1 }}>{c.performance}%</p>
-                            <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: '0.25rem 0 0' }}>conformidade</p>
+                          <div className={`min-w-[80px] rounded-xl px-5 py-3 text-center ${tone.bg}`}>
+                            <p className={`text-2xl font-bold leading-none ${tone.text}`}>{c.performance}%</p>
+                            <p className="mt-1 text-[11px] text-ink-muted">conformidade</p>
                           </div>
 
                           <button
                             onClick={() => setExpandido(expandido === c.nome ? null : c.nome)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1.25rem', padding: '0.25rem' }}
+                            className="p-1 text-ink-faint"
                           >
-                            {expandido === c.nome ? '▲' : '▼'}
+                            {expandido === c.nome ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                           </button>
                         </div>
 
-                        <div style={{ marginTop: '1rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.375rem' }}>
+                        <div className="mt-4">
+                          <div className="mb-1.5 flex justify-between text-xs text-ink-muted">
                             <span>Taxa de conformidade</span><span>{c.performance}%</span>
                           </div>
-                          <div style={{ width: '100%', height: '8px', backgroundColor: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden' }}>
-                            <div style={{ width: `${c.performance}%`, height: '100%', backgroundColor: perfColor, borderRadius: '9999px', transition: 'width 0.8s ease' }} />
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-white">
+                            <div className={`h-full rounded-full transition-[width] duration-500 ${tone.bar}`} style={{ width: `${c.performance}%` }} />
                           </div>
                         </div>
                       </div>
 
                       {expandido === c.nome && (
-                        <div style={{ borderTop: '1px solid #e5e7eb', padding: '1.25rem', backgroundColor: 'white' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
-                            <div style={{ backgroundColor: '#f0fdf4', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #bbf7d0' }}>
-                              <p style={{ fontSize: '0.8rem', color: '#166534', margin: '0 0 0.25rem', fontWeight: '600' }}>Conformes</p>
-                              <p style={{ fontSize: '1.5rem', fontWeight: '900', color: '#16a34a', margin: 0 }}>{c.conformes}</p>
+                        <div className="border-t border-white p-5">
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <div className="rounded-xl bg-teal-tint p-4">
+                              <p className="mb-1 text-xs font-semibold text-teal">Conformes</p>
+                              <p className="text-xl font-bold text-teal">{c.conformes}</p>
                             </div>
-                            <div style={{ backgroundColor: '#fef2f2', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #fecaca' }}>
-                              <p style={{ fontSize: '0.8rem', color: '#991b1b', margin: '0 0 0.25rem', fontWeight: '600' }}>Não Conformes</p>
-                              <p style={{ fontSize: '1.5rem', fontWeight: '900', color: '#ef4444', margin: 0 }}>{c.naoConformes}</p>
+                            <div className="rounded-xl bg-coral-tint p-4">
+                              <p className="mb-1 text-xs font-semibold text-coral">Não Conformes</p>
+                              <p className="text-xl font-bold text-coral">{c.naoConformes}</p>
                             </div>
-                            <div style={{ backgroundColor: '#f9fafb', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #e5e7eb' }}>
-                              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0 0.25rem', fontWeight: '600' }}>N/A</p>
-                              <p style={{ fontSize: '1.5rem', fontWeight: '900', color: '#6b7280', margin: 0 }}>{c.naAplicavel}</p>
+                            <div className="rounded-xl bg-white p-4">
+                              <p className="mb-1 text-xs font-semibold text-ink-muted">N/A</p>
+                              <p className="text-xl font-bold text-ink-muted">{c.naAplicavel}</p>
                             </div>
-                            <div style={{ backgroundColor: '#eff6ff', borderRadius: '0.5rem', padding: '1rem', border: '1px solid #bfdbfe' }}>
-                              <p style={{ fontSize: '0.8rem', color: '#1e40af', margin: '0 0 0.25rem', fontWeight: '600' }}>Total</p>
-                              <p style={{ fontSize: '1.5rem', fontWeight: '900', color: '#3b82f6', margin: 0 }}>{c.total}</p>
+                            <div className="rounded-xl bg-blue-tint p-4">
+                              <p className="mb-1 text-xs font-semibold text-blue">Total</p>
+                              <p className="text-xl font-bold text-blue">{c.total}</p>
                             </div>
                           </div>
                         </div>
@@ -261,7 +244,7 @@ export default function PerformanceColaboradores() {
               </div>
             </>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )

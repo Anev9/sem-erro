@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Plus, Trash2, Copy, FileText, Upload, Download } from 'lucide-react'
+import { Save, Plus, Trash2, Copy, FileText, Upload, Download } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 type Template = {
   id: string
@@ -21,9 +24,23 @@ type ItemChecklist = {
   foto_obrigatoria: boolean
 }
 
+const inputClass = 'w-full rounded-xl bg-surface-2 px-3.5 py-2.5 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-60'
+const labelClass = 'mb-2 block text-sm font-semibold text-ink-muted'
+
+const OPCOES_CRIACAO = [
+  { value: 'proprio', label: 'Fazer do meu jeito', icon: FileText, tone: 'brand' },
+  { value: 'modelo', label: 'Copiar um modelo pronto', icon: Copy, tone: 'brand' },
+  { value: 'importar', label: 'Importar de planilha (CSV/Excel)', icon: Upload, tone: 'teal' },
+] as const
+
+const toneClasses = {
+  brand: { bgActive: 'bg-brand-tint', borderActive: 'border-brand', icon: 'text-brand', accent: 'accent-brand' },
+  teal: { bgActive: 'bg-teal-tint', borderActive: 'border-teal', icon: 'text-teal', accent: 'accent-teal' },
+}
+
 export default function CriarChecklistFuturoPage() {
   const router = useRouter()
-  
+
   const [recorrente, setRecorrente] = useState<'modelo' | 'proprio' | 'importar'>('proprio')
   const [proximaExecucao, setProximaExecucao] = useState('')
   const [tipoNegocio, setTipoNegocio] = useState('')
@@ -31,17 +48,17 @@ export default function CriarChecklistFuturoPage() {
   const [descricao, setDescricao] = useState('')
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState('')
-  
+
   const [templates, setTemplates] = useState<Template[]>([])
   const [templateSelecionado, setTemplateSelecionado] = useState<string>('')
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [itensDoTemplate, setItensDoTemplate] = useState<{[key: string]: any[]}>({})
   const [templateExpandido, setTemplateExpandido] = useState<string | null>(null)
-  
+
   const [itens, setItens] = useState<ItemChecklist[]>([
     { titulo: '', descricao: '', ordem: 1, foto_obrigatoria: false }
   ])
-  
+
   const [chaveCompartilhamento, setChaveCompartilhamento] = useState('')
   const [mensagemSalvamento, setMensagemSalvamento] = useState('')
 
@@ -84,7 +101,7 @@ export default function CriarChecklistFuturoPage() {
 
   async function buscarTemplates() {
     setLoadingTemplates(true)
-    
+
     try {
       const { data: templatesData, error: errorTemplates } = await supabase
         .from('checklist_templates')
@@ -260,7 +277,7 @@ export default function CriarChecklistFuturoPage() {
 
   async function criarPropio() {
     const itensValidos = itens.filter(item => item.titulo.trim() !== '')
-    
+
     if (itensValidos.length === 0) {
       toast.warning('❌ Adicione pelo menos 1 item com título')
       return
@@ -367,7 +384,7 @@ export default function CriarChecklistFuturoPage() {
     if (errorItensInserir) throw errorItensInserir
 
     setMensagemSalvamento(`✅ Checklist criado com ${itensTemplate.length} itens!`)
-    
+
     setTimeout(() => {
       router.push('/checklists-futuros')
     }, 1500)
@@ -433,310 +450,175 @@ export default function CriarChecklistFuturoPage() {
     if (errorItens) throw errorItens
 
     setMensagemSalvamento('✅ Checklist importado!')
-    
+
     setTimeout(() => {
       router.push('/checklists-futuros')
     }, 1500)
   }
 
+  function renderItensEditor(titulo: string) {
+    return (
+      <div className="rounded-2xl bg-surface-2 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-ink">{titulo}</h4>
+          <Button type="button" variant="primary" size="sm" onClick={adicionarItem} icon={<Plus size={16} />}>
+            Adicionar Item
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {itens.map((item, index) => (
+            <div key={index} className="rounded-xl bg-white p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-semibold text-ink-muted">Item {index + 1}</span>
+                {itens.length > 1 && (
+                  <button type="button" onClick={() => removerItem(index)} className="text-coral">
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+
+              <input
+                type="text"
+                placeholder="Título do item *"
+                value={item.titulo}
+                onChange={(e) => atualizarItem(index, 'titulo', e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+                className={`${inputClass} mb-3`}
+              />
+
+              <textarea
+                placeholder="Descrição (opcional)"
+                value={item.descricao}
+                onChange={(e) => atualizarItem(index, 'descricao', e.target.value)}
+                rows={2}
+                className={`${inputClass} resize-y font-sans`}
+              />
+
+              <label className="mt-3 flex select-none items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={item.foto_obrigatoria}
+                  onChange={() => toggleFotoObrigatoria(index)}
+                  className="h-4 w-4 cursor-pointer accent-brand"
+                />
+                <span className="text-sm text-ink-muted">Foto obrigatória</span>
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const mensagemTone = mensagemSalvamento.includes('❌')
+    ? { bg: 'bg-coral-tint', text: 'text-coral' }
+    : mensagemSalvamento.includes('✅')
+    ? { bg: 'bg-teal-tint', text: 'text-teal' }
+    : { bg: 'bg-blue-tint', text: 'text-blue' }
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-        
-        <button
-          type="button"
-          onClick={() => router.push('/checklists-futuros')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.5rem 1rem',
-            backgroundColor: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            marginBottom: '2rem',
-            color: '#374151',
-            fontSize: '0.95rem'
-          }}
-        >
-          <ArrowLeft size={18} />
-          Voltar
-        </button>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[900px] px-6 py-8">
+        <PageHeader title="Criar Checklist Futuro" backHref="/checklists-futuros" />
 
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '1rem',
-          padding: '2.5rem',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
-        }}>
-          
-          <h1 style={{ 
-            fontSize: '1.875rem', 
-            fontWeight: 'bold', 
-            color: '#1f2937',
-            marginBottom: '0.5rem'
-          }}>
-            Criar Checklist Futuro
-          </h1>
-
+        <Card className="p-6 sm:p-8">
           <form onSubmit={handleSubmit}>
-            
-            <div style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-              <h3 style={{ 
-                fontSize: '1.125rem', 
-                fontWeight: '600', 
-                color: '#1f2937',
-                marginBottom: '1rem'
-              }}>
-                Como deseja criar?
-              </h3>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  padding: '0.75rem',
-                  borderRadius: '0.5rem',
-                  backgroundColor: recorrente === 'proprio' ? '#eff6ff' : 'transparent',
-                  border: `2px solid ${recorrente === 'proprio' ? '#3b82f6' : 'transparent'}`,
-                  transition: 'all 0.2s ease'
-                }}>
-                  <input
-                    type="radio"
-                    name="recorrente"
-                    value="proprio"
-                    checked={recorrente === 'proprio'}
-                    onChange={() => setRecorrente('proprio')}
-                    style={{ 
-                      width: '1.25rem', 
-                      height: '1.25rem', 
-                      cursor: 'pointer',
-                      accentColor: '#3b82f6'
-                    }}
-                  />
-                  <FileText size={20} color={recorrente === 'proprio' ? '#3b82f6' : '#6b7280'} />
-                  <span style={{ fontSize: '1rem', color: '#374151', fontWeight: recorrente === 'proprio' ? '600' : '400' }}>
-                    Fazer do meu jeito
-                  </span>
-                </label>
+            <div className="mb-8">
+              <h3 className="mb-3 text-base font-bold text-ink">Como deseja criar?</h3>
 
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  padding: '0.75rem',
-                  borderRadius: '0.5rem',
-                  backgroundColor: recorrente === 'modelo' ? '#eff6ff' : 'transparent',
-                  border: `2px solid ${recorrente === 'modelo' ? '#3b82f6' : 'transparent'}`,
-                  transition: 'all 0.2s ease'
-                }}>
-                  <input
-                    type="radio"
-                    name="recorrente"
-                    value="modelo"
-                    checked={recorrente === 'modelo'}
-                    onChange={() => setRecorrente('modelo')}
-                    style={{ 
-                      width: '1.25rem', 
-                      height: '1.25rem', 
-                      cursor: 'pointer',
-                      accentColor: '#3b82f6'
-                    }}
-                  />
-                  <Copy size={20} color={recorrente === 'modelo' ? '#3b82f6' : '#6b7280'} />
-                  <span style={{ fontSize: '1rem', color: '#374151', fontWeight: recorrente === 'modelo' ? '600' : '400' }}>
-                    Copiar um modelo pronto
-                  </span>
-                </label>
-
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  padding: '0.75rem',
-                  borderRadius: '0.5rem',
-                  backgroundColor: recorrente === 'importar' ? '#f0fdf4' : 'transparent',
-                  border: `2px solid ${recorrente === 'importar' ? '#10b981' : 'transparent'}`,
-                  transition: 'all 0.2s ease'
-                }}>
-                  <input
-                    type="radio"
-                    name="recorrente"
-                    value="importar"
-                    checked={recorrente === 'importar'}
-                    onChange={() => setRecorrente('importar')}
-                    style={{
-                      width: '1.25rem',
-                      height: '1.25rem',
-                      cursor: 'pointer',
-                      accentColor: '#10b981'
-                    }}
-                  />
-                  <Upload size={20} color={recorrente === 'importar' ? '#10b981' : '#6b7280'} />
-                  <span style={{ fontSize: '1rem', color: '#374151', fontWeight: recorrente === 'importar' ? '600' : '400' }}>
-                    Importar de planilha (CSV/Excel)
-                  </span>
-                </label>
+              <div className="flex flex-col gap-2.5">
+                {OPCOES_CRIACAO.map(({ value, label, icon: Icon, tone }) => {
+                  const t = toneClasses[tone]
+                  const ativo = recorrente === value
+                  return (
+                    <label
+                      key={value}
+                      className={`flex items-center gap-3 rounded-xl border-2 p-3 cursor-pointer transition-colors ${ativo ? `${t.bgActive} ${t.borderActive}` : 'border-transparent'}`}
+                    >
+                      <input
+                        type="radio"
+                        name="recorrente"
+                        value={value}
+                        checked={ativo}
+                        onChange={() => setRecorrente(value)}
+                        className={`h-5 w-5 cursor-pointer ${t.accent}`}
+                      />
+                      <Icon size={20} className={ativo ? t.icon : 'text-ink-faint'} />
+                      <span className={`text-sm text-ink ${ativo ? 'font-semibold' : ''}`}>{label}</span>
+                    </label>
+                  )
+                })}
               </div>
             </div>
 
             {/* SEÇÃO: COPIAR MODELO */}
             {recorrente === 'modelo' && (
-              <div style={{ 
-                padding: '1.5rem', 
-                backgroundColor: '#f9fafb', 
-                borderRadius: '0.75rem',
-                marginBottom: '2rem'
-              }}>
-                <h4 style={{ 
-                  fontSize: '1rem', 
-                  fontWeight: '600', 
-                  color: '#1f2937',
-                  marginBottom: '1rem'
-                }}>
-                  Selecione um template
-                </h4>
+              <div className="mb-8 rounded-2xl bg-surface-2 p-6">
+                <h4 className="mb-4 text-sm font-semibold text-ink">Selecione um template</h4>
 
                 {loadingTemplates ? (
-                  <p style={{ color: '#6b7280', textAlign: 'center', padding: '2rem' }}>
-                    Carregando templates...
-                  </p>
+                  <p className="py-8 text-center text-sm text-ink-muted">Carregando templates...</p>
                 ) : templates.length === 0 ? (
-                  <p style={{ color: '#6b7280', textAlign: 'center', padding: '2rem' }}>
-                    Nenhum template disponível
-                  </p>
+                  <p className="py-8 text-center text-sm text-ink-muted">Nenhum template disponível</p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {templates.map((template) => (
-                      <div key={template.id}>
-                        <label
-                          style={{
-                            display: 'flex',
-                            padding: '1rem',
-                            backgroundColor: templateSelecionado === template.id ? '#eff6ff' : 'white',
-                            border: `2px solid ${templateSelecionado === template.id ? '#3b82f6' : '#e5e7eb'}`,
-                            borderRadius: templateExpandido === template.id ? '0.5rem 0.5rem 0 0' : '0.5rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          <input
-                            type="radio"
-                            name="template"
-                            value={template.id}
-                            checked={templateSelecionado === template.id}
-                            onChange={(e) => setTemplateSelecionado(e.target.value)}
-                            style={{ 
-                              marginRight: '0.75rem',
-                              width: '1.125rem',
-                              height: '1.125rem',
-                              cursor: 'pointer',
-                              accentColor: '#3b82f6',
-                              flexShrink: 0
-                            }}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ 
-                              fontWeight: '600', 
-                              color: '#1f2937',
-                              marginBottom: '0.25rem'
-                            }}>
-                              {template.nome}
+                  <div className="flex flex-col gap-3">
+                    {templates.map((template) => {
+                      const selecionado = templateSelecionado === template.id
+                      const expandido = templateExpandido === template.id
+                      return (
+                        <div key={template.id}>
+                          <label
+                            className={`flex rounded-xl border-2 p-4 cursor-pointer transition-colors ${
+                              selecionado ? 'border-brand bg-brand-tint' : 'border-transparent bg-white'
+                            } ${expandido ? 'rounded-b-none' : ''}`}
+                          >
+                            <input
+                              type="radio"
+                              name="template"
+                              value={template.id}
+                              checked={selecionado}
+                              onChange={(e) => setTemplateSelecionado(e.target.value)}
+                              className="mr-3 h-[1.125rem] w-[1.125rem] flex-shrink-0 cursor-pointer accent-brand"
+                            />
+                            <div className="flex-1">
+                              <div className="mb-1 font-semibold text-ink">{template.nome}</div>
+                              <div className="mb-2 text-sm text-ink-muted">{template.descricao || 'Sem descrição'}</div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-ink-faint">
+                                  {template.total_itens} {template.total_itens === 1 ? 'item' : 'itens'}
+                                  {template.categoria && ` • ${template.categoria}`}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.preventDefault(); verItensDoTemplate(template.id) }}
+                                  className="text-xs font-medium text-brand underline"
+                                >
+                                  {expandido ? '▲ Ocultar itens' : '▼ Ver itens'}
+                                </button>
+                              </div>
                             </div>
-                            <div style={{ 
-                              fontSize: '0.875rem', 
-                              color: '#6b7280',
-                              marginBottom: '0.5rem'
-                            }}>
-                              {template.descricao || 'Sem descrição'}
-                            </div>
-                            <div style={{ 
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.75rem'
-                            }}>
-                              <span style={{ 
-                                fontSize: '0.8rem', 
-                                color: '#9ca3af'
-                              }}>
-                                {template.total_itens} {template.total_itens === 1 ? 'item' : 'itens'}
-                                {template.categoria && ` • ${template.categoria}`}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  verItensDoTemplate(template.id)
-                                }}
-                                style={{
-                                  fontSize: '0.8rem',
-                                  color: '#3b82f6',
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  textDecoration: 'underline',
-                                  padding: 0
-                                }}
-                              >
-                                {templateExpandido === template.id ? '▲ Ocultar itens' : '▼ Ver itens'}
-                              </button>
-                            </div>
-                          </div>
-                        </label>
+                          </label>
 
-                        {templateExpandido === template.id && itensDoTemplate[template.id] && (
-                          <div style={{
-                            backgroundColor: 'white',
-                            border: '2px solid #e5e7eb',
-                            borderTop: 'none',
-                            borderRadius: '0 0 0.5rem 0.5rem',
-                            padding: '1rem',
-                            marginTop: '-1px'
-                          }}>
-                            <h5 style={{
-                              fontSize: '0.875rem',
-                              fontWeight: '600',
-                              color: '#6b7280',
-                              marginBottom: '0.75rem'
-                            }}>
-                              Itens do checklist:
-                            </h5>
-                            <ol style={{
-                              margin: 0,
-                              paddingLeft: '1.5rem',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '0.5rem'
-                            }}>
-                              {itensDoTemplate[template.id].map((item: any) => (
-                                <li key={item.id} style={{
-                                  fontSize: '0.875rem',
-                                  color: '#374151',
-                                  lineHeight: '1.5'
-                                }}>
-                                  <strong>{item.titulo}</strong>
-                                  {item.descricao && (
-                                    <span style={{ 
-                                      color: '#6b7280',
-                                      display: 'block',
-                                      marginTop: '0.25rem',
-                                      fontSize: '0.8rem'
-                                    }}>
-                                      {item.descricao}
-                                    </span>
-                                  )}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          {expandido && itensDoTemplate[template.id] && (
+                            <div className="rounded-b-xl bg-white p-4">
+                              <h5 className="mb-3 text-sm font-semibold text-ink-muted">Itens do checklist:</h5>
+                              <ol className="flex flex-col gap-2 pl-6">
+                                {itensDoTemplate[template.id].map((item: any) => (
+                                  <li key={item.id} className="list-decimal text-sm leading-relaxed text-ink">
+                                    <strong>{item.titulo}</strong>
+                                    {item.descricao && (
+                                      <span className="mt-1 block text-xs text-ink-muted">{item.descricao}</span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -744,197 +626,34 @@ export default function CriarChecklistFuturoPage() {
 
             {/* SEÇÃO: FAZER DO PRÓPRIO JEITO */}
             {recorrente === 'proprio' && (
-              <div style={{ 
-                padding: '1.5rem', 
-                backgroundColor: '#f9fafb', 
-                borderRadius: '0.75rem',
-                marginBottom: '2rem'
-              }}>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  marginBottom: '1rem'
-                }}>
-                  <h4 style={{ 
-                    fontSize: '1rem', 
-                    fontWeight: '600', 
-                    color: '#1f2937',
-                    margin: 0
-                  }}>
-                    Itens do checklist
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={adicionarItem}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '500'
-                    }}
-                  >
-                    <Plus size={16} />
-                    Adicionar Item
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {itens.map((item, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        padding: '1rem',
-                        backgroundColor: 'white',
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e5e7eb'
-                      }}
-                    >
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '0.75rem'
-                      }}>
-                        <span style={{ 
-                          fontSize: '0.875rem', 
-                          fontWeight: '600',
-                          color: '#6b7280'
-                        }}>
-                          Item {index + 1}
-                        </span>
-                        {itens.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removerItem(index)}
-                            style={{
-                              padding: '0.375rem',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              cursor: 'pointer',
-                              color: '#ef4444'
-                            }}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-
-                      <input
-                        type="text"
-                        placeholder="Título do item *"
-                        value={item.titulo}
-                        onChange={(e) => atualizarItem(index, 'titulo', e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '0.375rem',
-                          fontSize: '0.95rem',
-                          marginBottom: '0.75rem',
-                          outline: 'none'
-                        }}
-                        onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                        onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
-                      />
-
-                      <textarea
-                        placeholder="Descrição (opcional)"
-                        value={item.descricao}
-                        onChange={(e) => atualizarItem(index, 'descricao', e.target.value)}
-                        rows={2}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '0.375rem',
-                          fontSize: '0.95rem',
-                          resize: 'vertical',
-                          outline: 'none',
-                          fontFamily: 'inherit'
-                        }}
-                        onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                        onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
-                      />
-
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
-                        <input
-                          type="checkbox"
-                          checked={item.foto_obrigatoria}
-                          onChange={() => toggleFotoObrigatoria(index)}
-                          style={{ width: '1rem', height: '1rem', cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '0.875rem', color: '#374151' }}>Foto obrigatória</span>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <div className="mb-8">{renderItensEditor('Itens do checklist')}</div>
             )}
 
             {/* SEÇÃO: IMPORTAR PLANILHA */}
             {recorrente === 'importar' && (
-              <div style={{
-                padding: '1.5rem',
-                backgroundColor: '#f0fdf4',
-                borderRadius: '0.75rem',
-                marginBottom: '2rem',
-                border: '2px dashed #10b981'
-              }}>
-                <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#1f2937', marginBottom: '0.5rem' }}>
-                  Importar itens de planilha
-                </h4>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.25rem' }}>
+              <div className="mb-8 rounded-2xl border-2 border-dashed border-teal bg-teal-tint p-6">
+                <h4 className="mb-1 text-sm font-semibold text-ink">Importar itens de planilha</h4>
+                <p className="mb-5 text-sm text-ink-muted">
                   Faça o upload de um arquivo <strong>.csv</strong> ou <strong>.txt</strong> com um item por linha.
                   Você pode separar título e descrição com ponto e vírgula (<code>;</code>).
                 </p>
 
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-                  <button
-                    type="button"
-                    onClick={baixarModeloCSV}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '0.5rem',
-                      padding: '0.5rem 1rem', backgroundColor: 'white',
-                      border: '1px solid #10b981', borderRadius: '0.375rem',
-                      cursor: 'pointer', fontSize: '0.875rem', color: '#059669', fontWeight: '500'
-                    }}
-                  >
-                    <Download size={16} />
+                <div className="mb-5">
+                  <Button type="button" variant="secondary" onClick={baixarModeloCSV} icon={<Download size={16} />}>
                     Baixar modelo de planilha
-                  </button>
+                  </Button>
                 </div>
 
-                <label style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  gap: '0.75rem', padding: '1.5rem',
-                  backgroundColor: 'white', borderRadius: '0.5rem',
-                  border: '2px dashed #d1d5db', cursor: 'pointer'
-                }}>
-                  <Upload size={32} style={{ color: '#10b981' }} />
-                  <span style={{ fontSize: '0.95rem', color: '#374151', fontWeight: '500' }}>
-                    Clique para selecionar o arquivo
-                  </span>
-                  <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>CSV, TXT — máx. 1MB</span>
-                  <input
-                    type="file"
-                    accept=".csv,.txt"
-                    onChange={importarCSV}
-                    style={{ display: 'none' }}
-                  />
+                <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-ink-faint/30 bg-white p-6">
+                  <Upload size={32} className="text-teal" />
+                  <span className="text-sm font-medium text-ink">Clique para selecionar o arquivo</span>
+                  <span className="text-xs text-ink-faint">CSV, TXT — máx. 1MB</span>
+                  <input type="file" accept=".csv,.txt" onChange={importarCSV} className="hidden" />
                 </label>
 
                 {itens.length > 0 && itens[0].titulo && (
-                  <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#dcfce7', borderRadius: '0.5rem' }}>
-                    <p style={{ fontSize: '0.875rem', color: '#15803d', fontWeight: '600', margin: 0 }}>
+                  <div className="mt-4 rounded-xl bg-white px-3 py-2.5">
+                    <p className="text-sm font-semibold text-teal">
                       {itens.length} {itens.length === 1 ? 'item importado' : 'itens importados'} — revise abaixo antes de salvar
                     </p>
                   </div>
@@ -944,108 +663,22 @@ export default function CriarChecklistFuturoPage() {
 
             {/* Itens importados — mostrar para revisar */}
             {recorrente === 'importar' && itens.length > 0 && itens[0].titulo && (
-              <div style={{
-                padding: '1.5rem',
-                backgroundColor: '#f9fafb',
-                borderRadius: '0.75rem',
-                marginBottom: '2rem'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-                    Itens importados (revise e edite se necessário)
-                  </h4>
-                  <button type="button" onClick={adicionarItem} style={{
-                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    padding: '0.5rem 1rem', backgroundColor: '#3b82f6', color: 'white',
-                    border: 'none', borderRadius: '0.375rem', cursor: 'pointer',
-                    fontSize: '0.875rem', fontWeight: '500'
-                  }}>
-                    <Plus size={16} /> Adicionar Item
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {itens.map((item, index) => (
-                    <div key={index} style={{ padding: '1rem', backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                        <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#6b7280' }}>Item {index + 1}</span>
-                        {itens.length > 1 && (
-                          <button type="button" onClick={() => removerItem(index)} style={{ padding: '0.375rem', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444' }}>
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                      <input type="text" placeholder="Título do item *" value={item.titulo}
-                        onChange={(e) => atualizarItem(index, 'titulo', e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
-                        style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.95rem', marginBottom: '0.75rem', outline: 'none' }}
-                      />
-                      <textarea placeholder="Descrição (opcional)" value={item.descricao}
-                        onChange={(e) => atualizarItem(index, 'descricao', e.target.value)}
-                        rows={2} style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.95rem', resize: 'vertical', outline: 'none', fontFamily: 'inherit' }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <div className="mb-8">{renderItensEditor('Itens importados (revise e edite se necessário)')}</div>
             )}
 
             {/* CAMPOS COMUNS */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '1.5rem',
-              marginBottom: '1.75rem'
-            }}>
+            <div className="mb-7 grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  color: '#374151',
-                  fontSize: '0.95rem'
-                }}>
-                  Próxima execução *
-                </label>
-                <input
-                  type="date"
-                  value={proximaExecucao}
-                  onChange={(e) => setProximaExecucao(e.target.value)}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    backgroundColor: 'white'
-                  }}
-                />
+                <label className={labelClass}>Próxima execução *</label>
+                <input type="date" value={proximaExecucao} onChange={(e) => setProximaExecucao(e.target.value)} required className={inputClass} />
               </div>
 
               <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  color: '#374151',
-                  fontSize: '0.95rem'
-                }}>
-                  Recorrência
-                </label>
+                <label className={labelClass}>Recorrência</label>
                 <select
                   value={recorrencia}
                   onChange={(e) => setRecorrencia(e.target.value as 'nenhuma' | 'diaria' | 'semanal' | 'mensal')}
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    backgroundColor: 'white'
-                  }}
+                  className={`${inputClass} cursor-pointer`}
                 >
                   <option value="nenhuma">Sem recorrência</option>
                   <option value="diaria">🔄 Diária</option>
@@ -1055,15 +688,7 @@ export default function CriarChecklistFuturoPage() {
               </div>
 
               <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  color: '#374151',
-                  fontSize: '0.95rem'
-                }}>
-                  Dias de tolerância
-                </label>
+                <label className={labelClass}>Dias de tolerância</label>
                 <input
                   type="number"
                   min={0}
@@ -1071,75 +696,22 @@ export default function CriarChecklistFuturoPage() {
                   value={diasTolerancia}
                   onChange={(e) => setDiasTolerancia(Math.max(0, parseInt(e.target.value) || 0))}
                   placeholder="0"
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    backgroundColor: 'white'
-                  }}
+                  className={inputClass}
                 />
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.375rem' }}>
-                  Dias antes e depois que o funcionário pode realizar
-                </p>
+                <p className="mt-1.5 text-xs text-ink-faint">Dias antes e depois que o funcionário pode realizar</p>
               </div>
 
               <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  color: '#374151',
-                  fontSize: '0.95rem'
-                }}>
-                  Horário limite
-                </label>
-                <input
-                  type="time"
-                  value={horaLimite}
-                  onChange={(e) => setHoraLimite(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    backgroundColor: 'white'
-                  }}
-                />
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.375rem' }}>
+                <label className={labelClass}>Horário limite</label>
+                <input type="time" value={horaLimite} onChange={(e) => setHoraLimite(e.target.value)} className={inputClass} />
+                <p className="mt-1.5 text-xs text-ink-faint">
                   Ex: 08:00 para “abertura de loja”. O funcionário verá um alerta ao se aproximar do horário.
                 </p>
               </div>
 
               <div>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  color: '#374151',
-                  fontSize: '0.95rem'
-                }}>
-                  Tipo de negócio *
-                </label>
-                <select
-                  value={tipoNegocio}
-                  onChange={(e) => setTipoNegocio(e.target.value)}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    backgroundColor: 'white'
-                  }}
-                >
+                <label className={labelClass}>Tipo de negócio *</label>
+                <select value={tipoNegocio} onChange={(e) => setTipoNegocio(e.target.value)} required className={`${inputClass} cursor-pointer`}>
                   <option value="">Selecione...</option>
                   <option value="supermercado">Supermercado</option>
                   <option value="farmacia">Farmácia</option>
@@ -1151,30 +723,10 @@ export default function CriarChecklistFuturoPage() {
             </div>
 
             {/* Empresa e Colaborador */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '1.5rem',
-              marginBottom: '1.75rem'
-            }}>
+            <div className="mb-7 grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151', fontSize: '0.95rem' }}>
-                  Empresa
-                </label>
-                <select
-                  value={empresaId}
-                  onChange={(e) => handleEmpresaChange(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    backgroundColor: 'white'
-                  }}
-                >
+                <label className={labelClass}>Empresa</label>
+                <select value={empresaId} onChange={(e) => handleEmpresaChange(e.target.value)} className={`${inputClass} cursor-pointer`}>
                   <option value="">Selecione a empresa...</option>
                   {empresas.map(e => (
                     <option key={e.id} value={e.id}>{e.nome_fantasia}</option>
@@ -1183,24 +735,12 @@ export default function CriarChecklistFuturoPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151', fontSize: '0.95rem' }}>
-                  Colaborador responsável
-                </label>
+                <label className={labelClass}>Colaborador responsável</label>
                 <select
                   value={colaboradorId}
                   onChange={(e) => setColaboradorId(e.target.value)}
                   disabled={!empresaId}
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    cursor: empresaId ? 'pointer' : 'not-allowed',
-                    backgroundColor: empresaId ? 'white' : '#f3f4f6',
-                    opacity: empresaId ? 1 : 0.7
-                  }}
+                  className={`${inputClass} cursor-pointer`}
                 >
                   <option value="">Selecione o colaborador...</option>
                   {colaboradores.map(c => (
@@ -1210,16 +750,8 @@ export default function CriarChecklistFuturoPage() {
               </div>
             </div>
 
-            <div style={{ marginBottom: '1.75rem' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontWeight: '500',
-                color: '#374151',
-                fontSize: '0.95rem'
-              }}>
-                Nome do checklist *
-              </label>
+            <div className="mb-7">
+              <label className={labelClass}>Nome do checklist *</label>
               <input
                 type="text"
                 value={nomeChecklist}
@@ -1227,89 +759,32 @@ export default function CriarChecklistFuturoPage() {
                 onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
                 placeholder="Digite o nome do checklist"
                 required
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '0.5rem',
-                  fontSize: '1rem',
-                  outline: 'none',
-                  backgroundColor: 'white'
-                }}
+                className={inputClass}
               />
             </div>
 
-            <div style={{ marginBottom: '2rem' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '0.5rem', 
-                fontWeight: '500', 
-                color: '#374151',
-                fontSize: '0.95rem'
-              }}>
-                Descrição
-              </label>
+            <div className="mb-8">
+              <label className={labelClass}>Descrição</label>
               <textarea
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
                 placeholder="Adicione informações adicionais"
                 rows={3}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '0.5rem',
-                  fontSize: '1rem',
-                  outline: 'none',
-                  resize: 'vertical',
-                  backgroundColor: 'white',
-                  fontFamily: 'inherit'
-                }}
+                className={`${inputClass} resize-y font-sans`}
               />
             </div>
 
             {mensagemSalvamento && (
-              <div style={{
-                marginBottom: '1.5rem',
-                padding: '1rem 1.5rem',
-                backgroundColor: mensagemSalvamento.includes('❌') ? '#fee2e2' : 
-                               mensagemSalvamento.includes('✅') ? '#dcfce7' : '#dbeafe',
-                border: `2px solid ${mensagemSalvamento.includes('❌') ? '#ef4444' : 
-                                    mensagemSalvamento.includes('✅') ? '#22c55e' : '#3b82f6'}`,
-                borderRadius: '0.5rem',
-                fontSize: '1rem',
-                fontWeight: '500',
-                color: mensagemSalvamento.includes('❌') ? '#991b1b' : 
-                       mensagemSalvamento.includes('✅') ? '#15803d' : '#1e40af',
-                textAlign: 'center'
-              }}>
+              <div className={`mb-6 rounded-xl px-6 py-4 text-center text-sm font-semibold ${mensagemTone.bg} ${mensagemTone.text}`}>
                 {mensagemSalvamento}
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.875rem 2rem',
-                backgroundColor: loading ? '#9ca3af' : '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontWeight: '600',
-                fontSize: '1rem',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <Save size={18} />
+            <Button type="submit" variant="primary" disabled={loading} icon={<Save size={18} />}>
               {loading ? 'Salvando...' : 'Criar Checklist'}
-            </button>
+            </Button>
           </form>
-        </div>
+        </Card>
       </div>
     </div>
   )

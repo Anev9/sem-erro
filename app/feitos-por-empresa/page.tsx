@@ -3,6 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import {
+  Calendar, User, ClipboardList, GraduationCap, Search, Check, Download,
+  BarChart3, CheckCircle, Clock, TrendingUp, TrendingDown, Minus, Building2
+} from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 
 interface PreenchimentoEmpresa {
   id: number;
@@ -13,6 +21,16 @@ interface PreenchimentoEmpresa {
   taxaPreenchimento: number;
   ultimoPreenchimento: string;
   tendencia: 'up' | 'down' | 'stable';
+}
+
+const inputClass = 'w-full rounded-xl bg-surface-2 px-3.5 py-2.5 text-sm outline-none cursor-pointer';
+const labelClass = 'mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink-muted';
+
+function taxaTone(taxa: number) {
+  if (taxa >= 90) return { text: 'text-teal', bar: 'bg-teal', bg: 'bg-teal-tint' };
+  if (taxa >= 80) return { text: 'text-blue', bar: 'bg-blue', bg: 'bg-blue-tint' };
+  if (taxa >= 70) return { text: 'text-amber', bar: 'bg-amber', bg: 'bg-amber-tint' };
+  return { text: 'text-coral', bar: 'bg-coral', bg: 'bg-coral-tint' };
 }
 
 export default function RelatorioPreenchimentoEmpresas() {
@@ -53,346 +71,160 @@ export default function RelatorioPreenchimentoEmpresas() {
   const pendentesGeral = empresas.reduce((acc, e) => acc + e.pendentes, 0);
   const taxaMedia = Math.round((preenchidosGeral / totalGeral) * 100);
 
-  const empresasFiltradas = empresas.filter(emp => 
-    filtros.buscaEmpresa === '' || 
+  const empresasFiltradas = empresas.filter(emp =>
+    filtros.buscaEmpresa === '' ||
     emp.nome.toLowerCase().includes(filtros.buscaEmpresa.toLowerCase())
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f7fa', padding: '2rem' }}>
-      <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
-        
-        {/* Botão Voltar */}
-        <button
-          onClick={() => router.back()}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            background: 'white',
-            border: '2px solid #e0e0e0',
-            borderRadius: '0.75rem',
-            padding: '0.75rem 1.25rem',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#5E6AD2',
-            cursor: 'pointer',
-            marginBottom: '1.5rem',
-            transition: 'all 0.2s',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#f5f5f5';
-            e.currentTarget.style.borderColor = '#5E6AD2';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'white';
-            e.currentTarget.style.borderColor = '#e0e0e0';
-          }}
-        >
-          <span style={{ fontSize: '1.25rem' }}>←</span>
-          <span>Voltar</span>
-        </button>
-
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#1a1a1a', margin: '0 0 0.5rem 0' }}>
-              Relatório de Preenchimento de Empresas
-            </h1>
-            <p style={{ color: '#666', fontSize: '1rem', margin: 0 }}>
-              Acompanhe o preenchimento de checklists por cada empresa/loja
-            </p>
-          </div>
-
-          <button
-            onClick={exportarRelatorio}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.75rem',
-              padding: '0.875rem 1.5rem',
-              fontSize: '0.875rem',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(76,175,80,0.4)',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(76,175,80,0.5)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(76,175,80,0.4)';
-            }}
-          >
-            <span style={{ fontSize: '1rem' }}>📥</span>
-            Exportar Relatório
-          </button>
-        </div>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1400px] px-6 py-8">
+        <PageHeader
+          title="Relatório de Preenchimento de Empresas"
+          subtitle="Acompanhe o preenchimento de checklists por cada empresa/loja"
+          backHref="/dashboard-aluno"
+          actions={
+            <Button variant="secondary" onClick={exportarRelatorio} icon={<Download size={16} />}>
+              Exportar Relatório
+            </Button>
+          }
+        />
 
         {/* Card de Filtros */}
-        <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
-            
-            {/* Período */}
+        <Card className="mb-6 p-6 sm:p-8">
+          <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '1rem' }}>📅</span> Período
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.5rem', alignItems: 'center' }}>
-                <input
-                  type="date"
-                  value={filtros.dataInicio}
-                  onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.875rem' }}
-                />
-                <span style={{ color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>até</span>
-                <input
-                  type="date"
-                  value={filtros.dataFim}
-                  onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.5rem', fontSize: '0.875rem' }}
-                />
+              <label className={labelClass}><Calendar size={15} /> Período</label>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <input type="date" value={filtros.dataInicio} onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })} className={inputClass} />
+                <span className="text-sm font-semibold text-ink-faint">até</span>
+                <input type="date" value={filtros.dataFim} onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })} className={inputClass} />
               </div>
             </div>
 
-            {/* Copiloto */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '1rem' }}>👤</span> Copiloto
-              </label>
-              <select
-                value={filtros.copiloto}
-                onChange={(e) => setFiltros({ ...filtros, copiloto: e.target.value })}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', cursor: 'pointer' }}
-              >
+              <label className={labelClass}><User size={15} /> Copiloto</label>
+              <select value={filtros.copiloto} onChange={(e) => setFiltros({ ...filtros, copiloto: e.target.value })} className={inputClass}>
                 {copilotos.map(cop => (
                   <option key={cop} value={cop.toLowerCase()}>{cop}</option>
                 ))}
               </select>
             </div>
 
-            {/* Questionário */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '1rem' }}>📋</span> Questionário
-              </label>
-              <select
-                value={filtros.questionario}
-                onChange={(e) => setFiltros({ ...filtros, questionario: e.target.value })}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', cursor: 'pointer' }}
-              >
+              <label className={labelClass}><ClipboardList size={15} /> Questionário</label>
+              <select value={filtros.questionario} onChange={(e) => setFiltros({ ...filtros, questionario: e.target.value })} className={inputClass}>
                 {questionarios.map(quest => (
                   <option key={quest} value={quest.toLowerCase()}>{quest}</option>
                 ))}
               </select>
             </div>
 
-            {/* Tipo de Mentoria */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '1rem' }}>🎓</span> Tipo de mentoria
-              </label>
-              <select
-                value={filtros.tipoMentoria}
-                onChange={(e) => setFiltros({ ...filtros, tipoMentoria: e.target.value })}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', cursor: 'pointer' }}
-              >
+              <label className={labelClass}><GraduationCap size={15} /> Tipo de mentoria</label>
+              <select value={filtros.tipoMentoria} onChange={(e) => setFiltros({ ...filtros, tipoMentoria: e.target.value })} className={inputClass}>
                 {tiposMentoria.map(tipo => (
                   <option key={tipo} value={tipo.toLowerCase()}>{tipo}</option>
                 ))}
               </select>
             </div>
 
-            {/* Buscar Empresa */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '1rem' }}>🔍</span> Buscar empresa
-              </label>
+              <label className={labelClass}><Search size={15} /> Buscar empresa</label>
               <input
                 type="text"
                 placeholder="Digite para filtrar..."
                 value={filtros.buscaEmpresa}
                 onChange={(e) => setFiltros({ ...filtros, buscaEmpresa: e.target.value })}
-                style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem' }}
+                className="w-full rounded-xl bg-surface-2 px-3.5 py-2.5 text-sm outline-none"
               />
             </div>
 
-            {/* Botão Filtrar */}
-            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-              <button
-                onClick={filtrarResultados}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.75rem',
-                  padding: '0.875rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(33,150,243,0.4)',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(33,150,243,0.5)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(33,150,243,0.4)';
-                }}
-              >
-                <span style={{ fontSize: '1rem' }}>✓</span>
+            <div className="flex items-end">
+              <Button variant="primary" className="w-full justify-center py-3" onClick={filtrarResultados} icon={<Check size={16} />}>
                 Filtrar Resultados
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Resultados */}
         {mostrarResultados ? (
           <>
             {/* Cards de Resumo */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-              <div style={{ background: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(33,150,243,0.3)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📊</div>
-                <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Total de Checklists</p>
-                <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{totalGeral}</p>
-                <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>no período</p>
-              </div>
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card className="p-6">
+                <BarChart3 size={26} className="mb-2 text-blue" />
+                <p className="mb-1.5 text-xs font-semibold text-ink-muted">Total de Checklists</p>
+                <p className="font-display text-3xl font-bold text-blue">{totalGeral}</p>
+                <p className="mt-1 text-xs text-ink-faint">no período</p>
+              </Card>
 
-              <div style={{ background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(76,175,80,0.3)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
-                <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Preenchidos</p>
-                <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{preenchidosGeral}</p>
-                <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>{Math.round((preenchidosGeral/totalGeral)*100)}% completos</p>
-              </div>
+              <Card className="p-6">
+                <CheckCircle size={26} className="mb-2 text-teal" />
+                <p className="mb-1.5 text-xs font-semibold text-ink-muted">Preenchidos</p>
+                <p className="font-display text-3xl font-bold text-teal">{preenchidosGeral}</p>
+                <p className="mt-1 text-xs text-ink-faint">{Math.round((preenchidosGeral/totalGeral)*100)}% completos</p>
+              </Card>
 
-              <div style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(255,152,0,0.3)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏳</div>
-                <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Pendentes</p>
-                <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{pendentesGeral}</p>
-                <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>{Math.round((pendentesGeral/totalGeral)*100)}% restantes</p>
-              </div>
+              <Card className="p-6">
+                <Clock size={26} className="mb-2 text-amber" />
+                <p className="mb-1.5 text-xs font-semibold text-ink-muted">Pendentes</p>
+                <p className="font-display text-3xl font-bold text-amber">{pendentesGeral}</p>
+                <p className="mt-1 text-xs text-ink-faint">{Math.round((pendentesGeral/totalGeral)*100)}% restantes</p>
+              </Card>
 
-              <div style={{ background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)', borderRadius: '1rem', padding: '1.75rem', color: 'white', boxShadow: '0 4px 12px rgba(156,39,176,0.3)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📈</div>
-                <p style={{ fontSize: '0.875rem', opacity: 0.9, margin: '0 0 0.5rem 0', fontWeight: '600' }}>Taxa Média</p>
-                <p style={{ fontSize: '3rem', fontWeight: '900', margin: '0 0 0.25rem 0' }}>{taxaMedia}%</p>
-                <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: 0 }}>de preenchimento</p>
-              </div>
+              <Card className="p-6">
+                <TrendingUp size={26} className="mb-2 text-violet" />
+                <p className="mb-1.5 text-xs font-semibold text-ink-muted">Taxa Média</p>
+                <p className="font-display text-3xl font-bold text-violet">{taxaMedia}%</p>
+                <p className="mt-1 text-xs text-ink-faint">de preenchimento</p>
+              </Card>
             </div>
 
             {/* Tabela de Empresas */}
-            <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#333', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>🏢</span>
-                Preenchimento por Empresa
+            <Card className="p-6 sm:p-8">
+              <h3 className="mb-6 flex items-center gap-2 font-display text-lg font-bold text-ink">
+                <Building2 size={20} className="text-brand" /> Preenchimento por Empresa
               </h3>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="flex flex-col gap-6">
                 {empresasFiltradas.map((empresa, index) => {
-                  const corBarra = empresa.taxaPreenchimento >= 90 ? '#4CAF50' : 
-                                   empresa.taxaPreenchimento >= 80 ? '#2196F3' : 
-                                   empresa.taxaPreenchimento >= 70 ? '#FF9800' : '#ef5350';
+                  const tone = taxaTone(empresa.taxaPreenchimento);
+                  const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`;
 
                   return (
                     <div key={empresa.id}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-                        {/* Ranking */}
-                        <div style={{
-                          width: '50px',
-                          height: '50px',
-                          borderRadius: '50%',
-                          background: index === 0 ? 'linear-gradient(135deg, #FFD700, #FFA500)' :
-                                      index === 1 ? 'linear-gradient(135deg, #C0C0C0, #A8A8A8)' :
-                                      index === 2 ? 'linear-gradient(135deg, #CD7F32, #B8860B)' : '#e0e0e0',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '1.25rem',
-                          fontWeight: '900',
-                          color: 'white',
-                          flexShrink: 0,
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                        }}>
-                          {index + 1}
+                      <div className="mb-3 flex flex-wrap items-center gap-4">
+                        <div className="flex h-[50px] w-[50px] flex-shrink-0 items-center justify-center rounded-full bg-surface-2 text-xl font-bold text-ink-muted">
+                          {medalha}
                         </div>
 
-                        {/* Informações */}
-                        <div style={{ flex: 1, minWidth: '250px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                            <h4 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#333', margin: 0 }}>
-                              {empresa.nome}
-                            </h4>
-                            {empresa.tendencia === 'up' && (
-                              <span style={{ padding: '0.25rem 0.625rem', background: '#E8F5E9', color: '#2E7D32', fontSize: '0.75rem', fontWeight: '700', borderRadius: '0.375rem' }}>
-                                ↑ Crescendo
-                              </span>
-                            )}
-                            {empresa.tendencia === 'down' && (
-                              <span style={{ padding: '0.25rem 0.625rem', background: '#FFEBEE', color: '#C62828', fontSize: '0.75rem', fontWeight: '700', borderRadius: '0.375rem' }}>
-                                ↓ Atenção
-                              </span>
-                            )}
-                            {empresa.tendencia === 'stable' && (
-                              <span style={{ padding: '0.25rem 0.625rem', background: '#f5f5f5', color: '#666', fontSize: '0.75rem', fontWeight: '700', borderRadius: '0.375rem' }}>
-                                ↔ Estável
-                              </span>
-                            )}
+                        <div className="min-w-[250px] flex-1">
+                          <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
+                            <h4 className="text-base font-bold text-ink">{empresa.nome}</h4>
+                            {empresa.tendencia === 'up' && <Badge tone="success"><TrendingUp size={12} /> Crescendo</Badge>}
+                            {empresa.tendencia === 'down' && <Badge tone="danger"><TrendingDown size={12} /> Atenção</Badge>}
+                            {empresa.tendencia === 'stable' && <Badge tone="neutral"><Minus size={12} /> Estável</Badge>}
                           </div>
-                          <p style={{ fontSize: '0.875rem', color: '#666', margin: '0 0 0.25rem 0' }}>
+                          <p className="text-sm text-ink-muted">
                             {empresa.preenchidos} de {empresa.totalChecklists} checklists • {empresa.pendentes} pendentes
                           </p>
-                          <p style={{ fontSize: '0.75rem', color: '#999', margin: 0 }}>
-                            Último preenchimento: {empresa.ultimoPreenchimento}
-                          </p>
+                          <p className="mt-0.5 text-xs text-ink-faint">Último preenchimento: {empresa.ultimoPreenchimento}</p>
                         </div>
 
-                        {/* Taxa */}
-                        <div style={{ 
-                          textAlign: 'center',
-                          padding: '1rem 1.5rem',
-                          background: empresa.taxaPreenchimento >= 90 ? '#E8F5E9' :
-                                     empresa.taxaPreenchimento >= 80 ? '#E3F2FD' :
-                                     empresa.taxaPreenchimento >= 70 ? '#FFF3E0' : '#FFEBEE',
-                          borderRadius: '0.75rem',
-                          minWidth: '120px'
-                        }}>
-                          <p style={{ fontSize: '2.5rem', fontWeight: '900', color: corBarra, margin: 0, lineHeight: 1 }}>
-                            {empresa.taxaPreenchimento}%
-                          </p>
-                          <p style={{ fontSize: '0.75rem', color: '#666', margin: '0.25rem 0 0 0' }}>
-                            preenchido
-                          </p>
+                        <div className={`min-w-[120px] rounded-xl px-6 py-4 text-center ${tone.bg}`}>
+                          <p className={`text-3xl font-bold leading-none ${tone.text}`}>{empresa.taxaPreenchimento}%</p>
+                          <p className="mt-1 text-xs text-ink-muted">preenchido</p>
                         </div>
                       </div>
 
-                      {/* Barra de Progresso */}
-                      <div style={{ width: '100%', height: '20px', background: '#f0f0f0', borderRadius: '10px', overflow: 'hidden' }}>
-                        <div style={{
-                          width: `${empresa.taxaPreenchimento}%`,
-                          height: '100%',
-                          background: corBarra,
-                          borderRadius: '10px',
-                          transition: 'width 1s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          paddingLeft: '1rem'
-                        }}>
-                          <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: '700' }}>
+                      <div className="h-4 w-full overflow-hidden rounded-full bg-surface-2">
+                        <div
+                          className={`flex h-full items-center rounded-full pl-3 transition-[width] duration-700 ${tone.bar}`}
+                          style={{ width: `${empresa.taxaPreenchimento}%` }}
+                        >
+                          <span className="text-xs font-bold text-white">
                             {empresa.taxaPreenchimento >= 15 ? `${empresa.preenchidos}/${empresa.totalChecklists}` : ''}
                           </span>
                         </div>
@@ -403,39 +235,25 @@ export default function RelatorioPreenchimentoEmpresas() {
               </div>
 
               {empresasFiltradas.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '3rem' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-                  <p style={{ color: '#666', fontSize: '1rem', fontWeight: '600' }}>
-                    Nenhuma empresa encontrada com os filtros aplicados.
-                  </p>
+                <div className="py-12 text-center">
+                  <Search size={40} className="mx-auto mb-4 text-ink-faint" />
+                  <p className="text-sm font-semibold text-ink-muted">Nenhuma empresa encontrada com os filtros aplicados.</p>
                 </div>
               )}
-            </div>
+            </Card>
           </>
         ) : (
-          <div style={{ background: 'white', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-              <div style={{ 
-                width: '120px', 
-                height: '120px', 
-                background: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)', 
-                borderRadius: '50%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                margin: '0 auto 2rem',
-                border: '4px solid #90CAF9'
-              }}>
-                <span style={{ fontSize: '4rem' }}>📊</span>
+          <Card className="px-6 py-16 text-center">
+            <div className="mx-auto max-w-[500px]">
+              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-blue-tint">
+                <BarChart3 size={40} className="text-blue" />
               </div>
-              <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#333', marginBottom: '1rem' }}>
-                Configure os Filtros
-              </h3>
-              <p style={{ color: '#666', fontSize: '1rem', margin: 0, lineHeight: 1.6 }}>
+              <h3 className="mb-3 font-display text-xl font-bold text-ink">Configure os Filtros</h3>
+              <p className="text-sm leading-relaxed text-ink-muted">
                 Selecione o período e filtros desejados para visualizar o relatório de preenchimento das empresas.
               </p>
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>

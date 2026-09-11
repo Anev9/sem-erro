@@ -3,20 +3,15 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import {
-  ArrowLeft,
-  Calendar,
-  Building2,
-  FileCheck,
-  Eye,
-  User,
-  Copy,
-  Loader2
-} from 'lucide-react'
+import { Calendar, Building2, FileCheck, Eye, User, Copy, Loader2, Pencil } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface ChecklistCriado {
   id: string
-  titulo: string
+  nome: string
   descricao?: string
   status: 'pendente' | 'em_andamento' | 'concluido'
   data_inicio: string
@@ -25,6 +20,18 @@ interface ChecklistCriado {
   empresas?: { nome_fantasia: string }
   colaboradores?: { nome: string }
 }
+
+const statusTone = {
+  pendente: 'warning',
+  em_andamento: 'info',
+  concluido: 'success',
+} as const
+
+const statusLabel = {
+  pendente: 'Pendente',
+  em_andamento: 'Em Andamento',
+  concluido: 'Concluído',
+} as const
 
 export default function ChecklistsCriados() {
   const router = useRouter()
@@ -75,8 +82,8 @@ export default function ChecklistsCriados() {
         body: JSON.stringify({ checklist_id: id }),
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Erro ao duplicar')
-      const { titulo } = await res.json()
-      toast.success(`Checklist duplicado: "${titulo}"`)
+      const { nome } = await res.json()
+      toast.success(`Checklist duplicado: "${nome}"`)
       const userStr = localStorage.getItem('user')
       if (userStr) await carregarDados(JSON.parse(userStr).id)
     } catch (err: unknown) {
@@ -101,235 +108,161 @@ export default function ChecklistsCriados() {
     return true
   })
 
-  const getStatusStyle = (status: string) => {
-    const estilos = {
-      pendente: { bg: '#FFF3E0', text: '#E65100', border: '#FFB74D', label: 'Pendente' },
-      em_andamento: { bg: '#E3F2FD', text: '#1565C0', border: '#64B5F6', label: 'Em Andamento' },
-      concluido: { bg: '#E8F5E9', text: '#2E7D32', border: '#81C784', label: 'Concluído' }
-    }
-    return estilos[status as keyof typeof estilos] || estilos.pendente
-  }
-
-  const formatarData = (data: string) =>
-    new Date(data).toLocaleDateString('pt-BR')
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'white', fontSize: '1rem' }}>Carregando checklists...</p>
-      </div>
-    )
-  }
+  const formatarData = (data: string) => new Date(data).toLocaleDateString('pt-BR')
 
   return (
-    <>
-      <style>{`
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .slide-up { animation: slideUp 0.4s ease-out; }
-        .card-hover { transition: all 0.2s ease; }
-        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.12) !important; }
-      `}</style>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1320px] px-6 py-8">
+        <PageHeader
+          title="Checklists Criados"
+          subtitle="Visualize e acompanhe todos os checklists cadastrados"
+          backHref="/dashboard-aluno"
+        />
 
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-
-        {/* Header */}
-        <div style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.3)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <button
-              onClick={() => router.push('/dashboard-aluno')}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '600', boxShadow: '0 4px 12px rgba(102,126,234,0.4)', transition: 'all 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(-4px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
-            >
-              <ArrowLeft size={18} />
-              Voltar
-            </button>
+        {/* Filtros */}
+        <Card className="mb-5 p-6">
+          <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: '800', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
-                Checklists Criados
-              </h1>
-              <p style={{ fontSize: '0.95rem', color: '#64748b', margin: '0.25rem 0 0', fontWeight: '500' }}>
-                Visualize e acompanhe todos os checklists cadastrados
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2.5rem 2rem' }}>
-
-          {/* Filtros */}
-          <div className="slide-up" style={{ background: 'rgba(255,255,255,0.95)', borderRadius: '20px', padding: '2rem', marginBottom: '2rem', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'end' }}>
-
-              {/* Empresa */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#1e293b', marginBottom: '0.5rem' }}>
-                  Empresa
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Building2 style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', width: '18px', height: '18px', pointerEvents: 'none' }} />
-                  <select
-                    value={filtros.empresa_id}
-                    onChange={(e) => setFiltros({ ...filtros, empresa_id: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.75rem', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', backgroundColor: 'white', cursor: 'pointer' }}
-                  >
-                    <option value="">Todas as empresas</option>
-                    {empresas.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.nome_fantasia}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Status */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#1e293b', marginBottom: '0.5rem' }}>
-                  Status
-                </label>
+              <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Empresa</label>
+              <div className="relative">
+                <Building2 size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
                 <select
-                  value={filtros.status}
-                  onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', backgroundColor: 'white', cursor: 'pointer' }}
+                  value={filtros.empresa_id}
+                  onChange={(e) => setFiltros({ ...filtros, empresa_id: e.target.value })}
+                  className="w-full cursor-pointer rounded-xl bg-surface-2 py-2.5 pl-9 pr-3 text-sm outline-none"
                 >
-                  <option value="">Todos os status</option>
-                  <option value="pendente">Pendente</option>
-                  <option value="em_andamento">Em Andamento</option>
-                  <option value="concluido">Concluído</option>
+                  <option value="">Todas as empresas</option>
+                  {empresas.map(emp => (
+                    <option key={emp.id} value={emp.id}>{emp.nome_fantasia}</option>
+                  ))}
                 </select>
               </div>
-
-              {/* Data início */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#1e293b', marginBottom: '0.5rem' }}>
-                  A partir de
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Calendar style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', width: '18px', height: '18px', pointerEvents: 'none' }} />
-                  <input
-                    type="date"
-                    value={filtros.dataInicio}
-                    onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.75rem', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', backgroundColor: 'white' }}
-                  />
-                </div>
-              </div>
-
-              {/* Data fim */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#1e293b', marginBottom: '0.5rem' }}>
-                  Até
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Calendar style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', width: '18px', height: '18px', pointerEvents: 'none' }} />
-                  <input
-                    type="date"
-                    value={filtros.dataFim}
-                    onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.75rem', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', backgroundColor: 'white' }}
-                  />
-                </div>
-              </div>
-
-              {/* Limpar filtros */}
-              <button
-                onClick={() => setFiltros({ empresa_id: '', dataInicio: '', dataFim: '', status: '' })}
-                style={{ padding: '0.75rem 1.25rem', background: '#f1f5f9', color: '#475569', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#e2e8f0'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#f1f5f9'}
-              >
-                Limpar filtros
-              </button>
             </div>
 
-            <p style={{ fontSize: '0.875rem', color: '#94a3b8', fontStyle: 'italic', margin: '1.5rem 0 0' }}>
-              {checklistsFiltrados.length} checklist{checklistsFiltrados.length !== 1 ? 's' : ''} encontrado{checklistsFiltrados.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Status</label>
+              <select
+                value={filtros.status}
+                onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}
+                className="w-full cursor-pointer rounded-xl bg-surface-2 px-3 py-2.5 text-sm outline-none"
+              >
+                <option value="">Todos os status</option>
+                <option value="pendente">Pendente</option>
+                <option value="em_andamento">Em Andamento</option>
+                <option value="concluido">Concluído</option>
+              </select>
+            </div>
 
-          {/* Lista */}
-          <div className="slide-up" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {checklistsFiltrados.length === 0 ? (
-              <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: '20px', padding: '5rem 2rem', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-                <div style={{ width: '100px', height: '100px', margin: '0 auto 2rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'rotate(-5deg)' }}>
-                  <FileCheck size={50} style={{ color: 'white' }} />
-                </div>
-                <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#1e293b', margin: '0 0 0.75rem' }}>
-                  Nenhum checklist encontrado
-                </h2>
-                <p style={{ fontSize: '1rem', color: '#64748b', margin: 0 }}>
-                  {checklists.length === 0 ? 'Nenhum checklist foi criado ainda.' : 'Nenhum checklist corresponde aos filtros selecionados.'}
-                </p>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-ink-muted">A partir de</label>
+              <div className="relative">
+                <Calendar size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
+                <input
+                  type="date"
+                  value={filtros.dataInicio}
+                  onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })}
+                  className="w-full rounded-xl bg-surface-2 py-2.5 pl-9 pr-3 text-sm outline-none"
+                />
               </div>
-            ) : (
-              checklistsFiltrados.map((checklist) => {
-                const statusStyle = getStatusStyle(checklist.status)
-                return (
-                  <div
-                    key={checklist.id}
-                    className="card-hover"
-                    style={{ background: 'rgba(255,255,255,0.95)', borderRadius: '16px', padding: '1.75rem 2rem', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}
-                  >
-                    {/* Info */}
-                    <div style={{ flex: 1, minWidth: '280px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.625rem', flexWrap: 'wrap' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', margin: 0 }}>
-                          {checklist.titulo}
-                        </h3>
-                        <span style={{ padding: '0.25rem 0.75rem', background: statusStyle.bg, color: statusStyle.text, border: `1.5px solid ${statusStyle.border}`, borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' }}>
-                          {statusStyle.label}
-                        </span>
-                      </div>
+            </div>
 
-                      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                        {checklist.empresas && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', color: '#64748b' }}>
-                            <Building2 size={14} />
-                            {checklist.empresas.nome_fantasia}
-                          </span>
-                        )}
-                        {checklist.colaboradores && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', color: '#64748b' }}>
-                            <User size={14} />
-                            {checklist.colaboradores.nome}
-                          </span>
-                        )}
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', color: '#64748b' }}>
-                          <Calendar size={14} />
-                          Até {formatarData(checklist.data_fim)}
-                        </span>
-                      </div>
-                    </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-ink-muted">Até</label>
+              <div className="relative">
+                <Calendar size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
+                <input
+                  type="date"
+                  value={filtros.dataFim}
+                  onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })}
+                  className="w-full rounded-xl bg-surface-2 py-2.5 pl-9 pr-3 text-sm outline-none"
+                />
+              </div>
+            </div>
 
-                    {/* Botões */}
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => duplicarChecklist(checklist.id)}
-                        disabled={duplicandoId === checklist.id}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', background: '#f1f5f9', color: '#475569', border: '2px solid #e2e8f0', borderRadius: '10px', cursor: duplicandoId === checklist.id ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: '600', transition: 'all 0.2s', whiteSpace: 'nowrap', opacity: duplicandoId === checklist.id ? 0.7 : 1 }}
-                        onMouseEnter={(e) => { if (duplicandoId !== checklist.id) e.currentTarget.style.background = '#e2e8f0' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9' }}
-                      >
-                        {duplicandoId === checklist.id ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Copy size={16} />}
-                        Duplicar
-                      </button>
-                      <button
-                        onClick={() => router.push(`/checklists-criados/${checklist.id}`)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', boxShadow: '0 4px 12px rgba(102,126,234,0.35)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(102,126,234,0.5)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(102,126,234,0.35)'; }}
-                      >
-                        <Eye size={16} />
-                        Ver Detalhes
-                      </button>
-                    </div>
-                  </div>
-                )
-              })
-            )}
+            <Button
+              variant="secondary"
+              onClick={() => setFiltros({ empresa_id: '', dataInicio: '', dataFim: '', status: '' })}
+            >
+              Limpar filtros
+            </Button>
           </div>
-        </main>
+
+          <p className="mt-4 text-sm italic text-ink-faint">
+            {checklistsFiltrados.length} checklist{checklistsFiltrados.length !== 1 ? 's' : ''} encontrado{checklistsFiltrados.length !== 1 ? 's' : ''}
+          </p>
+        </Card>
+
+        {/* Lista */}
+        {loading ? (
+          <Card className="p-12 text-center text-ink-faint">Carregando checklists...</Card>
+        ) : checklistsFiltrados.length === 0 ? (
+          <Card className="px-6 py-16 text-center">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-tint">
+              <FileCheck size={36} className="text-brand" />
+            </div>
+            <h2 className="font-display text-xl font-bold text-ink">Nenhum checklist encontrado</h2>
+            <p className="mt-2 text-sm text-ink-muted">
+              {checklists.length === 0 ? 'Nenhum checklist foi criado ainda.' : 'Nenhum checklist corresponde aos filtros selecionados.'}
+            </p>
+          </Card>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {checklistsFiltrados.map((checklist) => (
+              <Card key={checklist.id} className="flex flex-wrap items-center justify-between gap-4 p-5">
+                <div className="min-w-[280px] flex-1">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
+                    <h3 className="text-base font-bold text-ink">{checklist.nome}</h3>
+                    <Badge tone={statusTone[checklist.status]}>{statusLabel[checklist.status]}</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-4 text-sm text-ink-muted">
+                    {checklist.empresas && (
+                      <span className="flex items-center gap-1.5">
+                        <Building2 size={14} />
+                        {checklist.empresas.nome_fantasia}
+                      </span>
+                    )}
+                    {checklist.colaboradores && (
+                      <span className="flex items-center gap-1.5">
+                        <User size={14} />
+                        {checklist.colaboradores.nome}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5">
+                      <Calendar size={14} />
+                      Até {formatarData(checklist.data_fim)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2.5">
+                  <Button
+                    variant="secondary"
+                    onClick={() => duplicarChecklist(checklist.id)}
+                    disabled={duplicandoId === checklist.id}
+                    icon={duplicandoId === checklist.id ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
+                  >
+                    Duplicar
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => router.push(`/checklists-futuros/editar/${checklist.id}`)}
+                    icon={<Pencil size={16} />}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => router.push(`/checklists-criados/${checklist.id}`)}
+                    icon={<Eye size={16} />}
+                  >
+                    Ver Detalhes
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
-    </>
+    </div>
   )
 }

@@ -29,7 +29,9 @@ export function inicioPeriodo(recorrencia: string | null): string | null {
 // usada para agrupar respostas de checklists recorrentes por dia.
 export function diaBrasil(dataIso: string | null | undefined): string | null {
   if (!dataIso) return null
-  const local = new Date(new Date(dataIso).getTime() - BRAZIL_OFFSET_MS)
+  const timestamp = new Date(dataIso).getTime()
+  if (Number.isNaN(timestamp)) return null
+  const local = new Date(timestamp - BRAZIL_OFFSET_MS)
   return local.toISOString().slice(0, 10)
 }
 

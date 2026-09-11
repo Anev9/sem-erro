@@ -3,6 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import {
+  ClipboardList, Calendar, Search, TrendingUp, CheckCircle, XCircle,
+  Download, Eye, X, Info, PartyPopper, Building2
+} from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 
 interface Filtros {
   empresa_id: string;
@@ -27,6 +35,15 @@ interface Resposta {
   responsavel: string;
   data: string;
   observacao: string;
+}
+
+const inputClass = 'w-full rounded-xl bg-surface-2 px-3.5 py-2.5 text-sm outline-none cursor-pointer';
+const labelClass = 'mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink-muted';
+
+function BadgeResultado({ resultado }: { resultado: string }) {
+  if (resultado === 'conforme') return <Badge tone="success"><CheckCircle size={12} /> Conforme</Badge>;
+  if (resultado === 'nao_conforme') return <Badge tone="danger"><XCircle size={12} /> Não Conforme</Badge>;
+  return <Badge tone="neutral">— N/A</Badge>;
 }
 
 export default function TodasRespostas() {
@@ -93,6 +110,7 @@ export default function TodasRespostas() {
   const conformes = respostas.filter(r => r.resultado === 'conforme').length;
   const naoConformes = respostas.filter(r => r.resultado === 'nao_conforme').length;
   const taxaConformidade = totalRespostas > 0 ? Math.round((conformes / totalRespostas) * 100) : 0;
+  const taxaTone = taxaConformidade >= 80 ? 'text-teal' : taxaConformidade >= 60 ? 'text-amber' : 'text-coral';
 
   const exportarExcel = () => {
     if (respostas.length === 0) {
@@ -137,69 +155,22 @@ export default function TodasRespostas() {
     toast.success(`${respostas.length} respostas exportadas com sucesso!`);
   };
 
-  const getBadgeResultado = (resultado: string) => {
-    if (resultado === 'conforme') return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', background: '#E8F5E9', color: '#2E7D32', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: '700', border: '2px solid #4CAF50' }}>
-        ✓ Conforme
-      </span>
-    );
-    if (resultado === 'nao_conforme') return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', background: '#FFEBEE', color: '#C62828', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: '700', border: '2px solid #ef5350' }}>
-        ✗ Não Conforme
-      </span>
-    );
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', background: '#F5F5F5', color: '#757575', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: '700', border: '2px solid #BDBDBD' }}>
-        — N/A
-      </span>
-    );
-  };
-
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #e3f2fd 100%)', padding: '2rem' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-
-        {/* Botão Voltar */}
-        <button
-          onClick={() => router.back()}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '2px solid #e0e0e0', borderRadius: '0.75rem', padding: '0.75rem 1.25rem', fontSize: '0.875rem', fontWeight: '600', color: '#5E6AD2', cursor: 'pointer', marginBottom: '1.5rem', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f5f5'; e.currentTarget.style.borderColor = '#5E6AD2'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = '#e0e0e0'; }}
-        >
-          <span style={{ fontSize: '1.25rem' }}>←</span>
-          <span>Voltar</span>
-        </button>
-
-        {/* Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-            <div style={{ padding: '0.75rem', background: 'linear-gradient(135deg, #5E6AD2 0%, #4C52B2 100%)', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(94,106,210,0.3)' }}>
-              <span style={{ fontSize: '1.5rem' }}>📋</span>
-            </div>
-            <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#1a1a1a', margin: 0 }}>
-              Todas as Respostas do Período
-            </h1>
-          </div>
-          <p style={{ color: '#666', fontSize: '1rem', margin: 0 }}>
-            Visualize e analise todas as respostas de checklists em um único lugar
-          </p>
-        </div>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1320px] px-6 py-8">
+        <PageHeader
+          title="Todas as Respostas do Período"
+          subtitle="Visualize e analise todas as respostas de checklists em um único lugar"
+          backHref="/dashboard-aluno"
+        />
 
         {/* Card de Filtros */}
-        <div style={{ background: 'white', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+        <Card className="mb-6 p-6 sm:p-8">
           <form onSubmit={handleFiltrar}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
-
-              {/* Empresa */}
+            <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '1rem' }}>🏢</span> Loja / Empresa
-                </label>
-                <select
-                  value={filtros.empresa_id}
-                  onChange={(e) => setFiltros({ ...filtros, empresa_id: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', fontWeight: '500', cursor: 'pointer' }}
-                >
+                <label className={labelClass}><Building2 size={15} /> Loja / Empresa</label>
+                <select value={filtros.empresa_id} onChange={(e) => setFiltros({ ...filtros, empresa_id: e.target.value })} className={inputClass}>
                   <option value="">Todas as empresas</option>
                   {empresas.map(emp => (
                     <option key={emp.id} value={emp.id}>{emp.nome_fantasia}</option>
@@ -207,186 +178,129 @@ export default function TodasRespostas() {
                 </select>
               </div>
 
-              {/* Data Início */}
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '1rem' }}>📅</span> A partir de
-                </label>
-                <input
-                  type="date"
-                  value={filtros.dataInicio}
-                  onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem' }}
-                />
+                <label className={labelClass}><Calendar size={15} /> A partir de</label>
+                <input type="date" value={filtros.dataInicio} onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })} className={inputClass} />
               </div>
 
-              {/* Data Fim */}
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '1rem' }}>📅</span> Até
-                </label>
-                <input
-                  type="date"
-                  value={filtros.dataFim}
-                  onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem' }}
-                />
+                <label className={labelClass}><Calendar size={15} /> Até</label>
+                <input type="date" value={filtros.dataFim} onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })} className={inputClass} />
               </div>
 
-              {/* Resultado */}
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '1rem' }}>🔍</span> Filtrar por resultado
-                </label>
-                <select
-                  value={filtros.resultado}
-                  onChange={(e) => setFiltros({ ...filtros, resultado: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '0.75rem', fontSize: '0.875rem', fontWeight: '500', cursor: 'pointer' }}
-                >
+                <label className={labelClass}><Search size={15} /> Filtrar por resultado</label>
+                <select value={filtros.resultado} onChange={(e) => setFiltros({ ...filtros, resultado: e.target.value })} className={inputClass}>
                   <option value="todos">Todos os resultados</option>
                   <option value="conforme">✓ Conforme</option>
                   <option value="nao_conforme">✗ Não Conforme</option>
                 </select>
               </div>
 
-              {/* Botão Filtrar */}
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{ width: '100%', background: loading ? '#90CAF9' : 'linear-gradient(135deg, #5E6AD2 0%, #4C52B2 100%)', color: 'white', border: 'none', padding: '0.875rem', borderRadius: '0.75rem', fontSize: '0.875rem', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(94,106,210,0.4)', transition: 'all 0.2s' }}
-                  onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(94,106,210,0.5)'; } }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(94,106,210,0.4)'; }}
-                >
-                  <span style={{ fontSize: '1rem' }}>🔎</span>
+              <div className="flex items-end">
+                <Button type="submit" variant="primary" disabled={loading} className="w-full justify-center py-3" icon={<Search size={16} />}>
                   {loading ? 'Carregando...' : 'Filtrar Respostas'}
-                </button>
+                </Button>
               </div>
             </div>
 
-            {/* Dica */}
-            <div style={{ padding: '1.25rem', background: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)', border: '2px solid #90CAF9', borderRadius: '0.75rem' }}>
-              <p style={{ fontSize: '0.875rem', color: '#1565C0', margin: 0, fontWeight: '500', lineHeight: 1.6 }}>
-                💡 <strong>Dica:</strong> Nessa tela é possível ver todas as respostas de uma única vez de todas as empresas, assim você consegue ser mais preciso no que procura, como por exemplo apenas as áreas que estão com algum problema e que as respostas foram negativas.
+            <div className="flex items-start gap-3 rounded-2xl bg-blue-tint p-4">
+              <Info size={18} className="mt-0.5 flex-shrink-0 text-blue" />
+              <p className="text-sm leading-relaxed text-blue">
+                <strong>Dica:</strong> Nessa tela é possível ver todas as respostas de uma única vez de todas as empresas, assim você consegue ser mais preciso no que procura, como por exemplo apenas as áreas que estão com algum problema e que as respostas foram negativas.
               </p>
             </div>
           </form>
-        </div>
+        </Card>
 
         {mostrarResultados ? (
           <>
             {/* Cards de Resumo */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-              <div style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 8px rgba(0,0,0,0.08)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Total de Respostas</span>
-                  <span style={{ fontSize: '1.5rem' }}>📊</span>
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card className="p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-ink-muted">Total de Respostas</span>
+                  <ClipboardList size={18} className="text-ink-faint" />
                 </div>
-                <p style={{ fontSize: '2.5rem', fontWeight: '900', color: '#5E6AD2', margin: '0 0 0.5rem 0' }}>{totalRespostas}</p>
-                <p style={{ fontSize: '0.75rem', color: '#999', margin: 0 }}>no período selecionado</p>
-              </div>
+                <p className="font-display text-3xl font-bold text-ink">{totalRespostas}</p>
+                <p className="mt-1 text-xs text-ink-faint">no período selecionado</p>
+              </Card>
 
-              <div style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 8px rgba(0,0,0,0.08)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Conformes</span>
-                  <span style={{ fontSize: '1.5rem' }}>✅</span>
+              <Card className="p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-ink-muted">Conformes</span>
+                  <CheckCircle size={18} className="text-teal" />
                 </div>
-                <p style={{ fontSize: '2.5rem', fontWeight: '900', color: '#4CAF50', margin: '0 0 0.5rem 0' }}>{conformes}</p>
-                <p style={{ fontSize: '0.75rem', color: '#999', margin: 0 }}>
+                <p className="font-display text-3xl font-bold text-teal">{conformes}</p>
+                <p className="mt-1 text-xs text-ink-faint">
                   {totalRespostas > 0 ? Math.round((conformes / totalRespostas) * 100) : 0}% do total
                 </p>
-              </div>
+              </Card>
 
-              <div style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 8px rgba(0,0,0,0.08)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Não Conformes</span>
-                  <span style={{ fontSize: '1.5rem' }}>❌</span>
+              <Card className="p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-ink-muted">Não Conformes</span>
+                  <XCircle size={18} className="text-coral" />
                 </div>
-                <p style={{ fontSize: '2.5rem', fontWeight: '900', color: '#ef5350', margin: '0 0 0.5rem 0' }}>{naoConformes}</p>
-                <p style={{ fontSize: '0.75rem', color: '#999', margin: 0 }}>
+                <p className="font-display text-3xl font-bold text-coral">{naoConformes}</p>
+                <p className="mt-1 text-xs text-ink-faint">
                   {totalRespostas > 0 ? Math.round((naoConformes / totalRespostas) * 100) : 0}% do total
                 </p>
-              </div>
+              </Card>
 
-              <div style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 8px rgba(0,0,0,0.08)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Taxa de Conformidade</span>
-                  <span style={{ fontSize: '1.5rem' }}>📈</span>
+              <Card className="p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-ink-muted">Taxa de Conformidade</span>
+                  <TrendingUp size={18} className="text-ink-faint" />
                 </div>
-                <p style={{ fontSize: '2.5rem', fontWeight: '900', color: taxaConformidade >= 80 ? '#4CAF50' : taxaConformidade >= 60 ? '#FFC107' : '#ef5350', margin: '0 0 0.5rem 0' }}>
-                  {taxaConformidade}%
-                </p>
-                <p style={{ fontSize: '0.75rem', color: '#999', margin: 0 }}>índice geral</p>
-              </div>
+                <p className={`font-display text-3xl font-bold ${taxaTone}`}>{taxaConformidade}%</p>
+                <p className="mt-1 text-xs text-ink-faint">índice geral</p>
+              </Card>
             </div>
 
             {/* Ações e Visualização */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button
-                  onClick={() => setVisualizacao('lista')}
-                  style={{ padding: '0.75rem 1.5rem', borderRadius: '0.75rem', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer', border: visualizacao === 'lista' ? 'none' : '2px solid #e0e0e0', background: visualizacao === 'lista' ? 'linear-gradient(135deg, #5E6AD2 0%, #4C52B2 100%)' : 'white', color: visualizacao === 'lista' ? 'white' : '#666', boxShadow: visualizacao === 'lista' ? '0 4px 8px rgba(94,106,210,0.3)' : 'none' }}
-                >
-                  📋 Lista Detalhada
-                </button>
-                <button
-                  onClick={() => setVisualizacao('resumo')}
-                  style={{ padding: '0.75rem 1.5rem', borderRadius: '0.75rem', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer', border: visualizacao === 'resumo' ? 'none' : '2px solid #e0e0e0', background: visualizacao === 'resumo' ? 'linear-gradient(135deg, #5E6AD2 0%, #4C52B2 100%)' : 'white', color: visualizacao === 'resumo' ? 'white' : '#666', boxShadow: visualizacao === 'resumo' ? '0 4px 8px rgba(94,106,210,0.3)' : 'none' }}
-                >
-                  📊 Resumo Executivo
-                </button>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex gap-2.5">
+                <Button variant={visualizacao === 'lista' ? 'primary' : 'secondary'} onClick={() => setVisualizacao('lista')} icon={<ClipboardList size={16} />}>
+                  Lista Detalhada
+                </Button>
+                <Button variant={visualizacao === 'resumo' ? 'primary' : 'secondary'} onClick={() => setVisualizacao('resumo')} icon={<TrendingUp size={16} />}>
+                  Resumo Executivo
+                </Button>
               </div>
 
-              <button
-                onClick={exportarExcel}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: 'white', border: '2px solid #4CAF50', borderRadius: '0.75rem', color: '#4CAF50', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer', transition: 'all 0.2s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#4CAF50'; e.currentTarget.style.color = 'white'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#4CAF50'; }}
-              >
-                <span style={{ fontSize: '1rem' }}>📥</span>
+              <Button variant="secondary" onClick={exportarExcel} icon={<Download size={16} />}>
                 Exportar Excel
-              </button>
+              </Button>
             </div>
 
             {/* Lista de Respostas */}
             {visualizacao === 'lista' && (
-              <div style={{ background: 'white', borderRadius: '1rem', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead style={{ background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
-                      <tr>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '700', color: '#333', borderBottom: '2px solid #dee2e6' }}>Data/Hora</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '700', color: '#333', borderBottom: '2px solid #dee2e6' }}>Empresa</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '700', color: '#333', borderBottom: '2px solid #dee2e6' }}>Checklist</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '700', color: '#333', borderBottom: '2px solid #dee2e6' }}>Pergunta</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '700', color: '#333', borderBottom: '2px solid #dee2e6' }}>Responsável</th>
-                        <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '700', color: '#333', borderBottom: '2px solid #dee2e6' }}>Resultado</th>
-                        <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '700', color: '#333', borderBottom: '2px solid #dee2e6' }}>Ações</th>
+              <Card className="overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-surface-2 bg-surface-2">
+                        <th className="p-4 text-left text-sm font-semibold text-ink-muted">Data/Hora</th>
+                        <th className="p-4 text-left text-sm font-semibold text-ink-muted">Empresa</th>
+                        <th className="p-4 text-left text-sm font-semibold text-ink-muted">Checklist</th>
+                        <th className="p-4 text-left text-sm font-semibold text-ink-muted">Pergunta</th>
+                        <th className="p-4 text-left text-sm font-semibold text-ink-muted">Responsável</th>
+                        <th className="p-4 text-center text-sm font-semibold text-ink-muted">Resultado</th>
+                        <th className="p-4 text-center text-sm font-semibold text-ink-muted">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {respostas.map((resposta) => (
-                        <tr key={resposta.id} style={{ borderBottom: '1px solid #f0f0f0', transition: 'background 0.2s' }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                        >
-                          <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#666', whiteSpace: 'nowrap' }}>{resposta.data}</td>
-                          <td style={{ padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#333' }}>{resposta.empresa}</td>
-                          <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#666' }}>{resposta.checklist}</td>
-                          <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#666', maxWidth: '300px' }}>{resposta.pergunta}</td>
-                          <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#666' }}>{resposta.responsavel}</td>
-                          <td style={{ padding: '1rem', textAlign: 'center' }}>
-                            {getBadgeResultado(resposta.resultado)}
-                          </td>
-                          <td style={{ padding: '1rem', textAlign: 'center' }}>
-                            <button
-                              onClick={() => setRespostaSelecionada(resposta)}
-                              style={{ padding: '0.5rem', background: '#E3F2FD', border: '2px solid #90CAF9', borderRadius: '0.5rem', color: '#1565C0', cursor: 'pointer', fontSize: '1rem', transition: 'all 0.2s' }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = '#5E6AD2'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = '#5E6AD2'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = '#E3F2FD'; e.currentTarget.style.color = '#1565C0'; e.currentTarget.style.borderColor = '#90CAF9'; }}
-                            >
-                              👁️
-                            </button>
+                        <tr key={resposta.id} className="border-b border-surface-2 transition-colors last:border-0 hover:bg-surface-2">
+                          <td className="whitespace-nowrap p-4 text-sm text-ink-muted">{resposta.data}</td>
+                          <td className="p-4 text-sm font-semibold text-ink">{resposta.empresa}</td>
+                          <td className="p-4 text-sm text-ink-muted">{resposta.checklist}</td>
+                          <td className="max-w-[300px] p-4 text-sm text-ink-muted">{resposta.pergunta}</td>
+                          <td className="p-4 text-sm text-ink-muted">{resposta.responsavel}</td>
+                          <td className="p-4 text-center"><BadgeResultado resultado={resposta.resultado} /></td>
+                          <td className="p-4 text-center">
+                            <Button variant="secondary" size="sm" onClick={() => setRespostaSelecionada(resposta)} icon={<Eye size={15} />} />
                           </td>
                         </tr>
                       ))}
@@ -395,131 +309,125 @@ export default function TodasRespostas() {
                 </div>
 
                 {respostas.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '3rem' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-                    <p style={{ color: '#666', fontSize: '1rem', fontWeight: '600' }}>
+                  <div className="py-16 text-center">
+                    <Search size={40} className="mx-auto mb-4 text-ink-faint" />
+                    <p className="text-sm font-semibold text-ink-muted">
                       Nenhuma resposta encontrada com os filtros selecionados.
                     </p>
                   </div>
                 )}
-              </div>
+              </Card>
             )}
 
             {/* Resumo Executivo */}
             {visualizacao === 'resumo' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="flex flex-col gap-4">
                 {respostas
                   .filter(r => r.resultado === 'nao_conforme')
                   .map((resposta) => (
-                    <div key={resposta.id} style={{ background: 'white', borderRadius: '1rem', padding: '1.5rem', borderLeft: '6px solid #ef5350', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+                    <Card key={resposta.id} className="border-l-4 border-coral p-6">
+                      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#333', margin: 0 }}>{resposta.empresa}</h3>
-                          </div>
-                          <p style={{ color: '#666', margin: '0 0 0.5rem 0', fontSize: '0.875rem' }}>{resposta.checklist}</p>
-                          <p style={{ color: '#999', margin: 0, fontSize: '0.75rem' }}>{resposta.data} • {resposta.responsavel}</p>
+                          <h3 className="text-lg font-bold text-ink">{resposta.empresa}</h3>
+                          <p className="mt-1 text-sm text-ink-muted">{resposta.checklist}</p>
+                          <p className="mt-1 text-xs text-ink-faint">{resposta.data} • {resposta.responsavel}</p>
                         </div>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', background: '#FFEBEE', color: '#C62828', borderRadius: '1rem', fontSize: '0.875rem', fontWeight: '700', border: '2px solid #ef5350' }}>
-                          ✗ Não Conforme
-                        </span>
+                        <Badge tone="danger"><XCircle size={13} /> Não Conforme</Badge>
                       </div>
 
-                      <div style={{ background: '#f8f9fa', borderRadius: '0.75rem', padding: '1.25rem' }}>
-                        <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#333', marginBottom: '0.5rem' }}>Pergunta:</p>
-                        <p style={{ color: '#666', marginBottom: resposta.observacao ? '1rem' : 0, fontSize: '0.875rem' }}>{resposta.pergunta}</p>
+                      <div className="rounded-xl bg-surface-2 p-5">
+                        <p className="mb-1.5 text-sm font-bold text-ink">Pergunta:</p>
+                        <p className={`text-sm text-ink-muted ${resposta.observacao ? 'mb-4' : ''}`}>{resposta.pergunta}</p>
 
                         {resposta.observacao && (
                           <>
-                            <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#333', marginBottom: '0.5rem' }}>Observação:</p>
-                            <p style={{ color: '#666', margin: 0, fontSize: '0.875rem' }}>{resposta.observacao}</p>
+                            <p className="mb-1.5 text-sm font-bold text-ink">Observação:</p>
+                            <p className="text-sm text-ink-muted">{resposta.observacao}</p>
                           </>
                         )}
                       </div>
-                    </div>
+                    </Card>
                   ))}
 
                 {respostas.filter(r => r.resultado === 'nao_conforme').length === 0 && (
-                  <div style={{ background: 'white', borderRadius: '1rem', padding: '3rem', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-                    <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#333', marginBottom: '0.5rem' }}>
-                      Tudo em conformidade!
-                    </h3>
-                    <p style={{ color: '#666', margin: 0 }}>
-                      Não há itens não conformes no período selecionado.
-                    </p>
-                  </div>
+                  <Card className="px-6 py-16 text-center">
+                    <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-teal-tint">
+                      <PartyPopper size={36} className="text-teal" />
+                    </div>
+                    <h3 className="font-display text-xl font-bold text-ink">Tudo em conformidade!</h3>
+                    <p className="mt-2 text-sm text-ink-muted">Não há itens não conformes no período selecionado.</p>
+                  </Card>
                 )}
               </div>
             )}
           </>
         ) : (
-          <div style={{ background: 'white', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-            <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-              <div style={{ width: '120px', height: '120px', background: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem', border: '4px solid #90CAF9' }}>
-                <span style={{ fontSize: '4rem' }}>🔍</span>
+          <Card className="px-6 py-16 text-center">
+            <div className="mx-auto max-w-[500px]">
+              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-violet-tint">
+                <Search size={40} className="text-violet" />
               </div>
-              <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#333', marginBottom: '1rem' }}>
-                Configure os Filtros
-              </h3>
-              <p style={{ color: '#666', fontSize: '1rem', margin: 0, lineHeight: 1.6 }}>
-                Selecione os filtros desejados e clique em "Filtrar Respostas" para visualizar os dados.
+              <h3 className="mb-3 font-display text-xl font-bold text-ink">Configure os Filtros</h3>
+              <p className="text-sm leading-relaxed text-ink-muted">
+                Selecione os filtros desejados e clique em &quot;Filtrar Respostas&quot; para visualizar os dados.
               </p>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Modal de Detalhes */}
         {respostaSelecionada && (
           <div
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
             onClick={() => setRespostaSelecionada(null)}
           >
             <div
-              style={{ background: 'white', borderRadius: '1rem', padding: '2rem', maxWidth: '600px', width: '100%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
+              className="max-h-[80vh] w-full max-w-[600px] overflow-y-auto rounded-3xl bg-white p-6 shadow-soft sm:p-8"
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#333', margin: 0 }}>Detalhes da Resposta</h3>
-                <button onClick={() => setRespostaSelecionada(null)} style={{ background: '#f5f5f5', border: 'none', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '1.25rem', color: '#666' }}>✕</button>
+              <div className="mb-6 flex items-center justify-between">
+                <h3 className="font-display text-lg font-bold text-ink">Detalhes da Resposta</h3>
+                <button onClick={() => setRespostaSelecionada(null)} className="rounded-lg p-2 text-ink-muted hover:bg-surface-2">
+                  <X size={20} />
+                </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="flex flex-col gap-4">
                 <div>
-                  <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>Empresa</p>
-                  <p style={{ fontSize: '1rem', fontWeight: '600', color: '#333', margin: 0 }}>{respostaSelecionada.empresa}</p>
+                  <p className="mb-1 text-xs text-ink-faint">Empresa</p>
+                  <p className="text-base font-semibold text-ink">{respostaSelecionada.empresa}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>Checklist</p>
-                  <p style={{ fontSize: '1rem', fontWeight: '600', color: '#333', margin: 0 }}>{respostaSelecionada.checklist}</p>
+                  <p className="mb-1 text-xs text-ink-faint">Checklist</p>
+                  <p className="text-base font-semibold text-ink">{respostaSelecionada.checklist}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>Pergunta</p>
-                  <p style={{ fontSize: '1rem', color: '#333', margin: 0 }}>{respostaSelecionada.pergunta}</p>
+                  <p className="mb-1 text-xs text-ink-faint">Pergunta</p>
+                  <p className="text-base text-ink">{respostaSelecionada.pergunta}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>Resposta</p>
-                  <p style={{ fontSize: '1rem', fontWeight: '600', color: '#333', margin: 0 }}>{respostaSelecionada.resposta}</p>
+                  <p className="mb-1 text-xs text-ink-faint">Resposta</p>
+                  <p className="text-base font-semibold text-ink">{respostaSelecionada.resposta}</p>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>Data/Hora</p>
-                    <p style={{ fontSize: '0.875rem', color: '#333', margin: 0 }}>{respostaSelecionada.data}</p>
+                    <p className="mb-1 text-xs text-ink-faint">Data/Hora</p>
+                    <p className="text-sm text-ink">{respostaSelecionada.data}</p>
                   </div>
                   <div>
-                    <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>Responsável</p>
-                    <p style={{ fontSize: '0.875rem', color: '#333', margin: 0 }}>{respostaSelecionada.responsavel}</p>
+                    <p className="mb-1 text-xs text-ink-faint">Responsável</p>
+                    <p className="text-sm text-ink">{respostaSelecionada.responsavel}</p>
                   </div>
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>Resultado</p>
-                  {getBadgeResultado(respostaSelecionada.resultado)}
+                  <p className="mb-2 text-xs text-ink-faint">Resultado</p>
+                  <BadgeResultado resultado={respostaSelecionada.resultado} />
                 </div>
                 {respostaSelecionada.observacao && (
                   <div>
-                    <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>Observação</p>
-                    <div style={{ background: '#f8f9fa', borderRadius: '0.5rem', padding: '1rem' }}>
-                      <p style={{ fontSize: '0.875rem', color: '#333', margin: 0 }}>{respostaSelecionada.observacao}</p>
+                    <p className="mb-1 text-xs text-ink-faint">Observação</p>
+                    <div className="rounded-xl bg-surface-2 p-4">
+                      <p className="text-sm text-ink">{respostaSelecionada.observacao}</p>
                     </div>
                   </div>
                 )}

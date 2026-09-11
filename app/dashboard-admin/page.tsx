@@ -298,7 +298,7 @@ export default function DashboardAdmin() {
                 </button>
 
                 {activeDropdown === item.title && (
-                  <div className="absolute left-0 top-full min-w-[200px] overflow-hidden rounded-2xl bg-white py-1.5 shadow-soft">
+                  <div className="absolute left-0 top-full z-[500] min-w-[200px] overflow-hidden rounded-2xl bg-white py-1.5 shadow-soft">
                     {item.submenu.map((sub) => (
                       <button
                         key={sub.label}

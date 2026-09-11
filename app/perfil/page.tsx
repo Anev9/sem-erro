@@ -3,19 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import {
-  ArrowLeft,
-  User,
-  Mail,
-  Phone,
-  Briefcase,
-  Building2,
-  Save,
-  Lock,
-  CheckCircle,
-  Camera,
-  Loader2
-} from 'lucide-react'
+import { ArrowLeft, User, Mail, Phone, Briefcase, Building2, Save, Lock, CheckCircle, Camera, Loader2 } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 interface Colaborador {
   id: string
@@ -27,6 +17,12 @@ interface Colaborador {
   empresa_nome?: string
   foto_url?: string | null
 }
+
+const fieldWrapClass = 'relative'
+const iconClass = 'pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint'
+const inputClass = 'w-full rounded-xl bg-surface-2 py-3 pl-10 pr-3.5 text-sm outline-none'
+const labelClass = 'mb-2 block text-sm font-semibold text-ink-muted'
+const sectionTitleClass = 'mb-5 text-xs font-semibold uppercase tracking-wide text-ink-faint'
 
 export default function PerfilPage() {
   const router = useRouter()
@@ -194,8 +190,8 @@ export default function PerfilPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#6b7280' }}>Carregando perfil...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-ink-muted">Carregando perfil...</p>
       </div>
     )
   }
@@ -203,135 +199,97 @@ export default function PerfilPage() {
   if (!colaborador) return null
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <style>{`
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .form-input { width: 100%; padding: 0.875rem 1rem 0.875rem 3rem; border: 2px solid #e5e7eb; border-radius: 0.75rem; font-size: 0.95rem; outline: none; transition: all 0.2s ease; background: white; box-sizing: border-box; }
-        .form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-        .form-input:disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
-      `}</style>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[700px] px-6 py-8">
+        <button
+          onClick={() => router.push('/dashboard-funcionario')}
+          className="mb-5 inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-sm font-medium text-ink-muted shadow-soft-sm transition-colors hover:text-ink cursor-pointer"
+        >
+          <ArrowLeft size={16} />
+          Voltar ao Dashboard
+        </button>
 
-      {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        padding: '2rem',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-          <button
-            onClick={() => router.push('/dashboard-funcionario')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.85)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', marginBottom: '1rem', padding: 0 }}
+        {/* Cabeçalho do perfil */}
+        <Card className="mb-5 flex items-center gap-5 p-6">
+          <div
+            className="relative flex-shrink-0 cursor-pointer"
+            onClick={() => document.getElementById('foto-input')?.click()}
+            title="Clique para trocar a foto"
           >
-            <ArrowLeft size={16} />
-            Voltar ao Dashboard
-          </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-            <div
-              style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}
-              onClick={() => document.getElementById('foto-input')?.click()}
-              title="Clique para trocar a foto"
-            >
-              {colaborador.foto_url ? (
-                <img
-                  src={colaborador.foto_url}
-                  alt={colaborador.nome}
-                  style={{ width: '4rem', height: '4rem', borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.5)' }}
-                />
-              ) : (
-                <div style={{ width: '4rem', height: '4rem', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ color: 'white', fontSize: '1.5rem', fontWeight: 'bold' }}>
-                    {colaborador.nome.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#2563eb', borderRadius: '50%', width: '1.4rem', height: '1.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white' }}>
-                {uploadingFoto
-                  ? <Loader2 size={10} style={{ color: 'white', animation: 'spin 1s linear infinite' }} />
-                  : <Camera size={10} style={{ color: 'white' }} />
-                }
+            {colaborador.foto_url ? (
+              <img
+                src={colaborador.foto_url}
+                alt={colaborador.nome}
+                className="h-16 w-16 rounded-full border-2 border-surface-2 object-cover"
+              />
+            ) : (
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-tint">
+                <span className="text-xl font-bold text-brand">{colaborador.nome.charAt(0).toUpperCase()}</span>
               </div>
-            </div>
-            <input id="foto-input" type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleFotoUpload} />
-            <div>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'white', margin: 0 }}>
-                {colaborador.nome}
-              </h1>
-              {erroFoto && (
-                <p style={{ fontSize: '0.75rem', color: '#fca5a5', margin: '0.25rem 0 0', maxWidth: '280px' }}>
-                  ⚠️ {erroFoto}
-                </p>
-              )}
-              <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', margin: '0.25rem 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Building2 size={14} />
-                {colaborador.empresa_nome}
-                {colaborador.cargo && ` • ${colaborador.cargo}`}
-              </p>
+            )}
+            <div className="absolute bottom-0 right-0 flex h-[1.4rem] w-[1.4rem] items-center justify-center rounded-full border-2 border-white bg-brand">
+              {uploadingFoto ? <Loader2 size={10} className="animate-spin text-white" /> : <Camera size={10} className="text-white" />}
             </div>
           </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+          <input id="foto-input" type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFotoUpload} />
+          <div>
+            <h1 className="font-display text-xl font-bold text-ink">{colaborador.nome}</h1>
+            {erroFoto && <p className="mt-1 max-w-[280px] text-xs text-coral">⚠️ {erroFoto}</p>}
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-muted">
+              <Building2 size={14} />
+              {colaborador.empresa_nome}
+              {colaborador.cargo && ` • ${colaborador.cargo}`}
+            </p>
+          </div>
+        </Card>
 
         {/* Dados fixos (somente leitura) */}
-        <div className="fade-in" style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.75rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '0.8rem', fontWeight: '600', color: '#6b7280', margin: '0 0 1.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Informações da conta
-          </h2>
+        <Card className="mb-5 p-6 sm:p-7">
+          <h2 className={sectionTitleClass}>Informações da conta</h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1rem', backgroundColor: '#f9fafb', borderRadius: '0.75rem' }}>
-              <Mail size={18} style={{ color: '#9ca3af', flexShrink: 0 }} />
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-4 rounded-xl bg-surface-2 p-3.5">
+              <Mail size={18} className="flex-shrink-0 text-ink-faint" />
               <div>
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>E-mail</p>
-                <p style={{ fontSize: '0.95rem', color: '#374151', margin: '0.125rem 0 0', fontWeight: '500' }}>{colaborador.email}</p>
+                <p className="text-xs text-ink-faint">E-mail</p>
+                <p className="mt-0.5 text-sm font-medium text-ink">{colaborador.email}</p>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1rem', backgroundColor: '#f9fafb', borderRadius: '0.75rem' }}>
-              <Briefcase size={18} style={{ color: '#9ca3af', flexShrink: 0 }} />
+            <div className="flex items-center gap-4 rounded-xl bg-surface-2 p-3.5">
+              <Briefcase size={18} className="flex-shrink-0 text-ink-faint" />
               <div>
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Cargo</p>
-                <p style={{ fontSize: '0.95rem', color: '#374151', margin: '0.125rem 0 0', fontWeight: '500' }}>{colaborador.cargo || '—'}</p>
+                <p className="text-xs text-ink-faint">Cargo</p>
+                <p className="mt-0.5 text-sm font-medium text-ink">{colaborador.cargo || '—'}</p>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1rem', backgroundColor: '#f9fafb', borderRadius: '0.75rem' }}>
-              <Building2 size={18} style={{ color: '#9ca3af', flexShrink: 0 }} />
+            <div className="flex items-center gap-4 rounded-xl bg-surface-2 p-3.5">
+              <Building2 size={18} className="flex-shrink-0 text-ink-faint" />
               <div>
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Empresa</p>
-                <p style={{ fontSize: '0.95rem', color: '#374151', margin: '0.125rem 0 0', fontWeight: '500' }}>{colaborador.empresa_nome || '—'}</p>
+                <p className="text-xs text-ink-faint">Empresa</p>
+                <p className="mt-0.5 text-sm font-medium text-ink">{colaborador.empresa_nome || '—'}</p>
               </div>
             </div>
           </div>
 
-          <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '1rem 0 0' }}>
-            E-mail, cargo e empresa só podem ser alterados pelo seu gestor.
-          </p>
-        </div>
+          <p className="mt-4 text-xs text-ink-faint">E-mail, cargo e empresa só podem ser alterados pelo seu gestor.</p>
+        </Card>
 
         {/* Formulário editável */}
-        <div className="fade-in" style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.75rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '0.8rem', fontWeight: '600', color: '#6b7280', margin: '0 0 1.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Editar meus dados
-          </h2>
+        <Card className="mb-5 p-6 sm:p-7">
+          <h2 className={sectionTitleClass}>Editar meus dados</h2>
 
           <form onSubmit={handleSalvar}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '1.5rem' }}>
-
-              {/* Nome */}
+            <div className="mb-6 flex flex-col gap-5">
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                  Nome completo
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <User size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                <label className={labelClass}>Nome completo</label>
+                <div className={fieldWrapClass}>
+                  <User size={18} className={iconClass} />
                   <input
                     type="text"
                     required
-                    className="form-input"
+                    className={inputClass}
                     value={formData.nome}
                     onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                     placeholder="Seu nome completo"
@@ -339,16 +297,13 @@ export default function PerfilPage() {
                 </div>
               </div>
 
-              {/* Celular */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                  Celular
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Phone size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                <label className={labelClass}>Celular</label>
+                <div className={fieldWrapClass}>
+                  <Phone size={18} className={iconClass} />
                   <input
                     type="tel"
-                    className="form-input"
+                    className={inputClass}
                     value={formData.celular}
                     onChange={(e) => setFormData({ ...formData, celular: formatPhone(e.target.value) })}
                     placeholder="(00) 00000-0000"
@@ -358,47 +313,37 @@ export default function PerfilPage() {
             </div>
 
             {sucesso && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.875rem 1rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.75rem', marginBottom: '1.25rem' }}>
-                <CheckCircle size={18} style={{ color: '#16a34a' }} />
-                <span style={{ fontSize: '0.9rem', color: '#15803d', fontWeight: '500' }}>Perfil atualizado com sucesso!</span>
+              <div className="mb-5 flex items-center gap-2 rounded-xl bg-teal-tint px-4 py-3.5">
+                <CheckCircle size={18} className="text-teal" />
+                <span className="text-sm font-medium text-teal">Perfil atualizado com sucesso!</span>
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={salvando}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.875rem 1.75rem', backgroundColor: salvando ? '#9ca3af' : '#3b82f6', color: 'white', border: 'none', borderRadius: '0.75rem', cursor: salvando ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '0.95rem' }}
-            >
-              <Save size={18} />
+            <Button type="submit" variant="primary" disabled={salvando} icon={<Save size={18} />}>
               {salvando ? 'Salvando...' : 'Salvar Alterações'}
-            </button>
+            </Button>
           </form>
-        </div>
+        </Card>
 
         {/* Alterar senha */}
-        <div className="fade-in" style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.75rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <h2 style={{ fontSize: '0.8rem', fontWeight: '600', color: '#6b7280', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Segurança
-          </h2>
+        <Card className="p-6 sm:p-7">
+          <h2 className={sectionTitleClass}>Segurança</h2>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '2.5rem', height: '2.5rem', backgroundColor: '#eff6ff', borderRadius: '0.625rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Lock size={18} style={{ color: '#3b82f6' }} />
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-tint">
+                <Lock size={18} className="text-blue" />
               </div>
               <div>
-                <p style={{ fontSize: '0.95rem', fontWeight: '500', color: '#1f2937', margin: 0 }}>Senha</p>
-                <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0.125rem 0 0' }}>Altere sua senha de acesso</p>
+                <p className="text-sm font-medium text-ink">Senha</p>
+                <p className="text-xs text-ink-faint">Altere sua senha de acesso</p>
               </div>
             </div>
-            <button
-              onClick={() => router.push('/alterar-senha')}
-              style={{ padding: '0.625rem 1.25rem', backgroundColor: 'white', color: '#3b82f6', border: '2px solid #3b82f6', borderRadius: '0.625rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem' }}
-            >
+            <Button variant="secondary" onClick={() => router.push('/alterar-senha')}>
               Alterar Senha
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
 
       </div>
     </div>

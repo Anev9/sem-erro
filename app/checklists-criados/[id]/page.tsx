@@ -21,10 +21,13 @@ import {
   Send,
   Trash2
 } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface Checklist {
   id: string
-  titulo: string
+  nome: string
   descricao?: string
   status: string
   data_inicio: string
@@ -56,6 +59,41 @@ interface AcaoVinculada {
   responsavel?: string
   prazo?: string
   item_id?: string
+}
+
+const statusTone = {
+  pendente: 'warning',
+  em_andamento: 'info',
+  concluido: 'success',
+} as const
+
+const statusLabel = {
+  pendente: 'Pendente',
+  em_andamento: 'Em Andamento',
+  concluido: 'Concluído',
+} as const
+
+const statusAcaoTone = {
+  aguardando: 'warning',
+  em_andamento: 'info',
+  concluida: 'success',
+  atrasada: 'danger',
+} as const
+
+const statusAcaoLabel = {
+  aguardando: 'Aguardando',
+  em_andamento: 'Em Andamento',
+  concluida: 'Concluída',
+  atrasada: 'Atrasada',
+} as const
+
+const prioridadeCor = { baixa: 'bg-teal', media: 'bg-amber', alta: 'bg-coral' } as const
+
+const respostaEstilo = {
+  sim: { bg: 'bg-teal-tint', icon: <CheckCircle size={20} className="text-teal" />, label: 'Sim', tone: 'success' as const },
+  nao: { bg: 'bg-coral-tint', icon: <XCircle size={20} className="text-coral" />, label: 'Não', tone: 'danger' as const },
+  na: { bg: 'bg-surface-2', icon: <MinusCircle size={20} className="text-ink-faint" />, label: 'N/A', tone: 'neutral' as const },
+  pendente: { bg: 'bg-amber-tint', icon: <div className="h-5 w-5 rounded-full border-2 border-amber bg-white" />, label: 'Pendente', tone: 'warning' as const },
 }
 
 export default function DetalhesChecklistPage() {
@@ -117,11 +155,9 @@ export default function DetalhesChecklistPage() {
       setRespostas(mapaRespostas)
       setAcoes(ac || [])
 
-      // Carregar histórico de versões
       const resVersoes = await fetch(`/api/aluno/checklists-criados/${checklistId}/versoes`)
       if (resVersoes.ok) setVersoes(await resVersoes.json())
 
-      // Carregar comentários
       const resComentarios = await fetch(`/api/aluno/comentarios?checklist_id=${checklistId}`)
       if (resComentarios.ok) setComentarios(await resComentarios.json())
 
@@ -134,8 +170,8 @@ export default function DetalhesChecklistPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'white', fontSize: '1rem' }}>Carregando detalhes...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-ink-muted">Carregando detalhes...</p>
       </div>
     )
   }
@@ -149,18 +185,8 @@ export default function DetalhesChecklistPage() {
   const semResposta = itens.filter(i => !respostas[i.id]?.resposta).length
   const respondidos = totalItens - semResposta
   const percentual = totalItens > 0 ? Math.round((conformes / Math.max(1, totalItens - naAplicavel)) * 100) : 0
-
-  const getStatusChecklist = (status: string) => {
-    const s = { pendente: { bg: '#FFF3E0', text: '#E65100', border: '#FFB74D', label: 'Pendente' }, em_andamento: { bg: '#E3F2FD', text: '#1565C0', border: '#64B5F6', label: 'Em Andamento' }, concluido: { bg: '#E8F5E9', text: '#2E7D32', border: '#81C784', label: 'Concluído' } }
-    return s[status as keyof typeof s] || s.pendente
-  }
-
-  const getStatusAcao = (status: string) => {
-    const s = { aguardando: { bg: '#FFF3E0', text: '#E65100', label: 'Aguardando' }, em_andamento: { bg: '#E3F2FD', text: '#1565C0', label: 'Em Andamento' }, concluida: { bg: '#E8F5E9', text: '#2E7D32', label: 'Concluída' }, atrasada: { bg: '#FFEBEE', text: '#C62828', label: 'Atrasada' } }
-    return s[status as keyof typeof s] || s.aguardando
-  }
-
-  const getPrioridadeCor = (p: string) => ({ baixa: '#4CAF50', media: '#FF9800', alta: '#ef5350' }[p] || '#FF9800')
+  const percentualCor = percentual >= 80 ? 'text-teal' : percentual >= 50 ? 'text-amber' : 'text-coral'
+  const percentualBarra = percentual >= 80 ? 'bg-teal' : percentual >= 50 ? 'bg-amber' : 'bg-coral'
 
   const formatarData = (d: string) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
 
@@ -171,7 +197,7 @@ export default function DetalhesChecklistPage() {
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Relatório – ${checklist.titulo}</title>
+        <title>Relatório – ${checklist.nome}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 2rem; color: #1f2937; font-size: 13px; }
           h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
@@ -189,20 +215,20 @@ export default function DetalhesChecklistPage() {
         </style>
       </head>
       <body>
-        <h1>${checklist.titulo}</h1>
+        <h1>${checklist.nome}</h1>
         <p class="meta">
           ${checklist.empresas ? `Empresa: ${checklist.empresas.nome_fantasia} | ` : ''}
           ${checklist.colaboradores ? `Colaborador: ${checklist.colaboradores.nome} | ` : ''}
           Prazo: ${formatarData(checklist.data_fim)} |
-          Status: ${getStatusChecklist(checklist.status).label} |
+          Status: ${statusLabel[checklist.status as keyof typeof statusLabel] || checklist.status} |
           Gerado em: ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
         </p>
         <h2>Resumo</h2>
         <div class="resumo">
-          <div class="card"><div class="num" style="color:#16a34a">${conformes}</div><div class="label">Conforme</div></div>
-          <div class="card"><div class="num" style="color:#dc2626">${naoConformes}</div><div class="label">Não Conforme</div></div>
+          <div class="card"><div class="num" style="color:#16b88a">${conformes}</div><div class="label">Conforme</div></div>
+          <div class="card"><div class="num" style="color:#fb5c66">${naoConformes}</div><div class="label">Não Conforme</div></div>
           <div class="card"><div class="num" style="color:#6b7280">${naAplicavel}</div><div class="label">N/A</div></div>
-          <div class="card"><div class="num" style="color:#2563eb">${percentual}%</div><div class="label">Conformidade</div></div>
+          <div class="card"><div class="num" style="color:#ff7a3d">${percentual}%</div><div class="label">Conformidade</div></div>
         </div>
         <h2>Itens (${totalItens})</h2>
         ${itens.map(item => {
@@ -221,7 +247,7 @@ export default function DetalhesChecklistPage() {
           ${acoes.map(a => `
             <div class="item">
               <div class="item-titulo">${a.titulo}</div>
-              <div class="item-resposta">Status: ${getStatusAcao(a.status).label} | Prioridade: ${a.prioridade}${a.responsavel ? ` | Responsável: ${a.responsavel}` : ''}${a.prazo ? ` | Prazo: ${formatarData(a.prazo)}` : ''}</div>
+              <div class="item-resposta">Status: ${statusAcaoLabel[a.status as keyof typeof statusAcaoLabel] || a.status} | Prioridade: ${a.prioridade}${a.responsavel ? ` | Responsável: ${a.responsavel}` : ''}${a.prazo ? ` | Prazo: ${formatarData(a.prazo)}` : ''}</div>
             </div>
           `).join('')}
         ` : ''}
@@ -266,354 +292,293 @@ export default function DetalhesChecklistPage() {
     }
   }
 
-  const dynamicStatus = respondidos >= totalItens && totalItens > 0
+  const dynamicStatus = (respondidos >= totalItens && totalItens > 0
     ? 'concluido'
     : respondidos > 0
     ? 'em_andamento'
-    : checklist.status || 'pendente'
-  const statusCl = getStatusChecklist(dynamicStatus)
+    : checklist.status || 'pendente') as keyof typeof statusTone
 
   return (
-    <>
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-      `}</style>
-
-      <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1000px] px-6 py-8">
 
         {/* Header */}
-        <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '1.5rem 2rem', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
-          <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-            <button
-              onClick={() => router.push('/checklists-criados')}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.85)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', marginBottom: '1rem', padding: 0 }}
-            >
-              <ArrowLeft size={16} />
-              Voltar para Checklists
-            </button>
+        <div className="mb-5">
+          <button
+            onClick={() => router.push('/checklists-criados')}
+            className="mb-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-sm font-medium text-ink-muted shadow-soft-sm transition-colors hover:text-ink cursor-pointer"
+          >
+            <ArrowLeft size={16} />
+            Voltar para Checklists
+          </button>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-              <div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'white', margin: '0 0 0.5rem' }}>
-                  {checklist.titulo}
-                </h1>
-                <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
-                  {checklist.empresas && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.85)' }}>
-                      <Building2 size={14} /> {checklist.empresas.nome_fantasia}
-                    </span>
-                  )}
-                  {checklist.colaboradores && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.85)' }}>
-                      <User size={14} /> {checklist.colaboradores.nome}
-                    </span>
-                  )}
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.85)' }}>
-                    <Calendar size={14} /> Prazo: {formatarData(checklist.data_fim)}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.85)' }}>
-                    <ClipboardList size={14} /> {respondidos}/{totalItens} respondidos
-                  </span>
-                </div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="font-display text-2xl font-bold text-ink">{checklist.nome}</h1>
+              <div className="mt-2 flex flex-wrap gap-4 text-sm text-ink-muted">
+                {checklist.empresas && (
+                  <span className="flex items-center gap-1.5"><Building2 size={14} /> {checklist.empresas.nome_fantasia}</span>
+                )}
+                {checklist.colaboradores && (
+                  <span className="flex items-center gap-1.5"><User size={14} /> {checklist.colaboradores.nome}</span>
+                )}
+                <span className="flex items-center gap-1.5"><Calendar size={14} /> Prazo: {formatarData(checklist.data_fim)}</span>
+                <span className="flex items-center gap-1.5"><ClipboardList size={14} /> {respondidos}/{totalItens} respondidos</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <span style={{ padding: '0.375rem 1rem', background: statusCl.bg, color: statusCl.text, border: `1.5px solid ${statusCl.border}`, borderRadius: '999px', fontSize: '0.8rem', fontWeight: '700', whiteSpace: 'nowrap' }}>
-                  {statusCl.label}
-                </span>
-                <button
-                  onClick={exportarPDF}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1.5px solid rgba(255,255,255,0.5)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', whiteSpace: 'nowrap' }}
-                  title="Exportar relatório em PDF"
-                >
-                  <FileDown size={14} />
-                  Exportar PDF
-                </button>
-              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Badge tone={statusTone[dynamicStatus]}>{statusLabel[dynamicStatus]}</Badge>
+              <Button variant="secondary" onClick={exportarPDF} icon={<FileDown size={14} />} title="Exportar relatório em PDF">
+                Exportar PDF
+              </Button>
             </div>
           </div>
         </div>
 
-        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
+        {/* Cards de resumo */}
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <Card className="p-5 text-center">
+            <p className="font-display text-3xl font-bold text-teal">{conformes}</p>
+            <p className="mt-1 text-xs font-semibold text-ink-muted">Conforme</p>
+          </Card>
+          <Card className="p-5 text-center">
+            <p className="font-display text-3xl font-bold text-coral">{naoConformes}</p>
+            <p className="mt-1 text-xs font-semibold text-ink-muted">Não Conforme</p>
+          </Card>
+          <Card className="p-5 text-center">
+            <p className="font-display text-3xl font-bold text-ink-faint">{naAplicavel}</p>
+            <p className="mt-1 text-xs font-semibold text-ink-muted">N/A</p>
+          </Card>
+          {semResposta > 0 && (
+            <Card className="p-5 text-center">
+              <p className="font-display text-3xl font-bold text-amber">{semResposta}</p>
+              <p className="mt-1 text-xs font-semibold text-ink-muted">Sem Resposta</p>
+            </Card>
+          )}
+          <Card className="bg-brand p-5 text-center shadow-[0_8px_16px_-8px_rgba(255,122,61,0.6)]">
+            <p className="font-display text-3xl font-bold text-white">{percentual}%</p>
+            <p className="mt-1 text-xs font-semibold text-white/85">Conformidade</p>
+          </Card>
+        </div>
 
-          {/* Cards de resumo */}
-          <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-            <div style={{ background: 'white', borderRadius: '12px', padding: '1.25rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '2px solid #bbf7d0' }}>
-              <p style={{ fontSize: '2.25rem', fontWeight: '800', color: '#16a34a', margin: 0 }}>{conformes}</p>
-              <p style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: '600', margin: '0.25rem 0 0' }}>Conforme</p>
-            </div>
-            <div style={{ background: 'white', borderRadius: '12px', padding: '1.25rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '2px solid #fecaca' }}>
-              <p style={{ fontSize: '2.25rem', fontWeight: '800', color: '#dc2626', margin: 0 }}>{naoConformes}</p>
-              <p style={{ fontSize: '0.8rem', color: '#b91c1c', fontWeight: '600', margin: '0.25rem 0 0' }}>Não Conforme</p>
-            </div>
-            <div style={{ background: 'white', borderRadius: '12px', padding: '1.25rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '2px solid #e5e7eb' }}>
-              <p style={{ fontSize: '2.25rem', fontWeight: '800', color: '#6b7280', margin: 0 }}>{naAplicavel}</p>
-              <p style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: '600', margin: '0.25rem 0 0' }}>N/A</p>
-            </div>
-            {semResposta > 0 && (
-              <div style={{ background: 'white', borderRadius: '12px', padding: '1.25rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '2px solid #fed7aa' }}>
-                <p style={{ fontSize: '2.25rem', fontWeight: '800', color: '#ea580c', margin: 0 }}>{semResposta}</p>
-                <p style={{ fontSize: '0.8rem', color: '#c2410c', fontWeight: '600', margin: '0.25rem 0 0' }}>Sem Resposta</p>
-              </div>
-            )}
-            <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px', padding: '1.25rem', textAlign: 'center', boxShadow: '0 4px 12px rgba(102,126,234,0.3)' }}>
-              <p style={{ fontSize: '2.25rem', fontWeight: '800', color: 'white', margin: 0 }}>{percentual}%</p>
-              <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', fontWeight: '600', margin: '0.25rem 0 0' }}>Conformidade</p>
-            </div>
+        {/* Barra de progresso */}
+        <Card className="mb-5 p-5">
+          <div className="mb-2 flex justify-between text-sm font-semibold text-ink-muted">
+            <span>Conformidade geral</span>
+            <span className={percentualCor}>{percentual}%</span>
           </div>
-
-          {/* Barra de progresso */}
-          <div className="fade-in" style={{ background: 'white', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#64748b', fontWeight: '600' }}>
-              <span>Conformidade geral</span>
-              <span style={{ color: percentual >= 80 ? '#16a34a' : percentual >= 50 ? '#ca8a04' : '#dc2626' }}>{percentual}%</span>
-            </div>
-            <div style={{ width: '100%', height: '10px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
-              <div style={{
-                width: `${percentual}%`, height: '100%', borderRadius: '999px', transition: 'width 0.6s ease',
-                background: percentual >= 80 ? '#16a34a' : percentual >= 50 ? '#ca8a04' : '#dc2626'
-              }} />
-            </div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
+            <div className={`h-full rounded-full transition-[width] duration-500 ${percentualBarra}`} style={{ width: `${percentual}%` }} />
           </div>
+        </Card>
 
-          {/* Lista de itens */}
-          <div className="fade-in" style={{ background: 'white', borderRadius: '16px', padding: '1.75rem', marginBottom: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <h2 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#1e293b', margin: '0 0 1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ClipboardList size={20} style={{ color: '#667eea' }} />
-              Itens do Checklist
-            </h2>
+        {/* Lista de itens */}
+        <Card className="mb-5 p-6">
+          <h2 className="mb-4 flex items-center gap-2 font-display text-base font-bold text-ink">
+            <ClipboardList size={20} className="text-brand" />
+            Itens do Checklist
+          </h2>
 
-            {/* Lightbox */}
-            {fotoExpandida && (
-              <div
-                onClick={() => setFotoExpandida(null)}
-                style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', cursor: 'zoom-out' }}
-              >
-                <img src={fotoExpandida} alt="Foto ampliada" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '0.75rem', objectFit: 'contain' }} />
-              </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-              {itens.map((item, index) => {
-                const r = respostas[item.id]
-                const acaoItem = acoes.find(a => a.item_id === item.id)
-
-                const corFundo = r?.resposta === 'sim' ? '#f0fdf4' : r?.resposta === 'nao' ? '#fef2f2' : r?.resposta === 'na' ? '#f9fafb' : '#fffbeb'
-                const corBorda = r?.resposta === 'sim' ? '#bbf7d0' : r?.resposta === 'nao' ? '#fecaca' : r?.resposta === 'na' ? '#e5e7eb' : '#fed7aa'
-
-                return (
-                  <div key={item.id} style={{ background: corFundo, border: `1.5px solid ${corBorda}`, borderRadius: '10px', padding: '1rem 1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
-                      {/* Ícone de resposta */}
-                      <div style={{ flexShrink: 0, marginTop: '2px' }}>
-                        {r?.resposta === 'sim' ? <CheckCircle size={20} style={{ color: '#16a34a' }} /> :
-                         r?.resposta === 'nao' ? <XCircle size={20} style={{ color: '#dc2626' }} /> :
-                         r?.resposta === 'na' ? <MinusCircle size={20} style={{ color: '#9ca3af' }} /> :
-                         <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid #fb923c', background: 'white' }} />}
-                      </div>
-
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600' }}>{index + 1}.</span>
-                          <p style={{ fontSize: '0.9rem', color: '#1e293b', fontWeight: '500', margin: 0 }}>{item.titulo}</p>
-                        </div>
-
-                        {r?.observacao && (
-                          <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.375rem 0 0', fontStyle: 'italic', paddingLeft: '1rem', borderLeft: '2px solid #cbd5e1' }}>
-                            {r.observacao}
-                          </p>
-                        )}
-
-                        {/* Foto do funcionário */}
-                        {r?.foto_url && (
-                          <button
-                            onClick={() => setFotoExpandida(r.foto_url!)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', background: 'none', border: 'none', cursor: 'zoom-in', padding: 0 }}
-                            title="Ver foto"
-                          >
-                            <img
-                              src={r.foto_url}
-                              alt="Foto do funcionário"
-                              style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #cbd5e1' }}
-                            />
-                            <span style={{ fontSize: '0.75rem', color: '#667eea', fontWeight: '500' }}>Ver foto</span>
-                          </button>
-                        )}
-
-                        {/* Ação vinculada a este item */}
-                        {acaoItem && (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.5rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '6px', padding: '0.25rem 0.625rem', fontSize: '0.75rem', color: '#ea580c' }}>
-                            <AlertTriangle size={12} />
-                            Ação: {acaoItem.titulo}
-                          </div>
-                        )}
-
-                        {/* Botão de comentários */}
-                        <button
-                          onClick={() => setComentarioAberto(comentarioAberto === item.id ? null : item.id)}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.5rem', marginLeft: acaoItem ? '0.5rem' : '0', background: 'none', border: 'none', cursor: 'pointer', color: '#667eea', fontSize: '0.75rem', fontWeight: '600', padding: 0 }}
-                        >
-                          <MessageSquare size={12} />
-                          {comentarios.filter(c => c.item_id === item.id).length > 0
-                            ? `${comentarios.filter(c => c.item_id === item.id).length} comentário(s)`
-                            : 'Comentar'}
-                        </button>
-
-                        {/* Painel de comentários */}
-                        {comentarioAberto === item.id && (
-                          <div style={{ marginTop: '0.75rem', padding: '0.875rem', background: 'white', borderRadius: '8px', border: '1.5px solid #e2e8f0' }}>
-                            {comentarios.filter(c => c.item_id === item.id).map(com => (
-                              <div key={com.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', padding: '0.5rem 0', borderBottom: '1px solid #f1f5f9' }}>
-                                <div>
-                                  <p style={{ fontSize: '0.75rem', fontWeight: '700', color: '#667eea', margin: 0 }}>{com.autor}</p>
-                                  <p style={{ fontSize: '0.875rem', color: '#1e293b', margin: '0.125rem 0 0' }}>{com.texto}</p>
-                                  <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: '0.125rem 0 0' }}>{new Date(com.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
-                                </div>
-                                <button onClick={() => excluirComentario(com.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '0.25rem', flexShrink: 0 }}>
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            ))}
-                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                              <input
-                                type="text"
-                                value={novoComentario}
-                                onChange={(e) => setNovoComentario(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarComentario(item.id); } }}
-                                placeholder="Adicionar comentário..."
-                                style={{ flex: 1, padding: '0.5rem 0.75rem', border: '1.5px solid #e2e8f0', borderRadius: '6px', fontSize: '0.875rem', outline: 'none' }}
-                              />
-                              <button
-                                onClick={() => enviarComentario(item.id)}
-                                disabled={enviandoComentario || !novoComentario.trim()}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 0.75rem', background: '#667eea', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', opacity: enviandoComentario || !novoComentario.trim() ? 0.6 : 1 }}
-                              >
-                                <Send size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Label da resposta */}
-                      <div style={{ flexShrink: 0 }}>
-                        <span style={{
-                          fontSize: '0.8rem', fontWeight: '700', padding: '0.25rem 0.75rem', borderRadius: '999px',
-                          background: r?.resposta === 'sim' ? '#dcfce7' : r?.resposta === 'nao' ? '#fee2e2' : r?.resposta === 'na' ? '#f3f4f6' : '#ffedd5',
-                          color: r?.resposta === 'sim' ? '#16a34a' : r?.resposta === 'nao' ? '#dc2626' : r?.resposta === 'na' ? '#6b7280' : '#ea580c'
-                        }}>
-                          {r?.resposta === 'sim' ? 'Sim' : r?.resposta === 'nao' ? 'Não' : r?.resposta === 'na' ? 'N/A' : 'Pendente'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Ações corretivas vinculadas */}
-          {acoes.length > 0 && (
-            <div className="fade-in" style={{ background: 'white', borderRadius: '16px', padding: '1.75rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <h2 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#1e293b', margin: '0 0 1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <AlertTriangle size={20} style={{ color: '#ea580c' }} />
-                Ações Corretivas ({acoes.length})
-              </h2>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {acoes.map(acao => {
-                  const statusAcao = getStatusAcao(acao.status)
-                  return (
-                    <div key={acao.id} style={{ border: '1.5px solid #e2e8f0', borderRadius: '10px', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '200px' }}>
-                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: getPrioridadeCor(acao.prioridade), flexShrink: 0 }} title={`Prioridade ${acao.prioridade}`} />
-                        <div>
-                          <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#1e293b', margin: 0 }}>{acao.titulo}</p>
-                          {acao.responsavel && (
-                            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.2rem 0 0' }}>Responsável: {acao.responsavel}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                        {acao.prazo && (
-                          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                            Prazo: {formatarData(acao.prazo)}
-                          </span>
-                        )}
-                        <span style={{ padding: '0.25rem 0.75rem', background: statusAcao.bg, color: statusAcao.text, borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' }}>
-                          {statusAcao.label}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <button
-                onClick={() => router.push('/acoes')}
-                style={{ marginTop: '1.25rem', padding: '0.75rem 1.5rem', background: 'transparent', color: '#667eea', border: '2px solid #667eea', borderRadius: '10px', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#667eea'; e.currentTarget.style.color = 'white'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#667eea'; }}
-              >
-                Ver todas as ações
-              </button>
+          {/* Lightbox */}
+          {fotoExpandida && (
+            <div
+              onClick={() => setFotoExpandida(null)}
+              className="fixed inset-0 z-[9999] flex cursor-zoom-out items-center justify-center bg-black/85 p-4"
+            >
+              <img src={fotoExpandida} alt="Foto ampliada" className="max-h-[90vh] max-w-full rounded-xl object-contain" />
             </div>
           )}
 
-          {/* Histórico de versões */}
-          {versoes.length > 0 && (
-            <div className="fade-in" style={{ background: 'white', borderRadius: '16px', padding: '1.75rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <button
-                onClick={() => setShowVersoes(!showVersoes)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-              >
-                <h2 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <History size={20} style={{ color: '#667eea' }} />
-                  Histórico de Versões ({versoes.length})
-                </h2>
-                {showVersoes ? <ChevronUp size={20} style={{ color: '#94a3b8' }} /> : <ChevronDown size={20} style={{ color: '#94a3b8' }} />}
-              </button>
+          <div className="flex flex-col gap-2.5">
+            {itens.map((item, index) => {
+              const r = respostas[item.id]
+              const acaoItem = acoes.find(a => a.item_id === item.id)
+              const estilo = respostaEstilo[r?.resposta ?? 'pendente']
+              const numComentarios = comentarios.filter(c => c.item_id === item.id).length
 
-              {showVersoes && (
-                <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {versoes.map(v => (
-                    <div key={v.id} style={{ border: '1.5px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
-                      <button
-                        onClick={() => setVersaoExpandida(versaoExpandida === v.id ? null : v.id)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0.875rem 1.25rem', background: versaoExpandida === v.id ? '#f1f5f9' : 'white', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                      >
-                        <div>
-                          <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#475569' }}>Versão {v.versao}</span>
-                          <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '0.75rem' }}>
-                            {new Date(v.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          <p style={{ fontSize: '0.875rem', color: '#64748b', margin: '0.2rem 0 0' }}>{v.titulo}</p>
+              return (
+                <div key={item.id} className={`rounded-xl p-4 ${estilo.bg}`}>
+                  <div className="flex items-start gap-3.5">
+                    <div className="mt-0.5 flex-shrink-0">{estilo.icon}</div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-ink-faint">{index + 1}.</span>
+                        <p className="text-sm font-medium text-ink">{item.titulo}</p>
+                      </div>
+
+                      {r?.observacao && (
+                        <p className="mt-1.5 border-l-2 border-ink-faint/40 pl-3 text-xs italic text-ink-muted">
+                          {r.observacao}
+                        </p>
+                      )}
+
+                      {r?.foto_url && (
+                        <button
+                          onClick={() => setFotoExpandida(r.foto_url!)}
+                          className="mt-2 flex cursor-zoom-in items-center gap-2"
+                          title="Ver foto"
+                        >
+                          <img
+                            src={r.foto_url}
+                            alt="Foto do funcionário"
+                            className="h-16 w-16 rounded-lg border-2 border-white object-cover"
+                          />
+                          <span className="text-xs font-medium text-brand">Ver foto</span>
+                        </button>
+                      )}
+
+                      {acaoItem && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-amber">
+                          <AlertTriangle size={12} />
+                          Ação: {acaoItem.titulo}
                         </div>
-                        {versaoExpandida === v.id ? <ChevronUp size={16} style={{ color: '#94a3b8', flexShrink: 0 }} /> : <ChevronDown size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />}
+                      )}
+
+                      <button
+                        onClick={() => setComentarioAberto(comentarioAberto === item.id ? null : item.id)}
+                        className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-brand"
+                      >
+                        <MessageSquare size={12} />
+                        {numComentarios > 0 ? `${numComentarios} comentário(s)` : 'Comentar'}
                       </button>
 
-                      {versaoExpandida === v.id && (
-                        <div style={{ padding: '0.75rem 1.25rem 1rem', borderTop: '1px solid #e2e8f0', background: '#fafafa' }}>
-                          {v.descricao && <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '0.75rem' }}>{v.descricao}</p>}
-                          <p style={{ fontSize: '0.75rem', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.5rem' }}>
-                            Itens ({v.itens.length})
-                          </p>
-                          <ol style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            {v.itens.map((item, idx) => (
-                              <li key={idx} style={{ fontSize: '0.875rem', color: '#475569' }}>{item.titulo}</li>
-                            ))}
-                          </ol>
+                      {comentarioAberto === item.id && (
+                        <div className="mt-3 rounded-xl bg-white p-3.5 shadow-soft-sm">
+                          {comentarios.filter(c => c.item_id === item.id).map(com => (
+                            <div key={com.id} className="flex items-start justify-between gap-2 border-b border-surface-2 py-2 last:border-0">
+                              <div>
+                                <p className="text-xs font-bold text-brand">{com.autor}</p>
+                                <p className="mt-0.5 text-sm text-ink">{com.texto}</p>
+                                <p className="mt-0.5 text-[11px] text-ink-faint">{new Date(com.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+                              </div>
+                              <button onClick={() => excluirComentario(com.id)} className="flex-shrink-0 text-coral">
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                          <div className="mt-3 flex gap-2">
+                            <input
+                              type="text"
+                              value={novoComentario}
+                              onChange={(e) => setNovoComentario(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarComentario(item.id) } }}
+                              placeholder="Adicionar comentário..."
+                              className="flex-1 rounded-lg bg-surface-2 px-3 py-2 text-sm outline-none"
+                            />
+                            <button
+                              onClick={() => enviarComentario(item.id)}
+                              disabled={enviandoComentario || !novoComentario.trim()}
+                              className="flex items-center justify-center rounded-lg bg-brand px-3 py-2 text-white disabled:opacity-60"
+                            >
+                              <Send size={14} />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
-        </div>
+                    <div className="flex-shrink-0">
+                      <Badge tone={estilo.tone}>{estilo.label}</Badge>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+
+        {/* Ações corretivas vinculadas */}
+        {acoes.length > 0 && (
+          <Card className="mb-5 p-6">
+            <h2 className="mb-4 flex items-center gap-2 font-display text-base font-bold text-ink">
+              <AlertTriangle size={20} className="text-amber" />
+              Ações Corretivas ({acoes.length})
+            </h2>
+
+            <div className="flex flex-col gap-2.5">
+              {acoes.map(acao => (
+                <div key={acao.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 p-4">
+                  <div className="flex min-w-[200px] flex-1 items-center gap-3">
+                    <div className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${prioridadeCor[acao.prioridade as keyof typeof prioridadeCor] || 'bg-amber'}`} title={`Prioridade ${acao.prioridade}`} />
+                    <div>
+                      <p className="text-sm font-semibold text-ink">{acao.titulo}</p>
+                      {acao.responsavel && (
+                        <p className="mt-0.5 text-xs text-ink-muted">Responsável: {acao.responsavel}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {acao.prazo && (
+                      <span className="text-xs text-ink-muted">Prazo: {formatarData(acao.prazo)}</span>
+                    )}
+                    <Badge tone={statusAcaoTone[acao.status as keyof typeof statusAcaoTone] || 'warning'}>
+                      {statusAcaoLabel[acao.status as keyof typeof statusAcaoLabel] || acao.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Button variant="secondary" className="mt-4" onClick={() => router.push('/acoes')}>
+              Ver todas as ações
+            </Button>
+          </Card>
+        )}
+
+        {/* Histórico de versões */}
+        {versoes.length > 0 && (
+          <Card className="p-6">
+            <button
+              onClick={() => setShowVersoes(!showVersoes)}
+              className="flex w-full items-center justify-between"
+            >
+              <h2 className="flex items-center gap-2 font-display text-base font-bold text-ink">
+                <History size={20} className="text-brand" />
+                Histórico de Versões ({versoes.length})
+              </h2>
+              {showVersoes ? <ChevronUp size={20} className="text-ink-faint" /> : <ChevronDown size={20} className="text-ink-faint" />}
+            </button>
+
+            {showVersoes && (
+              <div className="mt-4 flex flex-col gap-2.5">
+                {versoes.map(v => (
+                  <div key={v.id} className="overflow-hidden rounded-xl bg-surface-2">
+                    <button
+                      onClick={() => setVersaoExpandida(versaoExpandida === v.id ? null : v.id)}
+                      className="flex w-full items-center justify-between px-4 py-3 text-left"
+                    >
+                      <div>
+                        <span className="text-sm font-bold text-ink-muted">Versão {v.versao}</span>
+                        <span className="ml-3 text-xs text-ink-faint">
+                          {new Date(v.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <p className="mt-0.5 text-sm text-ink-muted">{v.titulo}</p>
+                      </div>
+                      {versaoExpandida === v.id ? <ChevronUp size={16} className="flex-shrink-0 text-ink-faint" /> : <ChevronDown size={16} className="flex-shrink-0 text-ink-faint" />}
+                    </button>
+
+                    {versaoExpandida === v.id && (
+                      <div className="border-t border-white/60 px-4 pb-4 pt-3">
+                        {v.descricao && <p className="mb-3 text-sm text-ink-muted">{v.descricao}</p>}
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+                          Itens ({v.itens.length})
+                        </p>
+                        <ol className="flex flex-col gap-1 pl-5">
+                          {v.itens.map((item, idx) => (
+                            <li key={idx} className="list-decimal text-sm text-ink-muted">{item.titulo}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
+
       </div>
-    </>
+    </div>
   )
 }

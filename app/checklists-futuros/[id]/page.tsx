@@ -6,6 +6,9 @@ import { ArrowLeft, Calendar, CheckCircle, XCircle, MinusCircle, Clock, AlertCir
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { diaBrasil, hojeBrasil } from '@/lib/periodo'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface ChecklistFuturo {
   id: string
@@ -39,6 +42,20 @@ interface Resposta {
   observacao?: string | null
   foto_url?: string | null
   respondido_em?: string | null
+}
+
+const statusInfo = {
+  concluido: { tone: 'success' as const, icon: CheckCircle, label: 'Concluído' },
+  em_andamento: { tone: 'info' as const, icon: PlayCircle, label: 'Em Andamento' },
+  pendente: { tone: 'warning' as const, icon: Clock, label: 'Pendente' },
+  atrasado: { tone: 'danger' as const, icon: AlertCircle, label: 'Atrasado' },
+}
+
+const respostaEstilo = {
+  sim: { bg: 'bg-teal-tint', text: 'text-teal', label: 'Sim', icon: <CheckCircle size={18} className="text-teal" /> },
+  nao: { bg: 'bg-coral-tint', text: 'text-coral', label: 'Não', icon: <XCircle size={18} className="text-coral" /> },
+  na: { bg: 'bg-surface-2', text: 'text-ink-faint', label: 'N/A', icon: <MinusCircle size={18} className="text-ink-faint" /> },
+  semResposta: { bg: 'bg-surface-2', text: 'text-ink-faint', label: 'Sem resposta', icon: null },
 }
 
 export default function DetalhesChecklistFuturoPage() {
@@ -139,21 +156,6 @@ export default function DetalhesChecklistFuturoPage() {
     }
   }
 
-  function obterCorStatus(status: string) {
-    switch (status) {
-      case 'concluido':
-        return { bg: '#dcfce7', text: '#166534', icon: CheckCircle, label: 'Concluído' }
-      case 'em_andamento':
-        return { bg: '#dbeafe', text: '#1e40af', icon: PlayCircle, label: 'Em Andamento' }
-      case 'pendente':
-        return { bg: '#fef3c7', text: '#92400e', icon: Clock, label: 'Pendente' }
-      case 'atrasado':
-        return { bg: '#fee2e2', text: '#991b1b', icon: AlertCircle, label: 'Atrasado' }
-      default:
-        return { bg: '#f3f4f6', text: '#374151', icon: Clock, label: status }
-    }
-  }
-
   const ehRecorrente = !!(checklist?.recorrencia && checklist.recorrencia !== 'nenhuma')
 
   // Dias com respostas registradas, do mais recente para o mais antigo
@@ -182,204 +184,157 @@ export default function DetalhesChecklistFuturoPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#6b7280' }}>Carregando...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-ink-muted">Carregando...</p>
       </div>
     )
   }
 
   if (!checklist) return null
 
-  const statusInfo = obterCorStatus(checklist.status || 'pendente')
-  const StatusIcon = statusInfo.icon
+  const info = statusInfo[(checklist.status || 'pendente') as keyof typeof statusInfo] || statusInfo.pendente
+  const StatusIcon = info.icon
 
   return (
     <>
       {fotoExpandida && (
         <div
           onClick={() => setFotoExpandida(null)}
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', cursor: 'zoom-out' }}
+          className="fixed inset-0 z-[9999] flex cursor-zoom-out items-center justify-center bg-black/85 p-4"
         >
-          <img src={fotoExpandida} alt="Foto ampliada" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '0.75rem', objectFit: 'contain' }} />
+          <img src={fotoExpandida} alt="Foto ampliada" className="max-h-[90vh] max-w-full rounded-xl object-contain" />
         </div>
       )}
 
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-        <div style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+      <div className="min-h-screen">
+        <div className="mx-auto max-w-[860px] px-6 py-8">
 
-          {/* Voltar */}
           <button
             onClick={() => router.push('/checklists-futuros')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '0.5rem', cursor: 'pointer', marginBottom: '1.5rem', color: '#374151', fontSize: '0.95rem' }}
+            className="mb-5 inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-sm font-medium text-ink-muted shadow-soft-sm transition-colors hover:text-ink cursor-pointer"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={16} />
             Voltar
           </button>
 
           {/* Header */}
-          <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+          <Card className="mb-5 p-6">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', margin: '0 0 0.5rem' }}>
-                  {checklist.nome}
-                </h1>
-                {checklist.descricao && (
-                  <p style={{ color: '#6b7280', margin: 0 }}>{checklist.descricao}</p>
-                )}
+                <h1 className="font-display text-xl font-bold text-ink">{checklist.nome}</h1>
+                {checklist.descricao && <p className="mt-1 text-sm text-ink-muted">{checklist.descricao}</p>}
               </div>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', borderRadius: '9999px', backgroundColor: statusInfo.bg, color: statusInfo.text, fontSize: '0.875rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
-                <StatusIcon size={16} />
-                {statusInfo.label}
-              </span>
+              <Badge tone={info.tone}>
+                <StatusIcon size={14} />
+                {info.label}
+              </Badge>
             </div>
 
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.875rem', color: '#6b7280' }}>
+            <div className="flex flex-wrap gap-4 text-sm text-ink-muted">
               {checklist.proxima_execucao && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                  <Calendar size={16} />
+                <div className="flex items-center gap-1.5">
+                  <Calendar size={15} />
                   {new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}
                 </div>
               )}
               {checklist.empresas && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                  <Building2 size={16} />
+                <div className="flex items-center gap-1.5">
+                  <Building2 size={15} />
                   {checklist.empresas.nome_fantasia}
                 </div>
               )}
               {checklist.colaboradores && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                  <ClipboardList size={16} />
+                <div className="flex items-center gap-1.5">
+                  <ClipboardList size={15} />
                   {checklist.colaboradores.nome}
                   {checklist.colaboradores.cargo && ` — ${checklist.colaboradores.cargo}`}
                 </div>
               )}
               {checklist.recorrencia && checklist.recorrencia !== 'nenhuma' && (
-                <span style={{ padding: '0.2rem 0.6rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '9999px', fontWeight: '600', fontSize: '0.8rem', border: '1px solid #bfdbfe' }}>
-                  🔄 {checklist.recorrencia.charAt(0).toUpperCase() + checklist.recorrencia.slice(1)}
-                </span>
+                <Badge tone="info">🔄 {checklist.recorrencia.charAt(0).toUpperCase() + checklist.recorrencia.slice(1)}</Badge>
               )}
               {(checklist.dias_tolerancia ?? 0) > 0 && (
                 <span>🕐 {checklist.dias_tolerancia} dia(s) de tolerância</span>
               )}
             </div>
-          </div>
+          </Card>
 
           {/* Seletor de dia (checklists recorrentes) */}
           {ehRecorrente && (
-            <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1rem 1.5rem', marginBottom: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
-              <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: '0 0 0.75rem', fontWeight: '600' }}>
-                Ver histórico do dia
-              </p>
+            <Card className="mb-5 p-5">
+              <p className="mb-3 text-sm font-semibold text-ink-muted">Ver histórico do dia</p>
               {diasDisponiveis.length === 0 ? (
-                <p style={{ color: '#9ca3af', fontSize: '0.9rem', margin: 0 }}>
-                  Ainda não há respostas registradas para este checklist.
-                </p>
+                <p className="text-sm text-ink-faint">Ainda não há respostas registradas para este checklist.</p>
               ) : (
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {diasDisponiveis.map(dia => {
-                    const ativo = dia === diaSelecionado
-                    return (
-                      <button
-                        key={dia}
-                        onClick={() => setDiaSelecionado(dia)}
-                        style={{
-                          padding: '0.5rem 0.9rem',
-                          borderRadius: '9999px',
-                          border: ativo ? '1px solid #3b82f6' : '1px solid #e5e7eb',
-                          backgroundColor: ativo ? '#3b82f6' : 'white',
-                          color: ativo ? 'white' : '#374151',
-                          fontSize: '0.85rem',
-                          fontWeight: '600',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {formatarDia(dia)}
-                      </button>
-                    )
-                  })}
+                <div className="flex flex-wrap gap-2">
+                  {diasDisponiveis.map(dia => (
+                    <Button
+                      key={dia}
+                      variant={dia === diaSelecionado ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={() => setDiaSelecionado(dia)}
+                      className="rounded-full"
+                    >
+                      {formatarDia(dia)}
+                    </Button>
+                  ))}
                 </div>
               )}
-            </div>
+            </Card>
           )}
 
           {/* Resumo de respostas (se houver) */}
           {totalRespondidos > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1rem', textAlign: 'center', border: '1px solid #bbf7d0', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>
-                <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#16a34a', margin: 0 }}>{conformes}</p>
-                <p style={{ fontSize: '0.8rem', color: '#15803d', margin: '0.25rem 0 0' }}>Conforme</p>
-              </div>
-              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1rem', textAlign: 'center', border: '1px solid #fecaca', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>
-                <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#dc2626', margin: 0 }}>{naoConformes}</p>
-                <p style={{ fontSize: '0.8rem', color: '#b91c1c', margin: '0.25rem 0 0' }}>Não Conforme</p>
-              </div>
-              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', padding: '1rem', textAlign: 'center', border: '1px solid #e5e7eb', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>
-                <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#6b7280', margin: 0 }}>{naAplicavel}</p>
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.25rem 0 0' }}>N/A</p>
-              </div>
+            <div className="mb-5 grid grid-cols-3 gap-3">
+              <Card className="p-4 text-center">
+                <p className="font-display text-2xl font-bold text-teal">{conformes}</p>
+                <p className="mt-1 text-xs text-ink-muted">Conforme</p>
+              </Card>
+              <Card className="p-4 text-center">
+                <p className="font-display text-2xl font-bold text-coral">{naoConformes}</p>
+                <p className="mt-1 text-xs text-ink-muted">Não Conforme</p>
+              </Card>
+              <Card className="p-4 text-center">
+                <p className="font-display text-2xl font-bold text-ink-faint">{naAplicavel}</p>
+                <p className="mt-1 text-xs text-ink-muted">N/A</p>
+              </Card>
             </div>
           )}
 
           {/* Lista de itens */}
-          <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1f2937', marginBottom: '1rem' }}>
-              Itens do Checklist ({itens.length})
-            </h2>
+          <Card className="p-6">
+            <h2 className="mb-4 text-base font-bold text-ink">Itens do Checklist ({itens.length})</h2>
 
             {itens.length === 0 ? (
-              <p style={{ color: '#9ca3af', textAlign: 'center', padding: '2rem 0' }}>Nenhum item cadastrado.</p>
+              <p className="py-8 text-center text-sm text-ink-faint">Nenhum item cadastrado.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div className="flex flex-col gap-2.5">
                 {itens.map((item, index) => {
                   const r = respostas[item.id]
                   const temResposta = r?.resposta !== undefined && r.resposta !== null
-
-                  const corResposta = r?.resposta === 'sim'
-                    ? { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a', label: 'Sim' }
-                    : r?.resposta === 'nao'
-                    ? { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', label: 'Não' }
-                    : r?.resposta === 'na'
-                    ? { bg: '#f9fafb', border: '#e5e7eb', text: '#6b7280', label: 'N/A' }
-                    : { bg: '#f9fafb', border: '#e5e7eb', text: '#9ca3af', label: 'Sem resposta' }
+                  const estilo = respostaEstilo[r?.resposta ?? 'semResposta']
 
                   return (
-                    <div
-                      key={item.id}
-                      style={{ backgroundColor: corResposta.bg, borderRadius: '0.75rem', border: `1px solid ${corResposta.border}`, padding: '1rem', overflow: 'hidden' }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                        <span style={{ fontSize: '0.8rem', color: '#9ca3af', minWidth: '1.5rem', paddingTop: '2px' }}>
-                          {index + 1}.
-                        </span>
-                        <div style={{ flex: 1 }}>
-                          <p style={{ margin: '0 0 0.25rem', fontWeight: '500', color: '#1f2937' }}>{item.titulo}</p>
-                          {item.descricao && (
-                            <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: '#6b7280' }}>{item.descricao}</p>
-                          )}
+                    <div key={item.id} className={`rounded-xl p-4 ${estilo.bg}`}>
+                      <div className="flex items-start gap-3">
+                        <span className="min-w-[1.5rem] pt-0.5 text-xs text-ink-faint">{index + 1}.</span>
+                        <div className="flex-1">
+                          <p className="font-medium text-ink">{item.titulo}</p>
+                          {item.descricao && <p className="mt-1 text-sm text-ink-muted">{item.descricao}</p>}
                           {temResposta && r.observacao && (
-                            <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: '#6b7280', fontStyle: 'italic' }}>
-                              "{r.observacao}"
-                            </p>
+                            <p className="mt-2 text-sm italic text-ink-muted">&quot;{r.observacao}&quot;</p>
                           )}
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                        <div className="flex flex-shrink-0 items-center gap-2">
                           {temResposta && r.foto_url && (
-                            <button
-                              onClick={() => setFotoExpandida(r.foto_url!)}
-                              style={{ padding: '0.25rem', background: 'none', border: 'none', cursor: 'zoom-in' }}
-                              title="Ver foto"
-                            >
-                              <img src={r.foto_url} alt="foto" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '0.375rem', border: '2px solid #d1d5db' }} />
+                            <button onClick={() => setFotoExpandida(r.foto_url!)} className="cursor-zoom-in p-1" title="Ver foto">
+                              <img src={r.foto_url} alt="foto" className="h-10 w-10 rounded-md border-2 border-white object-cover" />
                             </button>
                           )}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                            {r?.resposta === 'sim' && <CheckCircle size={18} color="#16a34a" />}
-                            {r?.resposta === 'nao' && <XCircle size={18} color="#dc2626" />}
-                            {r?.resposta === 'na' && <MinusCircle size={18} color="#6b7280" />}
-                            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: corResposta.text }}>
-                              {corResposta.label}
-                            </span>
+                          <div className="flex items-center gap-1.5">
+                            {estilo.icon}
+                            <span className={`text-sm font-semibold ${estilo.text}`}>{estilo.label}</span>
                           </div>
                         </div>
                       </div>
@@ -390,11 +345,11 @@ export default function DetalhesChecklistFuturoPage() {
             )}
 
             {totalRespondidos < itens.length && itens.length > 0 && (
-              <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#9ca3af', textAlign: 'center' }}>
+              <p className="mt-4 text-center text-sm text-ink-faint">
                 {totalRespondidos} de {itens.length} itens respondidos pelo funcionário
               </p>
             )}
-          </div>
+          </Card>
 
         </div>
       </div>

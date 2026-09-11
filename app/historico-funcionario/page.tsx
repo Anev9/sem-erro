@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle, Clock, Building2, Search, Calendar } from 'lucide-react'
+import { CheckCircle, Clock, Building2, Search, Calendar, ClipboardList } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface ChecklistHistorico {
   id: string
@@ -75,147 +79,126 @@ export default function HistoricoFuncionario() {
   const totalPendentes = checklists.length - totalConcluidos
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f3f4f6' }}>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-
-      {/* Header */}
-      <nav style={{ backgroundColor: '#334155', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 1.5rem', display: 'flex', alignItems: 'center', height: '4rem', gap: '1rem' }}>
-          <button
-            onClick={() => router.push('/dashboard-funcionario')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem 0.875rem', color: 'white', cursor: 'pointer', fontSize: '0.875rem' }}
-          >
-            <ArrowLeft size={16} /> Voltar
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <Clock size={18} style={{ color: '#93c5fd' }} />
-            <span style={{ color: 'white', fontWeight: '700', fontSize: '1.1rem' }}>Histórico de Checklists</span>
-          </div>
-        </div>
-      </nav>
-
-      <main style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[900px] px-6 py-8">
+        <PageHeader title="Histórico de Checklists" backHref="/dashboard-funcionario" />
 
         {/* Cards resumo */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-          {[
-            { label: 'Total', value: checklists.length, color: '#3b82f6', bg: '#eff6ff', icon: '📋' },
-            { label: 'Concluídos', value: totalConcluidos, color: '#10b981', bg: '#f0fdf4', icon: '✅' },
-            { label: 'Pendentes', value: totalPendentes, color: '#f59e0b', bg: '#fffbeb', icon: '⏳' },
-          ].map(card => (
-            <div key={card.label} style={{ background: card.bg, borderRadius: '0.75rem', padding: '1rem 1.25rem', border: `1px solid ${card.color}25` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
-                <span>{card.icon}</span>
-                <span style={{ fontSize: '0.75rem', color: card.color, fontWeight: '600' }}>{card.label}</span>
-              </div>
-              <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: '800', color: card.color }}>{card.value}</p>
+        <div className="mb-5 grid grid-cols-3 gap-3">
+          <Card className="p-4">
+            <div className="mb-1 flex items-center gap-1.5">
+              <ClipboardList size={14} className="text-blue" />
+              <span className="text-xs font-semibold text-blue">Total</span>
             </div>
-          ))}
+            <p className="font-display text-2xl font-bold text-blue">{checklists.length}</p>
+          </Card>
+          <Card className="p-4">
+            <div className="mb-1 flex items-center gap-1.5">
+              <CheckCircle size={14} className="text-teal" />
+              <span className="text-xs font-semibold text-teal">Concluídos</span>
+            </div>
+            <p className="font-display text-2xl font-bold text-teal">{totalConcluidos}</p>
+          </Card>
+          <Card className="p-4">
+            <div className="mb-1 flex items-center gap-1.5">
+              <Clock size={14} className="text-amber" />
+              <span className="text-xs font-semibold text-amber">Pendentes</span>
+            </div>
+            <p className="font-display text-2xl font-bold text-amber">{totalPendentes}</p>
+          </Card>
         </div>
 
         {/* Filtros */}
-        <div style={{ background: 'white', borderRadius: '1rem', padding: '1rem 1.25rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
-            <Search size={14} style={{ position: 'absolute', left: '0.625rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+        <Card className="mb-5 flex flex-wrap items-center gap-3 p-4">
+          <div className="relative min-w-[180px] flex-1">
+            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
             <input
               type="text"
               placeholder="Buscar checklist ou empresa..."
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              style={{ width: '100%', paddingLeft: '2rem', paddingRight: '0.75rem', paddingTop: '0.5rem', paddingBottom: '0.5rem', border: '1.5px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+              className="w-full rounded-xl bg-surface-2 py-2.5 pl-9 pr-3 text-sm outline-none"
             />
           </div>
-          <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '0.375rem', padding: '2px', gap: '2px' }}>
+          <div className="flex gap-1 rounded-xl bg-surface-2 p-1">
             {(['todos', 'concluido', 'pendente'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFiltroStatus(f)}
-                style={{ padding: '0.3rem 0.75rem', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', background: filtroStatus === f ? 'white' : 'transparent', color: filtroStatus === f ? '#334155' : '#6b7280', boxShadow: filtroStatus === f ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}
-              >
+              <Button key={f} variant={filtroStatus === f ? 'primary' : 'ghost'} size="sm" onClick={() => setFiltroStatus(f)}>
                 {f === 'todos' ? 'Todos' : f === 'concluido' ? 'Concluídos' : 'Pendentes'}
-              </button>
+              </Button>
             ))}
           </div>
-        </div>
+        </Card>
 
         {/* Lista */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af' }}>
-            <div style={{ width: '36px', height: '36px', border: '3px solid #f3f4f6', borderTopColor: '#334155', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
+          <div className="py-16 text-center text-sm text-ink-muted">
+            <div className="mx-auto mb-4 h-9 w-9 animate-spin rounded-full border-4 border-surface-2 border-t-brand" />
             Carregando histórico...
           </div>
         ) : listaFiltrada.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem', color: '#9ca3af', background: 'white', borderRadius: '1rem' }}>
-            <Clock size={40} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
-            <p>Nenhum checklist encontrado</p>
-          </div>
+          <Card className="px-6 py-16 text-center">
+            <Clock size={40} className="mx-auto mb-4 text-ink-faint" />
+            <p className="text-sm text-ink-muted">Nenhum checklist encontrado</p>
+          </Card>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="flex flex-col gap-2.5">
             {listaFiltrada.map(cl => {
               const concluido = cl.total_perguntas > 0 && cl.respostas_count >= cl.total_perguntas
               const pct = cl.total_perguntas > 0 ? Math.round((cl.respostas_count / cl.total_perguntas) * 100) : 0
 
               return (
-                <div
+                <Card
                   key={cl.id}
+                  interactive
                   onClick={() => router.push(`/responder-checklist/${cl.id}`)}
-                  style={{ background: 'white', borderRadius: '0.75rem', padding: '1.125rem 1.25rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', cursor: 'pointer', border: `2px solid ${concluido ? '#d1fae5' : '#e5e7eb'}`, transition: 'all 0.15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = concluido ? '#10b981' : '#3b82f6'; e.currentTarget.style.transform = 'translateX(3px)' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = concluido ? '#d1fae5' : '#e5e7eb'; e.currentTarget.style.transform = 'translateX(0)' }}
+                  className="p-5"
                 >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem', flexWrap: 'wrap' }}>
-                        {concluido
-                          ? <CheckCircle size={16} style={{ color: '#10b981', flexShrink: 0 }} />
-                          : <Clock size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />
-                        }
-                        <span style={{ fontWeight: '700', color: '#1f2937', fontSize: '0.9rem' }}>{cl.nome}</span>
-                        <span style={{ padding: '0.125rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '700', background: concluido ? '#d1fae5' : '#fef3c7', color: concluido ? '#059669' : '#d97706' }}>
-                          {concluido ? 'Concluído' : 'Pendente'}
-                        </span>
-                        {cl.recorrencia && (
-                          <span style={{ padding: '0.125rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '600', background: '#eff6ff', color: '#1d4ed8' }}>
-                            {getRecorrenciaLabel(cl.recorrencia)}
-                          </span>
-                        )}
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                        {concluido ? <CheckCircle size={16} className="flex-shrink-0 text-teal" /> : <Clock size={16} className="flex-shrink-0 text-amber" />}
+                        <span className="text-sm font-bold text-ink">{cl.nome}</span>
+                        <Badge tone={concluido ? 'success' : 'warning'}>{concluido ? 'Concluído' : 'Pendente'}</Badge>
+                        {cl.recorrencia && <Badge tone="info">{getRecorrenciaLabel(cl.recorrencia)}</Badge>}
                       </div>
                       {cl.empresas && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6b7280', fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+                        <div className="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
                           <Building2 size={13} />
                           {cl.empresas.nome_fantasia}
                         </div>
                       )}
                       {/* Barra de progresso */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                        <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: '#f1f5f9', overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: concluido ? '#10b981' : '#3b82f6', borderRadius: '999px', transition: 'width 0.3s ease' }} />
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+                          <div
+                            className={`h-full rounded-full transition-[width] duration-300 ${concluido ? 'bg-teal' : 'bg-blue'}`}
+                            style={{ width: `${pct}%` }}
+                          />
                         </div>
-                        <span style={{ fontSize: '0.75rem', color: '#6b7280', flexShrink: 0 }}>{cl.respostas_count}/{cl.total_perguntas}</span>
+                        <span className="flex-shrink-0 text-xs text-ink-faint">{cl.respostas_count}/{cl.total_perguntas}</span>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#9ca3af', fontSize: '0.75rem', justifyContent: 'flex-end' }}>
+                    <div className="flex-shrink-0 text-right">
+                      <div className="flex items-center justify-end gap-1 text-xs text-ink-faint">
                         <Calendar size={12} />
                         {formatarData(cl.updated_at)}
                       </div>
                       {cl.proxima_execucao && (
-                        <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
-                          Próxima: {formatarData(cl.proxima_execucao)}
-                        </p>
+                        <p className="mt-1 text-xs text-ink-muted">Próxima: {formatarData(cl.proxima_execucao)}</p>
                       )}
                     </div>
                   </div>
-                </div>
+                </Card>
               )
             })}
           </div>
         )}
 
-        <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem', marginTop: '1rem' }}>
+        <p className="mt-4 text-center text-xs text-ink-faint">
           {listaFiltrada.length} checklist{listaFiltrada.length !== 1 ? 's' : ''} exibido{listaFiltrada.length !== 1 ? 's' : ''}
         </p>
-      </main>
+      </div>
     </div>
   )
 }
+

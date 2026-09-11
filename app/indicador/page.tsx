@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, BarChart2, Building2 } from 'lucide-react'
+import { BarChart2 } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
 
 interface EmpresaStats {
   nome: string
@@ -16,6 +18,12 @@ interface DadoDia {
   dia: string
   total: number
   conformes: number
+}
+
+function taxaTone(taxa: number) {
+  if (taxa >= 90) return { text: 'text-teal', bar: 'bg-teal' }
+  if (taxa >= 75) return { text: 'text-blue', bar: 'bg-blue' }
+  return { text: 'text-amber', bar: 'bg-amber' }
 }
 
 export default function DashboardIndicadores() {
@@ -114,55 +122,33 @@ export default function DashboardIndicadores() {
   const maxDia = dadosDiarios.length > 0 ? Math.max(...dadosDiarios.map(d => d.total)) : 1
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-
-        <button
-          onClick={() => router.back()}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.5rem 1rem', backgroundColor: 'white', border: '1px solid #e5e7eb',
-            borderRadius: '0.5rem', cursor: 'pointer', color: '#374151',
-            fontSize: '0.95rem', marginBottom: '2rem'
-          }}
-        >
-          <ArrowLeft size={18} />
-          Voltar
-        </button>
-
-        <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                <BarChart2 size={28} style={{ color: '#f97316' }} />
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>Indicadores</h1>
-              </div>
-              <p style={{ color: '#6b7280', margin: 0, fontSize: '0.95rem' }}>
-                Performance das empresas e atividade no período
-              </p>
-            </div>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1200px] px-6 py-8">
+        <PageHeader
+          title="Indicadores"
+          subtitle="Performance das empresas e atividade no período"
+          backHref="/dashboard-aluno"
+          actions={
             <select
               value={periodo}
               onChange={(e) => setPeriodo(e.target.value)}
-              style={{
-                padding: '0.5rem 1rem', border: '1px solid #e5e7eb',
-                borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', cursor: 'pointer'
-              }}
+              className="cursor-pointer rounded-xl bg-white px-3.5 py-2 text-sm text-ink-muted shadow-soft-sm outline-none"
             >
               <option value="7">Últimos 7 dias</option>
               <option value="15">Últimos 15 dias</option>
               <option value="30">Últimos 30 dias</option>
               <option value="60">Últimos 60 dias</option>
             </select>
-          </div>
+          }
+        />
 
+        <Card className="p-6 sm:p-8">
           {loading ? (
-            <p style={{ textAlign: 'center', color: '#6b7280', padding: '3rem 0' }}>Carregando dados...</p>
+            <p className="py-12 text-center text-sm text-ink-muted">Carregando dados...</p>
           ) : totalRespostas === 0 ? (
-            <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-              <BarChart2 size={56} style={{ color: '#9ca3af', margin: '0 auto 1rem' }} />
-              <p style={{ color: '#6b7280', fontSize: '1rem' }}>
+            <div className="py-16 text-center">
+              <BarChart2 size={48} className="mx-auto mb-4 text-ink-faint" />
+              <p className="text-sm text-ink-muted">
                 Nenhum dado disponível no período selecionado.<br />
                 Os dados aparecem conforme os checklists são respondidos.
               </p>
@@ -170,53 +156,43 @@ export default function DashboardIndicadores() {
           ) : (
             <>
               {/* Resumo */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                <div style={{ backgroundColor: '#fff7ed', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #fed7aa' }}>
-                  <p style={{ fontSize: '0.8rem', color: '#9a3412', margin: '0 0 0.5rem', fontWeight: '600' }}>Total de Respostas</p>
-                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#f97316', margin: 0 }}>{totalRespostas}</p>
+              <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="rounded-2xl bg-brand-tint p-5">
+                  <p className="mb-1.5 text-xs font-semibold text-brand">Total de Respostas</p>
+                  <p className="font-display text-3xl font-bold text-brand">{totalRespostas}</p>
                 </div>
-                <div style={{ backgroundColor: '#f0fdf4', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bbf7d0' }}>
-                  <p style={{ fontSize: '0.8rem', color: '#166534', margin: '0 0 0.5rem', fontWeight: '600' }}>Taxa de Conformidade</p>
-                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#16a34a', margin: 0 }}>{taxaGeral}%</p>
+                <div className="rounded-2xl bg-teal-tint p-5">
+                  <p className="mb-1.5 text-xs font-semibold text-teal">Taxa de Conformidade</p>
+                  <p className="font-display text-3xl font-bold text-teal">{taxaGeral}%</p>
                 </div>
-                <div style={{ backgroundColor: '#eff6ff', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #bfdbfe' }}>
-                  <p style={{ fontSize: '0.8rem', color: '#1e40af', margin: '0 0 0.5rem', fontWeight: '600' }}>Empresas</p>
-                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#3b82f6', margin: 0 }}>{empresas.length}</p>
+                <div className="rounded-2xl bg-blue-tint p-5">
+                  <p className="mb-1.5 text-xs font-semibold text-blue">Empresas</p>
+                  <p className="font-display text-3xl font-bold text-blue">{empresas.length}</p>
                 </div>
-                <div style={{ backgroundColor: '#fefce8', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #fde68a' }}>
-                  <p style={{ fontSize: '0.8rem', color: '#92400e', margin: '0 0 0.5rem', fontWeight: '600' }}>Dias com atividade</p>
-                  <p style={{ fontSize: '2rem', fontWeight: '900', color: '#d97706', margin: 0 }}>{dadosDiarios.length}</p>
+                <div className="rounded-2xl bg-amber-tint p-5">
+                  <p className="mb-1.5 text-xs font-semibold text-amber">Dias com atividade</p>
+                  <p className="font-display text-3xl font-bold text-amber">{dadosDiarios.length}</p>
                 </div>
               </div>
 
               {/* Gráfico de barras diário */}
               {dadosDiarios.length > 0 && (
-                <div style={{ marginBottom: '2rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937', marginBottom: '1rem' }}>
-                    Atividade por Dia
-                  </h2>
-                  <div style={{ backgroundColor: '#f9fafb', borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '160px', overflowX: 'auto', paddingBottom: '2rem' }}>
+                <div className="mb-8">
+                  <h2 className="mb-4 font-display text-lg font-bold text-ink">Atividade por Dia</h2>
+                  <div className="rounded-2xl bg-surface-2 p-6">
+                    <div className="flex items-end gap-1 overflow-x-auto pb-8" style={{ height: '160px' }}>
                       {dadosDiarios.map((d, i) => (
-                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 auto', minWidth: '32px' }}>
-                          <span style={{ fontSize: '0.65rem', color: '#9ca3af', marginBottom: '4px' }}>{d.total}</span>
+                        <div key={i} className="flex min-w-[32px] flex-none flex-col items-center">
+                          <span className="mb-1 text-[10px] text-ink-faint">{d.total}</span>
                           <div
                             title={`${d.dia}: ${d.total} respostas (${d.conformes} conformes)`}
-                            style={{
-                              width: '28px',
-                              height: `${Math.max((d.total / maxDia) * 120, 4)}px`,
-                              backgroundColor: '#f97316',
-                              borderRadius: '3px 3px 0 0',
-                              opacity: 0.85,
-                              cursor: 'pointer',
-                              transition: 'opacity 0.2s'
-                            }}
+                            className="w-7 cursor-pointer rounded-t-[3px] bg-brand opacity-85 transition-opacity hover:opacity-100"
+                            style={{ height: `${Math.max((d.total / maxDia) * 120, 4)}px` }}
                           />
-                          <p style={{
-                            fontSize: '0.6rem', color: '#9ca3af', margin: '4px 0 0',
-                            whiteSpace: 'nowrap', transform: 'rotate(-45deg)',
-                            transformOrigin: 'top left', width: '40px'
-                          }}>
+                          <p
+                            className="mt-1 w-10 origin-top-left whitespace-nowrap text-[9px] text-ink-faint"
+                            style={{ transform: 'rotate(-45deg)' }}
+                          >
                             {d.dia.substring(0, 5)}
                           </p>
                         </div>
@@ -229,27 +205,25 @@ export default function DashboardIndicadores() {
               {/* Performance por empresa */}
               {empresas.length > 0 && (
                 <div>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937', marginBottom: '1rem' }}>
-                    Performance por Empresa
-                  </h2>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h2 className="mb-4 font-display text-lg font-bold text-ink">Performance por Empresa</h2>
+                  <div className="flex flex-col gap-3">
                     {empresas.map((e, i) => {
-                      const cor = e.taxa >= 90 ? '#16a34a' : e.taxa >= 75 ? '#3b82f6' : '#f97316'
+                      const tone = taxaTone(e.taxa)
                       const medalha = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}º`
                       return (
-                        <div key={e.nome} style={{ backgroundColor: '#f9fafb', borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid #e5e7eb' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '1.25rem' }}>{medalha}</span>
-                            <div style={{ flex: 1 }}>
-                              <span style={{ fontWeight: '700', color: '#1f2937' }}>{e.nome}</span>
-                              <span style={{ fontSize: '0.8rem', color: '#6b7280', marginLeft: '0.75rem' }}>
+                        <div key={e.nome} className="rounded-2xl bg-surface-2 p-5">
+                          <div className="mb-3 flex flex-wrap items-center gap-4">
+                            <span className="text-xl">{medalha}</span>
+                            <div className="flex-1">
+                              <span className="font-bold text-ink">{e.nome}</span>
+                              <span className="ml-3 text-xs text-ink-muted">
                                 {e.conformes} conformes · {e.naoConformes} não conformes · {e.total} total
                               </span>
                             </div>
-                            <span style={{ fontSize: '1.75rem', fontWeight: '900', color: cor }}>{e.taxa}%</span>
+                            <span className={`text-2xl font-bold ${tone.text}`}>{e.taxa}%</span>
                           </div>
-                          <div style={{ width: '100%', height: '8px', backgroundColor: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden' }}>
-                            <div style={{ width: `${e.taxa}%`, height: '100%', backgroundColor: cor, borderRadius: '9999px', transition: 'width 0.8s ease' }} />
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-white">
+                            <div className={`h-full rounded-full transition-[width] duration-700 ${tone.bar}`} style={{ width: `${e.taxa}%` }} />
                           </div>
                         </div>
                       )
@@ -259,7 +233,7 @@ export default function DashboardIndicadores() {
               )}
             </>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )

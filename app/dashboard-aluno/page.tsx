@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Calendar, TrendingUp, Building2, Activity, Clock } from 'lucide-react'
+import { CheckSquare, FileText, ChevronDown, Menu, X, LogOut, User, Calendar, TrendingUp, Building2, Activity, Search, Bell, CheckCircle, AlertTriangle } from 'lucide-react'
 import { ThemeToggle } from '../../components/ThemeToggle'
 import { LanguageToggle } from '../../components/LanguageToggle'
+import { FontSizeToggle } from '../../components/FontSizeToggle'
 import { useLang } from '../../contexts/LanguageContext'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
 
 interface Checklist {
   id: string
@@ -24,6 +27,27 @@ interface PerformanceData {
   concluidos: number
   pendentes: number
   percentual: number
+}
+
+function statusInfo(status: string) {
+  switch (status) {
+    case 'concluido':
+      return { tone: 'success' as const, label: 'Concluído', bar: 'bg-teal' }
+    case 'ativo':
+      return { tone: 'info' as const, label: 'Ativo', bar: 'bg-blue' }
+    case 'em_andamento':
+      return { tone: 'warning' as const, label: 'Em Andamento', bar: 'bg-amber' }
+    case 'pendente':
+      return { tone: 'warning' as const, label: 'Pendente', bar: 'bg-amber' }
+    default:
+      return { tone: 'neutral' as const, label: status, bar: 'bg-surface-2' }
+  }
+}
+
+function perfColor(pct: number) {
+  if (pct >= 70) return { text: 'text-teal', bar: 'bg-teal' }
+  if (pct >= 50) return { text: 'text-amber', bar: 'bg-amber' }
+  return { text: 'text-coral', bar: 'bg-coral' }
 }
 
 export default function DashboardAluno() {
@@ -86,9 +110,9 @@ export default function DashboardAluno() {
       router.push('/login')
       return
     }
-    
+
     const user = JSON.parse(userData)
-    
+
     // Se for admin, redireciona
     if (user.role === 'admin') {
       router.push('/dashboard-admin')
@@ -261,435 +285,390 @@ export default function DashboardAluno() {
     })
   }
 
-  function obterCorStatus(status: string) {
-    switch (status) {
-      case 'concluido':
-        return { bg: '#dcfce7', text: '#166534', label: 'Concluído' }
-      case 'ativo':
-        return { bg: '#dbeafe', text: '#1e40af', label: 'Ativo' }
-      case 'em_andamento':
-        return { bg: '#fef3c7', text: '#92400e', label: 'Em Andamento' }
-      case 'pendente':
-        return { bg: '#fef3c7', text: '#92400e', label: 'Pendente' }
-      default:
-        return { bg: '#f3f4f6', text: '#374151', label: status }
-    }
-  }
-
   const handleLogout = async () => {
     localStorage.removeItem('user')
     await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/login')
   }
 
+  const totalPerfChecklists = performance.reduce((acc, item) => acc + item.total, 0)
+  const taxaMediaConclusao = performance.length > 0 ? Math.round(performance.reduce((acc, item) => acc + item.percentual, 0) / performance.length) : 0
+
   return (
-    <>
-      <style>{`
-        .dropdown-menu { animation: slideDown 0.2s ease-out; }
-        @keyframes slideDown {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .desktop-menu { display: none; }
-        @media (min-width: 768px) {
-          .desktop-menu { display: flex !important; }
-          .mobile-menu-btn { display: none !important; }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[1320px] px-6 py-6">
 
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-        {/* Navbar */}
-        <nav style={{ backgroundColor: '#334155', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', position: 'sticky', top: 0, zIndex: 50 }}>
-          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '4.5rem' }}>
-              
-              {/* Logo */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '3rem', height: '3rem', borderRadius: '0.75rem', overflow: 'hidden', backgroundColor: 'white' }}>
-                  <img src="/logo-semerro.jpg" alt="Performe seu Mercado" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>Performe seu Mercado</span>
-              </div>
-
-              {/* Menu Desktop */}
-              <div className="desktop-menu" style={{ gap: '0.5rem', alignItems: 'center' }}>
-                {menuItems.map((item) => (
-                  <div key={item.title} style={{ position: 'relative' }}
-                    onMouseEnter={() => setActiveDropdown(item.title)}
-                    onMouseLeave={() => setActiveDropdown(null)}>
-                    
-                    <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1rem', color: 'white', backgroundColor: activeDropdown === item.title ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500' }}>
-                      {item.title}
-                      <ChevronDown size={16} />
-                    </button>
-
-                    {activeDropdown === item.title && (
-                      <div className="dropdown-menu" style={{ position: 'absolute', top: '100%', left: 0, backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', minWidth: '220px', overflow: 'hidden', zIndex: 1000, padding: '0.5rem 0' }}>
-                        {item.submenu.map((sub) => (
-                          <button key={sub.label} onClick={() => router.push(sub.href)} style={{ width: '100%', padding: '0.75rem 1rem', color: '#374151', border: 'none', backgroundColor: 'transparent', cursor: 'pointer', textAlign: 'left', fontSize: '0.9rem' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f3f4f6'; e.currentTarget.style.paddingLeft = '1.25rem'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.paddingLeft = '1rem'; }}>
-                            {sub.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginLeft: '1rem', paddingLeft: '1rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
-                  <LanguageToggle />
-                  <ThemeToggle />
-                  <button onClick={() => router.push('/perfil-aluno')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.875rem', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.25)', borderRadius: '2rem', cursor: 'pointer' }}>
-                    {fotoUrl ? (
-                      <img src={fotoUrl} alt="Perfil" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.5)', flexShrink: 0 }} />
-                    ) : (
-                      <User size={18} />
-                    )}
-                    <span style={{ fontSize: '0.875rem' }}>{t.nav.perfil}</span>
-                  </button>
-                  <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>
-                    <LogOut size={18} />
-                    {t.nav.sair}
-                  </button>
-                </div>
-              </div>
-
-              {/* Botão Menu Mobile */}
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="mobile-menu-btn" style={{ padding: '0.5rem', color: 'white', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}>
-                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
+        {/* Top bar */}
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white p-3 shadow-soft-sm">
+          <div className="flex items-center gap-2.5 pl-1.5">
+            <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-xl shadow-[0_8px_16px_-6px_rgba(255,122,61,0.55)]">
+              <img src="/logo-semerro.jpg" alt="Performe seu Mercado" className="h-full w-full object-cover" />
             </div>
+            <span className="font-display text-[15px] font-bold text-ink">
+              Performe <span className="font-medium text-ink-faint">seu Mercado</span>
+            </span>
+          </div>
 
-            {/* Menu Mobile */}
-            {mobileMenuOpen && (
-              <div style={{ paddingBottom: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '0.5rem' }}>
-                {menuItems.map((item) => (
-                  <div key={item.title} style={{ marginTop: '0.5rem' }}>
-                    <div style={{ padding: '0.75rem 1rem', color: 'white', fontWeight: '600', fontSize: '0.9rem' }}>
-                      {item.title}
-                    </div>
+          <div className="hidden items-center gap-1 rounded-2xl bg-surface-2 p-1 md:flex">
+            {menuItems.map((item) => (
+              <div
+                key={item.title}
+                className="relative"
+                onMouseEnter={() => setActiveDropdown(item.title)}
+                onMouseLeave={() => setActiveDropdown(null)}
+              >
+                <button
+                  onClick={() => router.push(item.submenu[0].href)}
+                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                    activeDropdown === item.title ? 'bg-brand text-white shadow-[0_6px_14px_-6px_rgba(255,122,61,0.65)]' : 'text-ink-muted'
+                  }`}
+                >
+                  {item.title}
+                  <ChevronDown size={14} />
+                </button>
+
+                {activeDropdown === item.title && (
+                  <div className="absolute left-0 top-full z-[500] min-w-[210px] overflow-hidden rounded-2xl bg-white py-1.5 shadow-soft">
                     {item.submenu.map((sub) => (
-                      <button 
+                      <button
                         key={sub.label}
-                        onClick={() => { router.push(sub.href); setMobileMenuOpen(false); }}
-                        style={{ width: '100%', padding: '0.625rem 2rem', color: 'rgba(255,255,255,0.8)', backgroundColor: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                        onClick={() => router.push(sub.href)}
+                        className="block w-full px-4 py-2.5 text-left text-sm font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
                       >
                         {sub.label}
                       </button>
                     ))}
                   </div>
-                ))}
-                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '0.5rem', padding: '1rem 1rem 0', alignItems: 'center' }}>
-                  <LanguageToggle />
-                  <ThemeToggle />
-                  <button onClick={() => router.push('/perfil-aluno')} style={{ flex: 1, padding: '0.5rem', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                    {fotoUrl ? (
-                      <img src={fotoUrl} alt="Perfil" style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(255,255,255,0.5)' }} />
-                    ) : null}
-                    {t.nav.perfil}
-                  </button>
-                  <button onClick={handleLogout} style={{ flex: 1, padding: '0.5rem', color: 'white', backgroundColor: '#ef4444', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
-                    {t.nav.sair}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </nav>
-
-        {/* Conteúdo Principal */}
-        <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-          <div style={{ marginBottom: '2rem' }}>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
-              {t.dashboard.welcome}, {userName}!
-            </h1>
-            <p style={{ color: '#6b7280', marginBottom: '1.25rem' }}>Painel do Cliente</p>
-
-            {/* Busca Global */}
-            <div style={{ position: 'relative', maxWidth: '500px' }}>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', color: '#9ca3af', pointerEvents: 'none' }}>🔍</span>
-                <input
-                  type="text"
-                  value={buscaQuery}
-                  placeholder="Buscar checklists, ações..."
-                  onChange={e => { setBuscaQuery(e.target.value); setBuscaAberta(true); buscarGlobal(e.target.value) }}
-                  onFocus={() => setBuscaAberta(true)}
-                  onBlur={() => setTimeout(() => setBuscaAberta(false), 200)}
-                  style={{ width: '100%', padding: '0.75rem 0.875rem 0.75rem 2.5rem', border: '2px solid #e5e7eb', borderRadius: '0.75rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' as const, background: 'white', transition: 'border-color 0.15s' }}
-                  onFocusCapture={e => e.currentTarget.style.borderColor = '#6d28d9'}
-                  onBlurCapture={e => { e.currentTarget.style.borderColor = '#e5e7eb'; setTimeout(() => setBuscaAberta(false), 200) }}
-                />
-                {buscandoGlobal && (
-                  <span style={{ position: 'absolute', right: '0.875rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: '#9ca3af' }}>...</span>
                 )}
               </div>
-
-              {buscaAberta && buscaResultados && (buscaResultados.checklists.length > 0 || buscaResultados.acoes.length > 0) && (
-                <div style={{ position: 'absolute', top: '110%', left: 0, right: 0, background: 'white', borderRadius: '0.75rem', boxShadow: '0 8px 30px rgba(0,0,0,0.15)', border: '1.5px solid #e5e7eb', zIndex: 500, overflow: 'hidden', maxHeight: '360px', overflowY: 'auto' }}>
-                  {buscaResultados.checklists.length > 0 && (
-                    <div>
-                      <div style={{ padding: '0.5rem 0.875rem', fontSize: '0.7rem', fontWeight: '700', color: '#7c3aed', background: '#f5f3ff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Checklists</div>
-                      {buscaResultados.checklists.map(cl => (
-                        <button key={cl.id} onClick={() => { router.push(`/checklists-futuros`); setBuscaAberta(false); setBuscaQuery('') }}
-                          style={{ width: '100%', padding: '0.75rem 1rem', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.125rem', borderBottom: '1px solid #f3f4f6' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                          <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1f2937' }}>{cl.titulo}</span>
-                          {cl.empresas && <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>🏢 {cl.empresas.nome_fantasia}</span>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {buscaResultados.acoes.length > 0 && (
-                    <div>
-                      <div style={{ padding: '0.5rem 0.875rem', fontSize: '0.7rem', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ações Corretivas</div>
-                      {buscaResultados.acoes.map(ac => (
-                        <button key={ac.id} onClick={() => { router.push(`/acoes`); setBuscaAberta(false); setBuscaQuery('') }}
-                          style={{ width: '100%', padding: '0.75rem 1rem', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.125rem', borderBottom: '1px solid #f3f4f6' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                          <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1f2937' }}>{ac.titulo}</span>
-                          {ac.empresas && <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>🏢 {ac.empresas.nome_fantasia} · {ac.status}</span>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {buscaAberta && buscaQuery.length >= 2 && !buscandoGlobal && buscaResultados && buscaResultados.checklists.length === 0 && buscaResultados.acoes.length === 0 && (
-                <div style={{ position: 'absolute', top: '110%', left: 0, right: 0, background: 'white', borderRadius: '0.75rem', boxShadow: '0 8px 30px rgba(0,0,0,0.15)', border: '1.5px solid #e5e7eb', zIndex: 500, padding: '1.25rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
-                  Nenhum resultado encontrado.
-                </div>
-              )}
-            </div>
+            ))}
           </div>
 
-          {/* Banner de notificações push */}
-          {notifPermissao === 'default' && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.875rem 1.25rem', backgroundColor: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.25rem' }}>🔔</span>
-                <p style={{ fontSize: '0.875rem', color: '#1d4ed8', margin: 0 }}>
-                  {t.dashboard.notifBannerMsg}
-                </p>
-              </div>
-              <button
-                onClick={ativarNotificacoes}
-                style={{ padding: '0.5rem 1.25rem', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', whiteSpace: 'nowrap' }}
-              >
-                {t.dashboard.enableNotifications}
-              </button>
-            </div>
-          )}
+          <div className="hidden items-center gap-2 md:flex">
+            <FontSizeToggle />
+            <LanguageToggle variant="light" />
+            <ThemeToggle variant="light" />
+            <button onClick={() => router.push('/perfil-aluno')} className="flex h-9 items-center gap-1.5 rounded-xl bg-surface-2 px-3 text-sm font-semibold text-ink-muted">
+              {fotoUrl ? (
+                <img src={fotoUrl} alt="Perfil" className="h-5 w-5 flex-shrink-0 rounded-full object-cover" />
+              ) : (
+                <User size={15} />
+              )}
+              {t.nav.perfil}
+            </button>
+            <button onClick={handleLogout} className="flex h-9 items-center gap-1.5 rounded-xl bg-coral-tint px-3 text-sm font-semibold text-coral">
+              <LogOut size={15} />
+              {t.nav.sair}
+            </button>
+          </div>
 
-          {/* Resumo Semanal */}
-          {!loading && (
-            <div style={{ background: 'white', borderRadius: '1rem', padding: '1.25rem 1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.625rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <TrendingUp size={18} style={{ color: '#334155' }} />
-                  <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: '#1f2937' }}>Resumo dos Últimos 7 Dias</h2>
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-ink md:hidden">
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+
+          {mobileMenuOpen && (
+            <div className="w-full border-t border-surface-2 pt-3 md:hidden">
+              {menuItems.map((item) => (
+                <div key={item.title} className="mt-2">
+                  <div className="px-2 py-1.5 text-sm font-bold text-ink">{item.title}</div>
+                  {item.submenu.map((sub) => (
+                    <button
+                      key={sub.label}
+                      onClick={() => { router.push(sub.href); setMobileMenuOpen(false) }}
+                      className="block w-full px-6 py-2 text-left text-sm text-ink-muted"
+                    >
+                      {sub.label}
+                    </button>
+                  ))}
                 </div>
-                <button
-                  onClick={() => router.push('/dashboard-empresa')}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', background: '#334155', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}
-                >
-                  🏢 Dashboard por Empresa
+              ))}
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-surface-2 pt-3">
+                <FontSizeToggle />
+                <LanguageToggle variant="light" />
+                <ThemeToggle variant="light" />
+                <button onClick={() => router.push('/perfil-aluno')} className="flex-1 rounded-xl bg-surface-2 px-3 py-2 text-sm font-semibold text-ink-muted">
+                  {t.nav.perfil}
+                </button>
+                <button onClick={handleLogout} className="flex-1 rounded-xl bg-coral-tint px-3 py-2 text-sm font-semibold text-coral">
+                  {t.nav.sair}
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-                {[
-                  { label: 'Checklists concluídos', value: resumoSemanal.checklistsConcluidos, color: '#10b981', bg: '#f0fdf4', icon: '✅' },
-                  { label: 'Checklists pendentes', value: resumoSemanal.pendentes, color: resumoSemanal.pendentes > 0 ? '#f59e0b' : '#10b981', bg: resumoSemanal.pendentes > 0 ? '#fffbeb' : '#f0fdf4', icon: '📋' },
-                ].map(item => (
-                  <div key={item.label} style={{ background: item.bg, borderRadius: '0.75rem', padding: '0.875rem 1rem', border: `1px solid ${item.color}25` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.875rem' }}>{item.icon}</span>
-                      <span style={{ fontSize: '0.75rem', color: item.color, fontWeight: '600' }}>{item.label}</span>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '1.75rem', fontWeight: '800', color: item.color }}>{item.value}</p>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
+        </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-
-            {/* Card: Checklists dos Últimos 30 Dias */}
-            <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', padding: '1.5rem', color: 'white' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Checklists dos Últimos 30 Dias</h2>
-              </div>
-              <div style={{ padding: '1.5rem', maxHeight: '500px', overflowY: 'auto' }}>
-                {loading ? (
-                  <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>
-                    <div style={{ width: '40px', height: '40px', border: '4px solid #f3f4f6', borderTopColor: '#8b5cf6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
-                    <p>{t.common.loading}</p>
-                  </div>
-                ) : checklists.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>
-                    <CheckSquare size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                    <p style={{ margin: 0, marginBottom: '0.5rem', fontWeight: '500' }}>Nenhum checklist encontrado</p>
-                    <p style={{ margin: 0, fontSize: '0.875rem' }}>Os checklists aparecerão aqui quando forem criados</p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {checklists.map((checklist) => {
-                      const statusInfo = obterCorStatus(checklist.status)
-                      return (
-                        <div
-                          key={checklist.id}
-                          onClick={() => router.push(`/checklists-criados/${checklist.id}`)}
-                          style={{ padding: '1rem', border: '1px solid #e5e7eb', borderLeft: `4px solid ${statusInfo.text}`, borderRadius: '0.75rem', cursor: 'pointer', transition: 'all 0.2s' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(139, 92, 246, 0.1)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateX(0)'; }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-                              {checklist.nome}
-                            </h3>
-                            <span style={{ padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: statusInfo.bg, color: statusInfo.text, whiteSpace: 'nowrap' }}>
-                              {statusInfo.label}
-                            </span>
-                          </div>
-                          {checklist.descricao && (
-                            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.5rem 0', lineHeight: '1.4' }}>
-                              {checklist.descricao}
-                            </p>
-                          )}
-                          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8125rem', color: '#6b7280', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                            {checklist.empresa?.nome_fantasia && (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <Building2 size={14} />
-                                {checklist.empresa.nome_fantasia}
-                              </span>
-                            )}
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <Calendar size={14} />
-                              {formatarData(checklist.created_at)}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Card: Performance por Tipo de Negócio */}
-            <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', padding: '1.5rem', color: 'white' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>{t.dashboard.performance}</h2>
-              </div>
-              <div style={{ padding: '1.5rem' }}>
-                {loading ? (
-                  <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem 0' }}>
-                    <div style={{ width: '40px', height: '40px', border: '4px solid #f3f4f6', borderTopColor: '#8b5cf6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
-                    <p>{t.common.loading}</p>
-                  </div>
-                ) : performance.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: '#9ca3af', minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div>
-                      <FileText size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                      <p style={{ margin: 0, marginBottom: '0.5rem', fontWeight: '500' }}>Nenhum dado disponível</p>
-                      <p style={{ margin: 0, fontSize: '0.875rem' }}>Os dados aparecerão quando houver checklists</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    {performance.map((item, index) => (
-                      <div key={index}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                          <span style={{ fontWeight: '600', color: '#1f2937', fontSize: '0.95rem' }}>
-                            {item.empresa}
-                          </span>
-                          <span style={{ fontWeight: 'bold', color: item.percentual >= 70 ? '#16a34a' : item.percentual >= 50 ? '#f59e0b' : '#ef4444', fontSize: '1.25rem' }}>
-                            {item.percentual}%
-                          </span>
-                        </div>
-                        
-                        <div style={{ width: '100%', height: '12px', backgroundColor: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden', marginBottom: '0.75rem' }}>
-                          <div style={{ width: `${item.percentual}%`, height: '100%', background: item.percentual >= 70 ? 'linear-gradient(90deg, #16a34a, #22c55e)' : item.percentual >= 50 ? 'linear-gradient(90deg, #f59e0b, #fbbf24)' : 'linear-gradient(90deg, #ef4444, #f87171)', transition: 'width 0.5s ease' }} />
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8125rem', color: '#6b7280' }}>
-                          <span>Total: {item.total}</span>
-                          <span style={{ color: '#16a34a' }}>✓ {item.concluidos}</span>
-                          <span style={{ color: '#f59e0b' }}>⏳ {item.pendentes}</span>
-                        </div>
-                      </div>
-                    ))}
-
-                    <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.75rem', borderLeft: '4px solid #8b5cf6' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <TrendingUp size={18} style={{ color: '#8b5cf6' }} />
-                        <span style={{ fontWeight: '600', color: '#1f2937' }}>Resumo Geral</span>
-                      </div>
-                      <div style={{ fontSize: '0.875rem', color: '#6b7280', lineHeight: '1.6' }}>
-                        <p style={{ margin: '0.25rem 0' }}>Total de categorias: {performance.length}</p>
-                        <p style={{ margin: '0.25rem 0' }}>Total de checklists: {performance.reduce((acc, item) => acc + item.total, 0)}</p>
-                        <p style={{ margin: '0.25rem 0' }}>Taxa média de conclusão: {performance.length > 0 ? Math.round(performance.reduce((acc, item) => acc + item.percentual, 0) / performance.length) : 0}%</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
+        {/* Welcome + busca global */}
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-4 px-1">
+          <div>
+            <h1 className="font-display text-2xl font-bold text-ink">{t.dashboard.welcome}, {userName}!</h1>
+            <p className="mt-1 text-sm text-ink-muted">Painel do Cliente</p>
           </div>
 
-          {/* Feed de atividades */}
-          <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginTop: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-              <Activity size={20} style={{ color: '#8b5cf6' }} />
-              <h2 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>{t.dashboard.recentActivity}</h2>
-            </div>
-            {loadingFeed ? (
-              <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>{t.common.loading}</p>
-            ) : feed.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem 0', color: '#9ca3af' }}>
-                <Activity size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.35 }} />
-                <p style={{ margin: 0, fontSize: '0.875rem' }}>{t.dashboard.noActivity}</p>
+          <div className="relative w-full sm:w-[320px]">
+            <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
+            <input
+              type="text"
+              value={buscaQuery}
+              placeholder="Buscar checklists, ações..."
+              onChange={e => { setBuscaQuery(e.target.value); setBuscaAberta(true); buscarGlobal(e.target.value) }}
+              onFocus={() => setBuscaAberta(true)}
+              onBlur={() => setTimeout(() => setBuscaAberta(false), 200)}
+              className="w-full rounded-xl bg-surface-2 py-2.5 pl-8 pr-3 text-sm outline-none placeholder:text-ink-faint"
+            />
+            {buscandoGlobal && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-faint">...</span>
+            )}
+
+            {buscaAberta && buscaResultados && (buscaResultados.checklists.length > 0 || buscaResultados.acoes.length > 0) && (
+              <div className="absolute right-0 top-[110%] z-[500] max-h-[360px] w-full min-w-[280px] overflow-y-auto overflow-x-hidden rounded-2xl bg-white shadow-soft">
+                {buscaResultados.checklists.length > 0 && (
+                  <div>
+                    <div className="bg-violet-tint px-3.5 py-2 text-[11px] font-bold uppercase tracking-wide text-violet">Checklists</div>
+                    {buscaResultados.checklists.map(cl => (
+                      <button
+                        key={cl.id}
+                        onClick={() => { router.push(`/checklists-futuros`); setBuscaAberta(false); setBuscaQuery('') }}
+                        className="block w-full border-b border-surface-2 px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2"
+                      >
+                        <span className="block truncate text-sm font-semibold text-ink">{cl.titulo}</span>
+                        {cl.empresas && <span className="mt-0.5 flex items-center gap-1 text-xs text-ink-faint"><Building2 size={11} />{cl.empresas.nome_fantasia}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {buscaResultados.acoes.length > 0 && (
+                  <div>
+                    <div className="bg-blue-tint px-3.5 py-2 text-[11px] font-bold uppercase tracking-wide text-blue">Ações Corretivas</div>
+                    {buscaResultados.acoes.map(ac => (
+                      <button
+                        key={ac.id}
+                        onClick={() => { router.push(`/acoes`); setBuscaAberta(false); setBuscaQuery('') }}
+                        className="block w-full border-b border-surface-2 px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-2"
+                      >
+                        <span className="block truncate text-sm font-semibold text-ink">{ac.titulo}</span>
+                        {ac.empresas && <span className="mt-0.5 flex items-center gap-1 text-xs text-ink-faint"><Building2 size={11} />{ac.empresas.nome_fantasia} · {ac.status}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                {feed.map((item, idx) => {
-                  const icone = item.tipo === 'checklist' ? '📋' : item.tipo === 'acao' ? '⚠️' : '🔔'
-                  return (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem', padding: '0.75rem 0', borderBottom: idx < feed.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                      <span style={{ fontSize: '1.25rem', flexShrink: 0, marginTop: '1px' }}>{icone}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: '0.875rem', color: '#1f2937', margin: 0, lineHeight: '1.4' }}>{item.descricao}</p>
-                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: '0.125rem 0 0' }}>
-                          {new Date(item.data).toLocaleDateString(lang === 'en' ? 'en-US' : 'pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      {item.checklist && (
-                        <button
-                          onClick={() => router.push(`/checklists-criados/${item.checklist}`)}
-                          style={{ fontSize: '0.75rem', color: '#8b5cf6', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, fontWeight: '600', padding: 0 }}
-                        >
-                          {t.dashboard.viewMore}
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
+            )}
+
+            {buscaAberta && buscaQuery.length >= 2 && !buscandoGlobal && buscaResultados && buscaResultados.checklists.length === 0 && buscaResultados.acoes.length === 0 && (
+              <div className="absolute right-0 top-[110%] z-[500] w-full min-w-[280px] rounded-2xl bg-white p-5 text-center text-sm text-ink-faint shadow-soft">
+                Nenhum resultado encontrado.
               </div>
             )}
           </div>
+        </div>
 
-        </main>
+        {/* Banner de notificações push */}
+        {notifPermissao === 'default' && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-blue-tint px-5 py-4 shadow-soft-sm">
+            <div className="flex items-center gap-3">
+              <Bell size={18} className="flex-shrink-0 text-blue" />
+              <p className="text-sm text-blue">{t.dashboard.notifBannerMsg}</p>
+            </div>
+            <button
+              onClick={ativarNotificacoes}
+              className="whitespace-nowrap rounded-xl bg-blue px-4 py-2 text-sm font-semibold text-white"
+            >
+              {t.dashboard.enableNotifications}
+            </button>
+          </div>
+        )}
+
+        {/* Resumo semanal */}
+        {!loading && (
+          <Card className="mb-4 p-5">
+            <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 font-display text-sm font-bold text-ink">
+                <TrendingUp size={16} className="text-ink-muted" />
+                Resumo dos Últimos 7 Dias
+              </h2>
+              <button
+                onClick={() => router.push('/dashboard-empresa')}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-surface-2 px-3.5 py-2 text-xs font-semibold text-ink-muted"
+              >
+                <Building2 size={13} />
+                Dashboard por Empresa
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-teal-tint p-4">
+                <div className="mb-1 flex items-center gap-1.5 text-xs font-bold text-teal">
+                  <CheckCircle size={14} />
+                  Checklists concluídos
+                </div>
+                <div className="font-display text-2xl font-bold text-teal">{resumoSemanal.checklistsConcluidos}</div>
+              </div>
+              <div className={`rounded-2xl p-4 ${resumoSemanal.pendentes > 0 ? 'bg-amber-tint' : 'bg-teal-tint'}`}>
+                <div className={`mb-1 flex items-center gap-1.5 text-xs font-bold ${resumoSemanal.pendentes > 0 ? 'text-amber' : 'text-teal'}`}>
+                  <FileText size={14} />
+                  Checklists pendentes
+                </div>
+                <div className={`font-display text-2xl font-bold ${resumoSemanal.pendentes > 0 ? 'text-amber' : 'text-teal'}`}>{resumoSemanal.pendentes}</div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_1fr]">
+
+          {/* Checklists dos últimos 30 dias */}
+          <Card>
+            <div className="px-5 pb-1 pt-5">
+              <h2 className="font-display text-sm font-bold text-ink">Checklists dos Últimos 30 Dias</h2>
+            </div>
+            <div className="max-h-[440px] overflow-y-auto p-3.5">
+              {loading ? (
+                <div className="flex items-center gap-2 p-3 text-sm text-ink-faint">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-surface-2 border-t-violet" />
+                  {t.common.loading}
+                </div>
+              ) : checklists.length === 0 ? (
+                <div className="py-8 text-center text-ink-faint">
+                  <CheckSquare size={32} className="mx-auto mb-3 opacity-35" />
+                  <p className="text-sm font-medium">Nenhum checklist encontrado</p>
+                  <p className="mt-1 text-xs">Os checklists aparecerão aqui quando forem criados</p>
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  {checklists.map((checklist) => {
+                    const info = statusInfo(checklist.status)
+                    return (
+                      <div
+                        key={checklist.id}
+                        onClick={() => router.push(`/checklists-criados/${checklist.id}`)}
+                        className="flex cursor-pointer items-start gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-surface-2"
+                      >
+                        <div className={`min-h-[2.6rem] w-1.5 flex-shrink-0 self-stretch rounded-full ${info.bar}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-center justify-between gap-2">
+                            <span className="truncate text-sm font-semibold text-ink">{checklist.nome}</span>
+                            <Badge tone={info.tone}>{info.label}</Badge>
+                          </div>
+                          {checklist.descricao && (
+                            <p className="mb-1 line-clamp-2 text-xs text-ink-muted">{checklist.descricao}</p>
+                          )}
+                          <div className="flex flex-wrap gap-3 text-[11px] text-ink-faint">
+                            {checklist.empresa?.nome_fantasia && (
+                              <span className="flex items-center gap-1"><Building2 size={11} />{checklist.empresa.nome_fantasia}</span>
+                            )}
+                            <span className="flex items-center gap-1"><Calendar size={11} />{formatarData(checklist.created_at)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Performance por empresa */}
+          <Card>
+            <div className="px-5 pb-1 pt-5">
+              <h2 className="font-display text-sm font-bold text-ink">{t.dashboard.performance}</h2>
+            </div>
+            <div className="p-3.5">
+              {loading ? (
+                <div className="flex items-center gap-2 p-3 text-sm text-ink-faint">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-surface-2 border-t-violet" />
+                  {t.common.loading}
+                </div>
+              ) : performance.length === 0 ? (
+                <div className="py-8 text-center text-ink-faint">
+                  <FileText size={32} className="mx-auto mb-3 opacity-35" />
+                  <p className="text-sm font-medium">Nenhum dado disponível</p>
+                  <p className="mt-1 text-xs">Os dados aparecerão quando houver checklists</p>
+                </div>
+              ) : (
+                <>
+                  {performance.map((item) => {
+                    const color = perfColor(item.percentual)
+                    return (
+                      <div key={item.empresa} className="rounded-2xl px-2 py-2.5 transition-colors hover:bg-surface-2">
+                        <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                          <span className="truncate text-sm font-semibold text-ink">{item.empresa}</span>
+                          <span className={`whitespace-nowrap text-sm font-bold ${color.text}`}>{item.percentual}%</span>
+                        </div>
+                        <div className="relative h-[5px] overflow-hidden rounded-full bg-surface-2">
+                          <div className={`absolute inset-y-0 left-0 rounded-full ${color.bar}`} style={{ width: `${item.percentual}%` }} />
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap gap-3 text-[11px] text-ink-muted">
+                          <span>Total: <b className="text-ink">{item.total}</b></span>
+                          <span className="text-teal">✓ {item.concluidos}</span>
+                          <span className="text-amber">⏳ {item.pendentes}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  <div className="mt-2 rounded-2xl bg-violet-tint px-4 py-3">
+                    <div className="mb-1 flex items-center gap-1.5 text-xs font-bold text-violet">
+                      <TrendingUp size={13} />
+                      Resumo Geral
+                    </div>
+                    <p className="text-xs text-ink-muted">
+                      Categorias: <b className="text-ink">{performance.length}</b> · Checklists: <b className="text-ink">{totalPerfChecklists}</b> · Taxa média: <b className="text-ink">{taxaMediaConclusao}%</b>
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        {/* Feed de atividades */}
+        <Card className="p-5">
+          <h2 className="mb-2 flex items-center gap-2 font-display text-sm font-bold text-ink">
+            <Activity size={16} className="text-ink-muted" />
+            {t.dashboard.recentActivity}
+          </h2>
+          {loadingFeed ? (
+            <div className="flex items-center gap-2 p-3 text-sm text-ink-faint">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-surface-2 border-t-violet" />
+              {t.common.loading}
+            </div>
+          ) : feed.length === 0 ? (
+            <div className="py-8 text-center text-ink-faint">
+              <Activity size={32} className="mx-auto mb-3 opacity-35" />
+              <p className="text-sm">{t.dashboard.noActivity}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {feed.map((item, idx) => {
+                const isChecklist = item.tipo === 'checklist'
+                const isAcao = item.tipo === 'acao'
+                const iconCls = isChecklist ? 'bg-teal-tint text-teal' : isAcao ? 'bg-brand-tint text-brand' : 'bg-violet-tint text-violet'
+                return (
+                  <div key={idx} className="flex items-start gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-surface-2">
+                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ${iconCls}`}>
+                      {isChecklist ? <CheckSquare size={15} /> : isAcao ? <AlertTriangle size={15} /> : <Bell size={15} />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm leading-snug text-ink">{item.descricao}</p>
+                      <p className="mt-0.5 text-[11px] text-ink-faint">
+                        {new Date(item.data).toLocaleDateString(lang === 'en' ? 'en-US' : 'pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    {item.checklist && (
+                      <button
+                        onClick={() => router.push(`/checklists-criados/${item.checklist}`)}
+                        className="flex-shrink-0 whitespace-nowrap pt-0.5 text-xs font-semibold text-violet"
+                      >
+                        {t.dashboard.viewMore}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Card>
+
       </div>
-    </>
+    </div>
   )
 }

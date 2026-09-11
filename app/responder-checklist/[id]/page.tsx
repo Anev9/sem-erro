@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import {
   ArrowLeft,
@@ -28,6 +28,9 @@ import {
 } from '@/lib/offline-db'
 import { toast } from 'sonner'
 import { calcularAlertaHorario } from '@/lib/prazo-horario'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 interface Checklist {
   id: string
@@ -55,6 +58,8 @@ interface Resposta {
 }
 
 type MapaRespostas = Record<string, Resposta>
+
+const respostaBtnBase = 'flex flex-col items-center gap-2 rounded-2xl border-2 p-4 text-base font-semibold transition-all hover:-translate-y-0.5 cursor-pointer'
 
 export default function ResponderChecklistPage() {
   const router = useRouter()
@@ -173,7 +178,6 @@ export default function ResponderChecklistPage() {
       let checklistData: Record<string, unknown> | null = null
       let itensData: Record<string, unknown>[] = []
       let respostasData: Record<string, unknown>[] = []
-      let usouCache = false
 
       try {
         const res = await fetch(`/api/colaborador/checklist-detail/${checklistId}?colaborador_id=${colaboradorIdLocal}`)
@@ -201,7 +205,6 @@ export default function ResponderChecklistPage() {
           checklistData = cache.checklist
           itensData = cache.itens
           respostasData = cache.respostas
-          usouCache = true
           setModoCache(true)
         } else {
           toast.error('Sem conexão e checklist não encontrado em cache. Abra este checklist online primeiro.')
@@ -419,20 +422,20 @@ export default function ResponderChecklistPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#6b7280', fontSize: '1rem' }}>Carregando checklist...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-ink-muted">Carregando checklist...</p>
       </div>
     )
   }
 
   if (!checklist || itens.length === 0) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ color: '#6b7280', fontSize: '1rem', marginBottom: '1rem' }}>Checklist não encontrado ou sem itens.</p>
-          <button onClick={() => router.push('/dashboard-funcionario')} style={{ padding: '0.75rem 1.5rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="mb-4 text-sm text-ink-muted">Checklist não encontrado ou sem itens.</p>
+          <Button variant="primary" onClick={() => router.push('/dashboard-funcionario')}>
             Voltar ao Dashboard
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -445,38 +448,29 @@ export default function ResponderChecklistPage() {
     const naAplicavel = Object.values(respostas).filter(r => r.resposta === 'na').length
 
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-        <style>{`
-          .fade-in { animation: fadeIn 0.5s ease-out; }
-          @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        `}</style>
-
-        <div style={{ maxWidth: '680px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-          <div className="fade-in" style={{ backgroundColor: 'white', borderRadius: '1.5rem', padding: '3rem 2rem', textAlign: 'center', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
-            <div style={{ width: '5rem', height: '5rem', backgroundColor: '#d1fae5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-              <CheckCircle size={48} style={{ color: '#10b981' }} />
+      <div className="min-h-screen">
+        <div className="mx-auto max-w-[680px] px-6 py-8">
+          <Card className="p-8 text-center sm:p-12">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-teal-tint">
+              <CheckCircle size={44} className="text-teal" />
             </div>
 
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
-              Checklist Concluído!
-            </h1>
-            <p style={{ fontSize: '1rem', color: '#6b7280', marginBottom: '2rem' }}>
-              {checklist.nome}
-            </p>
+            <h1 className="mb-2 font-display text-2xl font-bold text-ink">Checklist Concluído!</h1>
+            <p className="mb-8 text-sm text-ink-muted">{checklist.nome}</p>
 
             {/* Resumo */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
-              <div style={{ padding: '1rem', backgroundColor: '#f0fdf4', borderRadius: '0.75rem', border: '1px solid #bbf7d0' }}>
-                <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#16a34a', margin: 0 }}>{conformes}</p>
-                <p style={{ fontSize: '0.8rem', color: '#15803d', margin: '0.25rem 0 0' }}>Conforme</p>
+            <div className="mb-8 grid grid-cols-3 gap-3">
+              <div className="rounded-2xl bg-teal-tint p-4">
+                <p className="text-2xl font-bold text-teal">{conformes}</p>
+                <p className="mt-1 text-xs text-teal">Conforme</p>
               </div>
-              <div style={{ padding: '1rem', backgroundColor: '#fef2f2', borderRadius: '0.75rem', border: '1px solid #fecaca' }}>
-                <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#dc2626', margin: 0 }}>{naoConformes}</p>
-                <p style={{ fontSize: '0.8rem', color: '#b91c1c', margin: '0.25rem 0 0' }}>Não Conforme</p>
+              <div className="rounded-2xl bg-coral-tint p-4">
+                <p className="text-2xl font-bold text-coral">{naoConformes}</p>
+                <p className="mt-1 text-xs text-coral">Não Conforme</p>
               </div>
-              <div style={{ padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.75rem', border: '1px solid #e5e7eb' }}>
-                <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#6b7280', margin: 0 }}>{naAplicavel}</p>
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.25rem 0 0' }}>N/A</p>
+              <div className="rounded-2xl bg-surface-2 p-4">
+                <p className="text-2xl font-bold text-ink-muted">{naAplicavel}</p>
+                <p className="mt-1 text-xs text-ink-muted">N/A</p>
               </div>
             </div>
 
@@ -484,135 +478,112 @@ export default function ResponderChecklistPage() {
             {fotoExpandida && (
               <div
                 onClick={() => setFotoExpandida(null)}
-                style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', cursor: 'zoom-out' }}
+                className="fixed inset-0 z-[9999] flex cursor-zoom-out items-center justify-center bg-black/85 p-4"
               >
-                <img src={fotoExpandida} alt="Foto ampliada" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: '0.75rem', objectFit: 'contain' }} />
+                <img src={fotoExpandida} alt="Foto ampliada" className="max-h-[90vh] max-w-full rounded-xl object-contain" />
               </div>
             )}
 
             {/* Itens respondidos */}
-            <div style={{ textAlign: 'left', marginBottom: '2rem', maxHeight: '420px', overflowY: 'auto' }}>
+            <div className="mb-8 max-h-[420px] overflow-y-auto text-left">
               {itens.map((item, index) => {
                 const r = respostas[item.id]
-                const cor = r?.resposta === 'sim' ? '#16a34a' : r?.resposta === 'nao' ? '#dc2626' : '#6b7280'
-                const bg = r?.resposta === 'sim' ? '#f0fdf4' : r?.resposta === 'nao' ? '#fef2f2' : '#f9fafb'
+                const cor = r?.resposta === 'sim' ? 'text-teal' : r?.resposta === 'nao' ? 'text-coral' : 'text-ink-muted'
+                const bg = r?.resposta === 'sim' ? 'bg-teal-tint' : r?.resposta === 'nao' ? 'bg-coral-tint' : 'bg-surface-2'
                 const label = r?.resposta === 'sim' ? 'Sim' : r?.resposta === 'nao' ? 'Não' : 'N/A'
                 const fotoUrl = fotoUrls[item.id]
 
                 return (
-                  <div key={item.id} style={{ backgroundColor: bg, borderRadius: '0.5rem', marginBottom: '0.5rem', overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#9ca3af', minWidth: '1.5rem' }}>{index + 1}.</span>
-                      <span style={{ flex: 1, fontSize: '0.9rem', color: '#374151' }}>{item.titulo}</span>
+                  <div key={item.id} className={`mb-2 overflow-hidden rounded-xl ${bg}`}>
+                    <div className="flex items-center gap-3 p-3">
+                      <span className="min-w-[1.5rem] text-xs text-ink-faint">{index + 1}.</span>
+                      <span className="flex-1 text-sm text-ink">{item.titulo}</span>
                       {fotoUrl && (
-                        <button
-                          onClick={() => setFotoExpandida(fotoUrl)}
-                          style={{ padding: '0.25rem', background: 'none', border: 'none', cursor: 'zoom-in', flexShrink: 0 }}
-                          title="Ver foto"
-                        >
-                          <img src={fotoUrl} alt="foto" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '0.375rem', border: '2px solid #d1d5db' }} />
+                        <button onClick={() => setFotoExpandida(fotoUrl)} className="flex-shrink-0 cursor-zoom-in" title="Ver foto">
+                          <img src={fotoUrl} alt="foto" className="h-10 w-10 rounded-md border-2 border-white object-cover" />
                         </button>
                       )}
-                      <span style={{ fontSize: '0.8rem', fontWeight: '600', color: cor, minWidth: '2.5rem', textAlign: 'right' }}>{label}</span>
+                      <span className={`min-w-[2.5rem] text-right text-xs font-semibold ${cor}`}>{label}</span>
                     </div>
                     {r?.observacao && (
-                      <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0 0.75rem 0.5rem 2.5rem', fontStyle: 'italic' }}>
-                        "{r.observacao}"
-                      </p>
+                      <p className="mx-3 mb-2 ml-10 text-xs italic text-ink-muted">&quot;{r.observacao}&quot;</p>
                     )}
                   </div>
                 )
               })}
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => { setConcluido(false); setItemAtual(0) }}
-                style={{ padding: '0.875rem 1.5rem', backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: '500' }}
-              >
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button variant="secondary" onClick={() => { setConcluido(false); setItemAtual(0) }}>
                 Revisar Respostas
-              </button>
-              <button
-                onClick={() => router.push('/dashboard-funcionario')}
-                style={{ padding: '0.875rem 1.5rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-              >
+              </Button>
+              <Button variant="primary" onClick={() => router.push('/dashboard-funcionario')} icon={<ChevronRight size={18} />} className="flex-row-reverse">
                 Voltar ao Dashboard
-                <ChevronRight size={18} />
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <style>{`
-        .fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .btn-resposta { transition: all 0.15s ease; border: 2px solid; cursor: pointer; border-radius: 0.75rem; padding: 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 1rem; }
-        .btn-resposta:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-      `}</style>
-
+    <div className="min-h-screen">
       {/* Banner offline / sincronizando */}
       {!isOnline && (
-        <div style={{ backgroundColor: '#1f2937', color: 'white', padding: '0.6rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.875rem' }}>
-          <WifiOff size={15} style={{ color: '#f97316', flexShrink: 0 }} />
-          <span style={{ flex: 1 }}>
+        <div className="flex items-center gap-2.5 bg-ink px-6 py-2.5 text-sm text-white">
+          <WifiOff size={15} className="flex-shrink-0 text-brand" />
+          <span className="flex-1">
             <strong>Modo offline.</strong> Suas respostas estão sendo salvas no dispositivo{pendentes > 0 ? ` (${pendentes} pendente${pendentes > 1 ? 's' : ''})` : ''}.
           </span>
         </div>
       )}
       {isOnline && pendentes > 0 && (
-        <div style={{ backgroundColor: '#f97316', color: 'white', padding: '0.6rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.875rem' }}>
-          <RefreshCw size={15} style={{ animation: sincronizando ? 'spin 1s linear infinite' : 'none', flexShrink: 0 }} />
-          <span style={{ flex: 1 }}>
+        <div className="flex items-center gap-2.5 bg-amber px-6 py-2.5 text-sm text-white">
+          <RefreshCw size={15} className={`flex-shrink-0 ${sincronizando ? 'animate-spin' : ''}`} />
+          <span className="flex-1">
             {sincronizando ? 'Sincronizando respostas...' : `${pendentes} resposta${pendentes > 1 ? 's' : ''} pendente${pendentes > 1 ? 's' : ''} de sincronização.`}
           </span>
           {!sincronizando && (
-            <button onClick={triggerSync} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '0.25rem 0.75rem', borderRadius: '9999px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}>
+            <button onClick={triggerSync} className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">
               Sincronizar agora
             </button>
           )}
         </div>
       )}
       {modoCache && isOnline && pendentes === 0 && (
-        <div style={{ backgroundColor: '#fffbeb', color: '#92400e', padding: '0.6rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.875rem', borderBottom: '1px solid #fde68a' }}>
-          <span>⚠️ Carregado do cache local. Dados podem estar desatualizados.</span>
+        <div className="border-b border-amber/30 bg-amber-tint px-6 py-2.5 text-sm text-amber">
+          ⚠️ Carregado do cache local. Dados podem estar desatualizados.
         </div>
       )}
 
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', padding: '1.25rem 1.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+      <div className="bg-white shadow-soft-sm">
+        <div className="mx-auto max-w-[680px] px-6 py-5">
           <button
             onClick={() => router.push('/dashboard-funcionario')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.85)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', marginBottom: '0.75rem', padding: 0 }}
+            className="mb-3 inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
           >
             <ArrowLeft size={16} />
             Voltar
           </button>
 
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'white', margin: '0 0 0.25rem' }}>
-            {checklist.nome}
-          </h1>
+          <h1 className="mb-1.5 font-display text-lg font-bold text-ink">{checklist.nome}</h1>
 
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <div className="flex flex-wrap gap-4">
             {checklist.empresas && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>
+              <span className="flex items-center gap-1.5 text-sm text-ink-muted">
                 <Building2 size={14} />
                 {checklist.empresas.nome_fantasia}
               </span>
             )}
             {checklist.proxima_execucao && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>
+              <span className="flex items-center gap-1.5 text-sm text-ink-muted">
                 <Calendar size={14} />
                 {new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}
               </span>
             )}
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)' }}>
+            <span className="flex items-center gap-1.5 text-sm text-ink-muted">
               <ClipboardList size={14} />
               {totalRespondidos}/{itens.length} respondidas
             </span>
@@ -620,14 +591,16 @@ export default function ResponderChecklistPage() {
 
           {checklist.hora_limite && (() => {
             const alerta = calcularAlertaHorario(checklist.hora_limite)
-            const bg = alerta?.nivel === 'vencido' ? 'rgba(239,68,68,0.9)' : alerta?.nivel === 'proximo' ? 'rgba(245,158,11,0.9)' : 'rgba(255,255,255,0.15)'
+            const tone = alerta?.nivel === 'vencido' ? 'danger' : alerta?.nivel === 'proximo' ? 'warning' : 'neutral'
             return (
-              <div style={{ marginTop: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.75rem', borderRadius: '9999px', backgroundColor: bg, color: 'white', fontSize: '0.8rem', fontWeight: '600' }}>
-                ⏰ {alerta?.nivel === 'vencido'
-                  ? `Prazo de hoje vencido às ${alerta.horaFormatada}`
-                  : alerta?.nivel === 'proximo'
-                    ? `Faltam ${alerta.minutosRestantes} min para o prazo (${alerta.horaFormatada})`
-                    : `Responder até ${checklist.hora_limite.slice(0, 5)}`}
+              <div className="mt-3 inline-block">
+                <Badge tone={tone}>
+                  ⏰ {alerta?.nivel === 'vencido'
+                    ? `Prazo de hoje vencido às ${alerta.horaFormatada}`
+                    : alerta?.nivel === 'proximo'
+                      ? `Faltam ${alerta.minutosRestantes} min para o prazo (${alerta.horaFormatada})`
+                      : `Responder até ${checklist.hora_limite.slice(0, 5)}`}
+                </Badge>
               </div>
             )
           })()}
@@ -635,26 +608,27 @@ export default function ResponderChecklistPage() {
       </div>
 
       {/* Barra de progresso */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '0.75rem 1.5rem' }}>
-        <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.8rem', color: '#6b7280' }}>
+      <div className="border-b border-surface-2 bg-white px-6 py-3">
+        <div className="mx-auto max-w-[680px]">
+          <div className="mb-2 flex justify-between text-xs text-ink-muted">
             <span>Progresso</span>
-            <span style={{ fontWeight: '600', color: '#3b82f6' }}>{Math.round(progresso)}%</span>
+            <span className="font-semibold text-brand">{Math.round(progresso)}%</span>
           </div>
-          <div style={{ width: '100%', height: '8px', backgroundColor: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden' }}>
-            <div style={{ width: `${progresso}%`, height: '100%', backgroundColor: '#3b82f6', borderRadius: '9999px', transition: 'width 0.4s ease' }} />
+          <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+            <div className="h-full rounded-full bg-brand transition-[width] duration-500" style={{ width: `${progresso}%` }} />
           </div>
 
           {/* Indicadores de itens */}
-          <div style={{ display: 'flex', gap: '4px', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="mt-3 flex flex-wrap gap-1">
             {itens.map((item, index) => {
               const r = respostas[item.id]?.resposta
-              const bg = r === 'sim' ? '#10b981' : r === 'nao' ? '#ef4444' : r === 'na' ? '#9ca3af' : index === itemAtual ? '#3b82f6' : '#e5e7eb'
+              const bg = r === 'sim' ? 'bg-teal' : r === 'nao' ? 'bg-coral' : r === 'na' ? 'bg-ink-faint' : index === itemAtual ? 'bg-brand' : 'bg-surface-2'
+              const textColor = r || index === itemAtual ? 'text-white' : 'text-ink-faint'
               return (
                 <button
                   key={item.id}
                   onClick={() => setItemAtual(index)}
-                  style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: bg, border: index === itemAtual ? '2px solid #1d4ed8' : 'none', cursor: 'pointer', fontSize: '0.7rem', color: 'white', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${bg} ${textColor} ${index === itemAtual ? 'ring-2 ring-brand ring-offset-1' : ''}`}
                 >
                   {index + 1}
                 </button>
@@ -665,123 +639,98 @@ export default function ResponderChecklistPage() {
       </div>
 
       {/* Conteúdo principal */}
-      <div style={{ maxWidth: '680px', margin: '0 auto', padding: '1.5rem' }}>
+      <div className="mx-auto max-w-[680px] px-6 py-6">
         {itemAtualDados && (
-          <div key={itemAtualDados.id} className="fade-in">
+          <div key={itemAtualDados.id}>
 
             {/* Card da pergunta */}
-            <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#9ca3af', backgroundColor: '#f3f4f6', padding: '0.25rem 0.625rem', borderRadius: '9999px' }}>
-                  Pergunta {itemAtual + 1} de {itens.length}
-                </span>
+            <Card className="mb-6 p-7">
+              <div className="mb-3">
+                <Badge tone="neutral">Pergunta {itemAtual + 1} de {itens.length}</Badge>
               </div>
 
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937', margin: '0 0 0.75rem', lineHeight: '1.5' }}>
-                {itemAtualDados.titulo}
-              </h2>
+              <h2 className="mb-2 text-lg font-semibold leading-relaxed text-ink">{itemAtualDados.titulo}</h2>
 
               {itemAtualDados.descricao && (
-                <p style={{ fontSize: '0.9rem', color: '#6b7280', margin: 0, lineHeight: '1.6' }}>
-                  {itemAtualDados.descricao}
-                </p>
+                <p className="text-sm leading-relaxed text-ink-muted">{itemAtualDados.descricao}</p>
               )}
-            </div>
+            </Card>
 
             {/* Botões de resposta */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="mb-6 grid grid-cols-3 gap-3">
               <button
-                className="btn-resposta"
                 onClick={() => selecionarResposta('sim')}
-                style={{
-                  backgroundColor: respostaAtual?.resposta === 'sim' ? '#10b981' : 'white',
-                  borderColor: respostaAtual?.resposta === 'sim' ? '#10b981' : '#e5e7eb',
-                  color: respostaAtual?.resposta === 'sim' ? 'white' : '#374151',
-                  boxShadow: respostaAtual?.resposta === 'sim' ? '0 4px 12px rgba(16,185,129,0.3)' : '0 2px 6px rgba(0,0,0,0.05)'
-                }}
+                className={`${respostaBtnBase} ${respostaAtual?.resposta === 'sim' ? 'border-teal bg-teal text-white shadow-[0_8px_16px_-8px_rgba(22,184,138,0.5)]' : 'border-surface-2 bg-white text-ink-muted shadow-soft-sm'}`}
               >
-                <CheckCircle size={28} />
+                <CheckCircle size={26} />
                 Sim
               </button>
 
               <button
-                className="btn-resposta"
                 onClick={() => selecionarResposta('nao')}
-                style={{
-                  backgroundColor: respostaAtual?.resposta === 'nao' ? '#ef4444' : 'white',
-                  borderColor: respostaAtual?.resposta === 'nao' ? '#ef4444' : '#e5e7eb',
-                  color: respostaAtual?.resposta === 'nao' ? 'white' : '#374151',
-                  boxShadow: respostaAtual?.resposta === 'nao' ? '0 4px 12px rgba(239,68,68,0.3)' : '0 2px 6px rgba(0,0,0,0.05)'
-                }}
+                className={`${respostaBtnBase} ${respostaAtual?.resposta === 'nao' ? 'border-coral bg-coral text-white shadow-[0_8px_16px_-8px_rgba(251,92,102,0.5)]' : 'border-surface-2 bg-white text-ink-muted shadow-soft-sm'}`}
               >
-                <XCircle size={28} />
+                <XCircle size={26} />
                 Não
               </button>
 
               <button
-                className="btn-resposta"
                 onClick={() => selecionarResposta('na')}
-                style={{
-                  backgroundColor: respostaAtual?.resposta === 'na' ? '#6b7280' : 'white',
-                  borderColor: respostaAtual?.resposta === 'na' ? '#6b7280' : '#e5e7eb',
-                  color: respostaAtual?.resposta === 'na' ? 'white' : '#374151',
-                  boxShadow: respostaAtual?.resposta === 'na' ? '0 4px 12px rgba(107,114,128,0.3)' : '0 2px 6px rgba(0,0,0,0.05)'
-                }}
+                className={`${respostaBtnBase} ${respostaAtual?.resposta === 'na' ? 'border-ink-faint bg-ink-faint text-white shadow-soft' : 'border-surface-2 bg-white text-ink-muted shadow-soft-sm'}`}
               >
-                <MinusCircle size={28} />
+                <MinusCircle size={26} />
                 N/A
               </button>
             </div>
 
             {/* Observação */}
-            <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.25rem', boxShadow: '0 2px 6px rgba(0,0,0,0.05)', marginBottom: '1.5rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: '#374151', marginBottom: '0.75rem' }}>
-                <MessageSquare size={16} style={{ color: '#6b7280' }} />
+            <Card className="mb-6 p-5">
+              <label className="mb-3 flex items-center gap-2 text-sm font-medium text-ink">
+                <MessageSquare size={16} className="text-ink-muted" />
                 Observação (opcional)
               </label>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div className="flex gap-3">
                 <textarea
                   value={respostaAtual?.observacao || ''}
                   onChange={(e) => atualizarObservacao(e.target.value)}
+                  onBlur={salvarObservacao}
                   placeholder="Adicione uma observação sobre este item..."
                   rows={3}
-                  style={{ flex: 1, padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.9rem', resize: 'vertical', outline: 'none', fontFamily: 'inherit', color: '#374151' }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; salvarObservacao() }}
+                  className="flex-1 resize-y rounded-xl bg-surface-2 p-3 text-sm text-ink outline-none"
                 />
                 <button
                   onClick={salvarObservacao}
                   title="Salvar observação"
-                  style={{ padding: '0.75rem', backgroundColor: '#eff6ff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' }}
+                  className="flex h-fit items-center justify-center rounded-xl bg-brand-tint p-3 text-brand"
                 >
                   <Send size={16} />
                 </button>
               </div>
-            </div>
+            </Card>
 
             {/* Foto */}
-            <div style={{ backgroundColor: 'white', borderRadius: '1rem', padding: '1.25rem', boxShadow: itemAtualDados.foto_obrigatoria && !fotoUrls[itemAtualDados.id] ? '0 2px 6px rgba(239,68,68,0.2)' : '0 2px 6px rgba(0,0,0,0.05)', marginBottom: '1.5rem', border: itemAtualDados.foto_obrigatoria && !fotoUrls[itemAtualDados.id] ? '1px solid #fca5a5' : '1px solid transparent' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: itemAtualDados.foto_obrigatoria ? '#dc2626' : '#374151', marginBottom: '0.75rem' }}>
-                <Camera size={16} style={{ color: itemAtualDados.foto_obrigatoria ? '#dc2626' : '#6b7280' }} />
+            <Card className={`mb-6 p-5 ${itemAtualDados.foto_obrigatoria && !fotoUrls[itemAtualDados.id] ? 'border-2 border-coral' : ''}`}>
+              <label className={`mb-3 flex items-center gap-2 text-sm font-medium ${itemAtualDados.foto_obrigatoria ? 'text-coral' : 'text-ink'}`}>
+                <Camera size={16} className={itemAtualDados.foto_obrigatoria ? 'text-coral' : 'text-ink-muted'} />
                 {itemAtualDados.foto_obrigatoria ? 'Foto obrigatória *' : 'Foto (opcional)'}
               </label>
 
               {fotos[itemAtualDados.id] ? (
-                <div style={{ position: 'relative', display: 'inline-block' }}>
+                <div className="relative inline-block w-full">
                   <img
                     src={fotos[itemAtualDados.id]}
                     alt="Foto capturada"
-                    style={{ width: '100%', maxHeight: '240px', objectFit: 'cover', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
+                    className="max-h-[240px] w-full rounded-xl object-cover"
                   />
                   <button
                     onClick={removerFoto}
-                    style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', width: '2rem', height: '2rem', backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white"
                   >
                     <X size={14} />
                   </button>
                   <label
                     htmlFor={`foto-input-${itemAtualDados.id}`}
-                    style={{ display: 'block', marginTop: '0.5rem', textAlign: 'center', fontSize: '0.8rem', color: '#3b82f6', cursor: 'pointer', fontWeight: '500' }}
+                    className="mt-2 block cursor-pointer text-center text-xs font-medium text-brand"
                   >
                     Trocar foto
                   </label>
@@ -789,19 +738,15 @@ export default function ResponderChecklistPage() {
               ) : (
                 <label
                   htmlFor={`foto-input-${itemAtualDados.id}`}
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    gap: '0.5rem', padding: '1.5rem', border: '2px dashed #d1d5db', borderRadius: '0.75rem',
-                    cursor: uploadandoFoto ? 'wait' : 'pointer', backgroundColor: '#f9fafb', color: '#6b7280'
-                  }}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink-faint/30 bg-surface-2 p-6 text-ink-muted ${uploadandoFoto ? 'cursor-wait' : 'cursor-pointer'}`}
                 >
                   {uploadandoFoto ? (
-                    <p style={{ margin: 0, fontSize: '0.9rem' }}>Enviando foto...</p>
+                    <p className="text-sm">Enviando foto...</p>
                   ) : (
                     <>
-                      <Camera size={32} style={{ color: '#9ca3af' }} />
-                      <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>Tirar foto ou escolher da galeria</span>
-                      <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Toque para abrir a câmera</span>
+                      <Camera size={32} className="text-ink-faint" />
+                      <span className="text-sm font-medium">Tirar foto ou escolher da galeria</span>
+                      <span className="text-xs text-ink-faint">Toque para abrir a câmera</span>
                     </>
                   )}
                 </label>
@@ -814,41 +759,30 @@ export default function ResponderChecklistPage() {
                 capture="environment"
                 onChange={handleFotoCaptura}
                 disabled={uploadandoFoto}
-                style={{ display: 'none' }}
+                className="hidden"
               />
-            </div>
+            </Card>
 
             {/* Navegação */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-              <button
-                onClick={voltar}
-                disabled={itemAtual === 0}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.875rem 1.5rem', backgroundColor: 'white', color: itemAtual === 0 ? '#9ca3af' : '#374151', border: '1px solid #e5e7eb', borderRadius: '0.75rem', cursor: itemAtual === 0 ? 'not-allowed' : 'pointer', fontWeight: '500', fontSize: '0.95rem' }}
-              >
-                <ChevronLeft size={18} />
+            <div className="flex items-center justify-between gap-4">
+              <Button variant="secondary" onClick={voltar} disabled={itemAtual === 0} icon={<ChevronLeft size={18} />}>
                 Anterior
-              </button>
+              </Button>
 
-              {salvando && (
-                <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Salvando...</span>
-              )}
+              {salvando && <span className="text-xs text-ink-faint">Salvando...</span>}
 
               {itemAtual === itens.length - 1 ? (
                 <button
                   onClick={verificarConclusao}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.875rem 1.5rem', backgroundColor: totalRespondidos === itens.length ? '#10b981' : '#3b82f6', color: 'white', border: 'none', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.95rem' }}
+                  className={`inline-flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white ${totalRespondidos === itens.length ? 'bg-teal' : 'bg-brand'}`}
                 >
                   <CheckCircle size={18} />
                   {totalRespondidos === itens.length ? 'Concluir' : 'Finalizar'}
                 </button>
               ) : (
-                <button
-                  onClick={avancar}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.875rem 1.5rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.95rem' }}
-                >
+                <Button variant="primary" onClick={avancar} icon={<ChevronRight size={18} />} className="flex-row-reverse">
                   Próxima
-                  <ChevronRight size={18} />
-                </button>
+                </Button>
               )}
             </div>
           </div>

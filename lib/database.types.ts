@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           categoria: string | null
           checklist_id: string | null
+          colaborador_id: string | null
           created_at: string | null
           descricao: string | null
           empresa_id: string | null
@@ -37,6 +38,7 @@ export type Database = {
         Insert: {
           categoria?: string | null
           checklist_id?: string | null
+          colaborador_id?: string | null
           created_at?: string | null
           descricao?: string | null
           empresa_id?: string | null
@@ -56,6 +58,7 @@ export type Database = {
         Update: {
           categoria?: string | null
           checklist_id?: string | null
+          colaborador_id?: string | null
           created_at?: string | null
           descricao?: string | null
           empresa_id?: string | null
@@ -85,6 +88,13 @@ export type Database = {
             columns: ["checklist_id"]
             isOneToOne: false
             referencedRelation: "vw_checklists_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_corretivas_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
             referencedColumns: ["id"]
           },
           {

@@ -57,7 +57,7 @@ export async function POST(
 
   const { data: checklist } = await supabase
     .from('checklists_futuros')
-    .select('titulo, descricao')
+    .select('nome, descricao')
     .eq('id', checklistId)
     .in('empresa_id', empresaIds)
     .single()
@@ -85,7 +85,7 @@ export async function POST(
   const { error } = await supabase.from('checklist_versoes').insert([{
     checklist_id: checklistId,
     versao: proximaVersao,
-    titulo: checklist.titulo,
+    titulo: checklist.nome,
     descricao: checklist.descricao,
     itens: itens || [],
   }])

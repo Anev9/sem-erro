@@ -3,25 +3,22 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import {
-  ArrowLeft,
-  Users,
-  Save,
-  User,
-  Mail,
-  Phone,
-  Lock,
-  Briefcase,
-  Building2,
-  CheckCircle,
-  Copy,
-  Check
-} from 'lucide-react'
+import { User, Mail, Phone, Lock, Briefcase, Building2, CheckCircle, Copy, Check, Save } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 interface Empresa {
   id: string
   nome_fantasia: string
 }
+
+const CARGOS = ['Gerente', 'Supervisor', 'Operador', 'Assistente', 'Conferente', 'Repositor', 'Caixa', 'Açougueiro', 'Padeiro']
+
+const fieldWrapClass = 'relative'
+const iconClass = 'pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint'
+const inputClass = 'w-full rounded-xl bg-surface-2 py-3 pl-10 pr-3.5 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-60'
+const labelClass = 'mb-2 block text-sm font-semibold text-ink-muted'
 
 export default function NovoColaborador() {
   const router = useRouter()
@@ -152,336 +149,180 @@ export default function NovoColaborador() {
   }
 
   return (
-    <>
-      <style>{`
-        .form-input {
-          width: 100%;
-          padding: 0.875rem 1rem 0.875rem 3rem;
-          border: 1px solid #e5e7eb;
-          border-radius: 0.5rem;
-          font-size: 0.95rem;
-          outline: none;
-          transition: border-color 0.2s ease;
-          box-sizing: border-box;
-        }
-        .form-input:focus {
-          border-color: #2196F3;
-          box-shadow: 0 0 0 3px rgba(33,150,243,0.1);
-        }
-      `}</style>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-[900px] px-6 py-8">
+        <PageHeader title="Novo Colaborador" subtitle="Preencha os dados do colaborador" backHref="/colaboradores" />
 
-      <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem' }}>
-
-          {/* Voltar */}
-          <button
-            onClick={() => router.push('/colaboradores')}
-            type="button"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              backgroundColor: 'white',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              color: '#374151',
-              fontSize: '0.95rem',
-              marginBottom: '2rem'
-            }}
-          >
-            <ArrowLeft size={18} />
-            Voltar
-          </button>
-
-          {/* Main card */}
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '2rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
-          }}>
-            <div style={{ marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                <Users size={28} style={{ color: '#2196F3' }} />
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-                  Novo Colaborador
-                </h1>
+        <Card className="p-6 sm:p-8">
+          {credenciais ? (
+            <div className="py-8 text-center">
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-teal-tint">
+                <CheckCircle size={32} className="text-teal" />
               </div>
-              <p style={{ color: '#6b7280', margin: 0, fontSize: '0.95rem' }}>
-                Preencha os dados do colaborador
-              </p>
+              <h3 className="mb-2 font-display text-xl font-bold text-ink">Colaborador cadastrado com sucesso!</h3>
+              <p className="mb-6 text-sm text-ink-muted">Anote e envie os dados de acesso para o colaborador.</p>
+
+              <div className="mx-auto mb-6 max-w-[400px] rounded-2xl bg-surface-2 p-6 text-left">
+                <div className="mb-4">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Email</span>
+                  <p className="mt-1 text-base font-semibold text-ink">{credenciais.email}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Senha</span>
+                  <p className="mt-1 text-base font-semibold text-ink">{credenciais.senha}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-3">
+                <Button
+                  variant="primary"
+                  onClick={copiarCredenciais}
+                  icon={copiado ? <Check size={18} /> : <Copy size={18} />}
+                >
+                  {copiado ? 'Copiado!' : 'Copiar dados'}
+                </Button>
+                <Button variant="secondary" onClick={() => router.push('/colaboradores')}>
+                  Ir para colaboradores
+                </Button>
+              </div>
             </div>
-
-            {credenciais ? (
-              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                <CheckCircle size={56} style={{ color: '#22c55e', margin: '0 auto 1.5rem' }} />
-                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' }}>
-                  Colaborador cadastrado com sucesso!
-                </h3>
-                <p style={{ color: '#6b7280', marginBottom: '2rem' }}>
-                  Anote e envie os dados de acesso para o colaborador.
-                </p>
-
-                <div style={{
-                  backgroundColor: '#f9fafb',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '0.75rem',
-                  padding: '1.5rem',
-                  marginBottom: '2rem',
-                  textAlign: 'left',
-                  maxWidth: '400px',
-                  margin: '0 auto 2rem'
-                }}>
-                  <div style={{ marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</span>
-                    <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', margin: '0.25rem 0 0 0' }}>{credenciais.email}</p>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Senha</span>
-                    <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', margin: '0.25rem 0 0 0' }}>{credenciais.senha}</p>
+          ) : loadingEmpresas ? (
+            <div className="py-12 text-center text-sm text-ink-muted">Carregando empresas...</div>
+          ) : empresas.length === 0 ? (
+            <div className="py-12 text-center">
+              <Building2 size={48} className="mx-auto mb-4 text-ink-faint" />
+              <h3 className="mb-2 text-lg font-semibold text-ink">Nenhuma empresa cadastrada</h3>
+              <p className="text-sm text-ink-muted">Você precisa cadastrar pelo menos uma empresa antes de adicionar colaboradores.</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>Empresa/Loja *</label>
+                  <div className={fieldWrapClass}>
+                    <Building2 size={18} className={iconClass} />
+                    <select
+                      required
+                      className={`${inputClass} cursor-pointer`}
+                      value={formData.empresa_id}
+                      onChange={(e) => setFormData({ ...formData, empresa_id: e.target.value })}
+                      disabled={empresas.length === 1}
+                    >
+                      <option value="">Selecione a empresa/loja</option>
+                      {empresas.map((empresa) => (
+                        <option key={empresa.id} value={empresa.id}>{empresa.nome_fantasia}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={copiarCredenciais}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.75rem 1.5rem',
-                      backgroundColor: copiado ? '#22c55e' : '#2196F3',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.95rem',
-                      fontWeight: '600',
-                      transition: 'background-color 0.2s'
-                    }}
-                  >
-                    {copiado ? <Check size={18} /> : <Copy size={18} />}
-                    {copiado ? 'Copiado!' : 'Copiar dados'}
-                  </button>
-                  <button
-                    onClick={() => router.push('/colaboradores')}
-                    style={{
-                      padding: '0.75rem 1.5rem',
-                      backgroundColor: 'white',
-                      color: '#374151',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.95rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    Ir para colaboradores
-                  </button>
+                <div>
+                  <label className={labelClass}>Nome Completo *</label>
+                  <div className={fieldWrapClass}>
+                    <User size={18} className={iconClass} />
+                    <input
+                      type="text"
+                      required
+                      className={inputClass}
+                      value={formData.nome}
+                      onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                      placeholder="Digite o nome completo"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Email (login) *</label>
+                  <div className={fieldWrapClass}>
+                    <Mail size={18} className={iconClass} />
+                    <input
+                      type="email"
+                      required
+                      className={inputClass}
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="email@exemplo.com"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Celular</label>
+                  <div className={fieldWrapClass}>
+                    <Phone size={18} className={iconClass} />
+                    <input
+                      type="tel"
+                      className={inputClass}
+                      value={formData.celular}
+                      onChange={(e) => setFormData({ ...formData, celular: formatPhone(e.target.value) })}
+                      placeholder="(00) 00000-0000"
+                      maxLength={15}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Cargo *</label>
+                  <div className={fieldWrapClass}>
+                    <Briefcase size={18} className={iconClass} />
+                    <select
+                      required
+                      className={`${inputClass} cursor-pointer`}
+                      value={formData.cargo}
+                      onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                    >
+                      <option value="">Selecione um cargo</option>
+                      {CARGOS.map(cargo => (
+                        <option key={cargo} value={cargo}>{cargo}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Senha *</label>
+                  <div className={fieldWrapClass}>
+                    <Lock size={18} className={iconClass} />
+                    <input
+                      type="password"
+                      required
+                      className={inputClass}
+                      value={formData.senha}
+                      onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                      placeholder="Mínimo 6 caracteres"
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Confirmar Senha *</label>
+                  <div className={fieldWrapClass}>
+                    <Lock size={18} className={iconClass} />
+                    <input
+                      type="password"
+                      required
+                      className={inputClass}
+                      value={formData.confirmarSenha}
+                      onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
+                      placeholder="Digite a senha novamente"
+                    />
+                  </div>
                 </div>
               </div>
-            ) : loadingEmpresas ? (
-              <div style={{ textAlign: 'center', padding: '3rem' }}>
-                <p style={{ color: '#6b7280' }}>Carregando empresas...</p>
+
+              <div className="flex justify-end gap-3 border-t border-surface-2 pt-6">
+                <Button type="button" variant="secondary" onClick={() => router.push('/colaboradores')}>
+                  Cancelar
+                </Button>
+                <Button type="submit" variant="primary" disabled={loading} icon={<Save size={18} />}>
+                  {loading ? 'Cadastrando...' : 'Cadastrar Colaborador'}
+                </Button>
               </div>
-            ) : empresas.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '3rem' }}>
-                <Building2 size={48} style={{ color: '#9ca3af', margin: '0 auto 1rem' }} />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
-                  Nenhuma empresa cadastrada
-                </h3>
-                <p style={{ color: '#6b7280' }}>
-                  Você precisa cadastrar pelo menos uma empresa antes de adicionar colaboradores.
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit}>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                  gap: '1.5rem',
-                  marginBottom: '2rem'
-                }}>
-                  {/* Empresa */}
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>Empresa/Loja *</label>
-                    <div style={{ position: 'relative' }}>
-                      <Building2 size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                      <select
-                        required
-                        className="form-input"
-                        value={formData.empresa_id}
-                        onChange={(e) => setFormData({ ...formData, empresa_id: e.target.value })}
-                        disabled={empresas.length === 1}
-                      >
-                        <option value="">Selecione a empresa/loja</option>
-                        {empresas.map((empresa) => (
-                          <option key={empresa.id} value={empresa.id}>
-                            {empresa.nome_fantasia}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Nome */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>Nome Completo *</label>
-                    <div style={{ position: 'relative' }}>
-                      <User size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                      <input
-                        type="text"
-                        required
-                        className="form-input"
-                        value={formData.nome}
-                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                        placeholder="Digite o nome completo"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Email */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>Email (login) *</label>
-                    <div style={{ position: 'relative' }}>
-                      <Mail size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                      <input
-                        type="email"
-                        required
-                        className="form-input"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder="email@exemplo.com"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Celular */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>Celular</label>
-                    <div style={{ position: 'relative' }}>
-                      <Phone size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                      <input
-                        type="tel"
-                        className="form-input"
-                        value={formData.celular}
-                        onChange={(e) => setFormData({ ...formData, celular: formatPhone(e.target.value) })}
-                        placeholder="(00) 00000-0000"
-                        maxLength={15}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Cargo */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>Cargo *</label>
-                    <div style={{ position: 'relative' }}>
-                      <Briefcase size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                      <select
-                        required
-                        className="form-input"
-                        value={formData.cargo}
-                        onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                      >
-                        <option value="">Selecione um cargo</option>
-                        <option value="Gerente">Gerente</option>
-                        <option value="Supervisor">Supervisor</option>
-                        <option value="Operador">Operador</option>
-                        <option value="Assistente">Assistente</option>
-                        <option value="Conferente">Conferente</option>
-                        <option value="Repositor">Repositor</option>
-                        <option value="Caixa">Caixa</option>
-                        <option value="Açougueiro">Açougueiro</option>
-                        <option value="Padeiro">Padeiro</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Senha */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>Senha *</label>
-                    <div style={{ position: 'relative' }}>
-                      <Lock size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                      <input
-                        type="password"
-                        required
-                        className="form-input"
-                        value={formData.senha}
-                        onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                        placeholder="Mínimo 6 caracteres"
-                        minLength={6}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Confirmar Senha */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>Confirmar Senha *</label>
-                    <div style={{ position: 'relative' }}>
-                      <Lock size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                      <input
-                        type="password"
-                        required
-                        className="form-input"
-                        value={formData.confirmarSenha}
-                        onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
-                        placeholder="Digite a senha novamente"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  justifyContent: 'flex-end',
-                  paddingTop: '1.5rem',
-                  borderTop: '1px solid #e5e7eb'
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => router.push('/colaboradores')}
-                    style={{
-                      padding: '0.875rem 2rem',
-                      border: '1px solid #e5e7eb',
-                      backgroundColor: 'white',
-                      color: '#374151',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.95rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.875rem 2rem',
-                      background: loading ? '#9ca3af' : 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      fontSize: '0.95rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    <Save size={18} />
-                    {loading ? 'Cadastrando...' : 'Cadastrar Colaborador'}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
+            </form>
+          )}
+        </Card>
       </div>
-    </>
+    </div>
   )
 }

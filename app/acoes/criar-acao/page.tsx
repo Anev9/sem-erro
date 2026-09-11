@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 interface Empresa { id: string; nome_fantasia: string; ativo?: boolean }
 interface Checklist { id: string; titulo: string }
 interface Item { id: string; titulo: string; ordem: number }
+interface Colaborador { id: string; nome: string; empresa_id: string | null; celular: string | null; telefone: string | null }
 
 export default function CriarAcao() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function CriarAcao() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [itens, setItens] = useState<Item[]>([]);
+  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
 
   const [carregandoChecklists, setCarregandoChecklists] = useState(false);
   const [carregandoItens, setCarregandoItens] = useState(false);
@@ -26,6 +28,7 @@ export default function CriarAcao() {
     titulo: '',
     descricao: '',
     responsavel: '',
+    colaborador_id: '',
     prazo: '',
     prioridade: 'media',
     status: 'aguardando',
@@ -37,7 +40,14 @@ export default function CriarAcao() {
 
   useEffect(() => {
     carregarEmpresas();
+    carregarColaboradores();
   }, []);
+
+  async function carregarColaboradores() {
+    const res = await fetch('/api/aluno/colaboradores');
+    const data = res.ok ? await res.json() : [];
+    setColaboradores(data);
+  }
 
   async function carregarEmpresas() {
     const userStr = localStorage.getItem('user');
@@ -88,7 +98,7 @@ export default function CriarAcao() {
   }
 
   async function handleEmpresaChange(empresaId: string) {
-    setFormulario(prev => ({ ...prev, empresa_id: empresaId, checklist_id: '', item_id: '' }));
+    setFormulario(prev => ({ ...prev, empresa_id: empresaId, checklist_id: '', item_id: '', colaborador_id: '', responsavel: '' }));
     await carregarChecklists(empresaId);
   }
 
@@ -107,6 +117,17 @@ export default function CriarAcao() {
     }));
   }
 
+  function handleColaboradorChange(colaboradorId: string) {
+    const colaborador = colaboradores.find(c => c.id === colaboradorId);
+    setFormulario(prev => ({
+      ...prev,
+      colaborador_id: colaboradorId,
+      responsavel: colaborador ? colaborador.nome : ''
+    }));
+  }
+
+  const colaboradoresDaEmpresa = colaboradores.filter(c => c.empresa_id === formulario.empresa_id);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formulario.titulo.trim()) { toast.warning('Informe o título da ação.'); return; }
@@ -124,6 +145,7 @@ export default function CriarAcao() {
           titulo: formulario.titulo.trim(),
           descricao: formulario.descricao.trim() || null,
           responsavel: formulario.responsavel.trim() || null,
+          colaborador_id: formulario.colaborador_id || null,
           prazo: formulario.prazo || null,
           prioridade: formulario.prioridade,
           status: formulario.status,
@@ -284,12 +306,26 @@ export default function CriarAcao() {
             {/* Responsável */}
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={labelStyle}>Responsável</label>
-              <input
-                type="text"
-                value={formulario.responsavel}
-                onChange={(e) => handleChange('responsavel', e.target.value)}
+              <select
+                value={formulario.colaborador_id}
+                onChange={(e) => handleColaboradorChange(e.target.value)}
+                disabled={!formulario.empresa_id}
                 style={inputStyle}
-              />
+              >
+                <option value="">
+                  {!formulario.empresa_id ? 'Selecione a empresa primeiro' : colaboradoresDaEmpresa.length === 0 ? 'Nenhum colaborador cadastrado' : 'Selecione o responsável (opcional)'}
+                </option>
+                {colaboradoresDaEmpresa.map(col => (
+                  <option key={col.id} value={col.id}>
+                    {col.nome}{!(col.celular || col.telefone) ? ' (sem telefone cadastrado)' : ''}
+                  </option>
+                ))}
+              </select>
+              {formulario.colaborador_id && !colaboradoresDaEmpresa.find(c => c.id === formulario.colaborador_id)?.celular && !colaboradoresDaEmpresa.find(c => c.id === formulario.colaborador_id)?.telefone && (
+                <p style={{ fontSize: '0.75rem', color: '#d97706', margin: '0.375rem 0 0' }}>
+                  ⚠️ Este colaborador não tem telefone cadastrado — não receberá notificação por WhatsApp.
+                </p>
+              )}
             </div>
 
             {/* Prioridade e Status */}
