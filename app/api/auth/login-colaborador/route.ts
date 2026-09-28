@@ -28,12 +28,16 @@ export async function POST(request: NextRequest) {
     const supabase = db()
     const emailNorm = email.toLowerCase().trim()
 
-    // 1. Verificar se existe na tabela colaboradores
-    const { data: colaborador, error: findError } = await supabase
+    // 1. Verificar se existe na tabela colaboradores.
+    // O mesmo e-mail pode ter vários registros (colaborador movido entre lojas:
+    // o registro antigo fica com ativo = false) — priorizar o registro ativo.
+    const { data: colaboradores, error: findError } = await supabase
       .from('colaboradores')
       .select('*, empresas(nome_fantasia)')
       .ilike('email', emailNorm)
-      .maybeSingle()
+      .order('created_at', { ascending: false })
+
+    const colaborador = colaboradores?.find((c) => c.ativo !== false) ?? colaboradores?.[0]
 
     if (findError || !colaborador) {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })

@@ -13,7 +13,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const { email, senha, nome, celular, cargo, empresa_id } = await request.json()
+    const body = await request.json()
+    const { senha, nome, celular, cargo, empresa_id } = body
+    const email = String(body.email || '').toLowerCase().trim()
 
     if (!email || !senha || !nome || !cargo || !empresa_id) {
       return NextResponse.json({ error: 'email, senha, nome, cargo e empresa_id são obrigatórios' }, { status: 400 })
@@ -38,11 +40,12 @@ export async function POST(request: NextRequest) {
 
     // Verificar se já existe colaborador com este email (email é único globalmente,
     // então precisamos checar em qualquer empresa, não só na empresa de destino)
-    const { data: existingColab } = await supabase
+    // (case-insensitive; se houver duplicados legados, prioriza o ativo)
+    const { data: existentes } = await supabase
       .from('colaboradores')
       .select('id, ativo, auth_id, empresa_id')
-      .eq('email', email)
-      .maybeSingle()
+      .ilike('email', email)
+    const existingColab = existentes?.find((c) => c.ativo !== false) ?? existentes?.[0] ?? null
 
     // Se o email já pertence a um colaborador de outra empresa, essa empresa
     // precisa ser do mesmo aluno (senão seria possível "roubar" colaborador de outra conta)
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
 
       // Email já existe no Auth — buscar o usuário e atualizar senha
       const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const existingAuthUser = listData?.users?.find((u) => u.email === email)
+      const existingAuthUser = listData?.users?.find((u) => u.email?.toLowerCase() === email)
 
       if (!existingAuthUser) {
         return NextResponse.json({ error: 'Email já registrado em outro sistema. Tente outro email.' }, { status: 400 })
@@ -105,7 +108,7 @@ export async function POST(request: NextRequest) {
     if (existingColab) {
       const { error: colabError } = await supabase
         .from('colaboradores')
-        .update({ auth_id: authUserId, nome, celular: celular || null, cargo, empresa_id, ativo: true })
+        .update({ auth_id: authUserId, nome, email, celular: celular || null, cargo, empresa_id, ativo: true })
         .eq('id', existingColab.id)
 
       if (colabError) {
