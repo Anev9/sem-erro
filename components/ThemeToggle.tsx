@@ -28,11 +28,11 @@ export function ThemeToggle({ variant = 'dark' }: { variant?: 'dark' | 'light' }
       <button
         onClick={toggle}
         title={dark ? 'Modo claro' : 'Modo escuro'}
-        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-colors ${
+        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors ${
           dark ? 'bg-amber-tint text-amber' : 'bg-surface-2 text-ink-muted'
         }`}
       >
-        {dark ? <Sun size={16} /> : <Moon size={16} />}
+        {dark ? <Sun size={17} /> : <Moon size={17} />}
       </button>
     )
   }

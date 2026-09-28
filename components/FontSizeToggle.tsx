@@ -33,18 +33,18 @@ export function FontSizeToggle() {
         onClick={() => step(-1)}
         disabled={size === STEPS[0]}
         title="Diminuir texto"
-        className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-white disabled:opacity-30"
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-white disabled:opacity-30"
       >
-        <Minus size={13} />
+        <Minus size={14} />
       </button>
-      <span className="w-6 text-center text-[11px] font-bold text-ink-faint">A</span>
+      <span className="w-7 text-center text-xs font-bold text-ink-faint">A</span>
       <button
         onClick={() => step(1)}
         disabled={size === STEPS[STEPS.length - 1]}
         title="Aumentar texto"
-        className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-white disabled:opacity-30"
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-white disabled:opacity-30"
       >
-        <Plus size={13} />
+        <Plus size={14} />
       </button>
     </div>
   )

@@ -51,17 +51,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sem permissão para resetar a senha deste colaborador' }, { status: 403 })
     }
 
-    // Encontra (ou cria) a conta no Supabase Auth pelo e-mail e vincula o auth_id
+    const emailNorm = String(colaborador.email || '').toLowerCase().trim()
+
+    // Encontra (ou cria) a conta no Supabase Auth pelo e-mail e vincula o auth_id.
+    // O login autentica pelo e-mail, então a senha precisa ser trocada exatamente
+    // na conta Auth desse e-mail — não confiar cegamente no auth_id salvo.
     async function resolverAuthId(): Promise<{ authId: string } | { erro: string }> {
-      const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const existingAuthUser = listData?.users?.find((u) => u.email === colaborador!.email)
+      let existingAuthUser: { id: string } | undefined
+
+      // 1. auth_id salvo, desde que o e-mail da conta bata com o do colaborador
+      if (colaborador!.auth_id) {
+        const { data: byId } = await supabase.auth.admin.getUserById(colaborador!.auth_id)
+        if (byId?.user?.email?.toLowerCase() === emailNorm) existingAuthUser = byId.user
+      }
+
+      // 2. busca paginada por e-mail (case-insensitive)
+      for (let page = 1; !existingAuthUser && page <= 50; page++) {
+        const { data: listData } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
+        const users = listData?.users ?? []
+        existingAuthUser = users.find((u) => u.email?.toLowerCase() === emailNorm)
+        if (users.length < 1000) break
+      }
 
       let novoAuthId: string
       if (existingAuthUser) {
         novoAuthId = existingAuthUser.id
       } else {
         const { data: created, error: createError } = await supabase.auth.admin.createUser({
-          email: colaborador!.email,
+          email: emailNorm,
           password: RESET_PASSWORD,
           email_confirm: true,
           user_metadata: { role: 'colaborador' }
@@ -72,35 +89,20 @@ export async function POST(request: NextRequest) {
         novoAuthId = created.user!.id
       }
 
-      await supabase.from('colaboradores').update({ auth_id: novoAuthId }).eq('id', colaborador_id)
+      if (novoAuthId !== colaborador!.auth_id) {
+        await supabase.from('colaboradores').update({ auth_id: novoAuthId }).eq('id', colaborador_id)
+      }
       return { authId: novoAuthId }
     }
 
-    let authId = colaborador.auth_id
-
-    if (!authId) {
-      // Colaborador não tem conta no Supabase Auth — verificar se já existe pelo email, ou criar
-      const resolvido = await resolverAuthId()
-      if ('erro' in resolvido) return NextResponse.json({ error: resolvido.erro }, { status: 500 })
-      authId = resolvido.authId
-    }
+    const resolvido = await resolverAuthId()
+    if ('erro' in resolvido) return NextResponse.json({ error: resolvido.erro }, { status: 500 })
 
     // Resetar a senha no Supabase Auth
-    let { error: updateError } = await supabase.auth.admin.updateUserById(
-      authId,
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      resolvido.authId,
       { password: RESET_PASSWORD }
     )
-
-    if (updateError) {
-      // auth_id pode estar "órfão" (conta apagada diretamente no Supabase Auth,
-      // por exemplo) — tenta re-resolver pelo e-mail e refazer o reset uma vez
-      // antes de desistir.
-      const resolvido = await resolverAuthId()
-      if ('erro' in resolvido) return NextResponse.json({ error: resolvido.erro }, { status: 500 })
-
-      const retry = await supabase.auth.admin.updateUserById(resolvido.authId, { password: RESET_PASSWORD })
-      updateError = retry.error
-    }
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })

@@ -13,7 +13,7 @@ export function LanguageToggle({ variant = 'dark' }: { variant?: 'dark' | 'light
             key={l}
             onClick={() => setLang(l)}
             title={l === 'pt' ? 'Português' : 'English'}
-            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
               lang === l ? 'bg-white text-ink shadow-soft-sm' : 'text-ink-muted'
             }`}
           >

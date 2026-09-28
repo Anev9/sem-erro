@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckSquare, ChevronDown, Menu, X, LogOut, User, Building2, CheckCircle, XCircle, Users, Search, Clock, AlertTriangle, TrendingUp, UserPlus, Mail } from 'lucide-react'
+import { CheckSquare, ChevronDown, Menu, X, LogOut, Building2, CheckCircle, XCircle, Users, Search, Clock, AlertTriangle, TrendingUp, UserPlus, Mail } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { ThemeToggle } from '../../components/ThemeToggle'
 import { LanguageToggle } from '../../components/LanguageToggle'
@@ -231,10 +231,9 @@ export default function DashboardAdmin() {
       ]
     },
     {
-      title: 'Sistema',
+      title: 'Perfil',
       submenu: [
-        { label: 'Usuários', href: '/usuarios' },
-        { label: 'Tutorial', href: '/tutorial' },
+        { label: 'Alterar Senha', href: '/alterar-senha' },
       ]
     }
   ]
@@ -269,17 +268,17 @@ export default function DashboardAdmin() {
     <div className="min-h-screen">
       <div className="mx-auto max-w-[1320px] px-6 py-6">
 
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white p-3 shadow-soft-sm">
-          <div className="flex items-center gap-2.5 pl-1.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-coral font-display text-sm font-extrabold text-white shadow-[0_8px_16px_-6px_rgba(255,122,61,0.55)]">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white p-4 shadow-soft-sm">
+          <div className="flex items-center gap-3 pl-1.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-coral font-display text-sm font-extrabold text-white shadow-[0_8px_16px_-6px_rgba(255,122,61,0.55)]">
               PM
             </div>
-            <span className="font-display text-[15px] font-bold text-ink">
+            <span className="font-display text-lg font-bold text-ink">
               Performe <span className="font-medium text-ink-faint">seu Mercado — Admin</span>
             </span>
           </div>
 
-          <div className="hidden items-center gap-1 rounded-2xl bg-surface-2 p-1 md:flex">
+          <div className="hidden items-center gap-1 rounded-2xl bg-surface-2 p-1.5 md:flex">
             {menuItems.map((item) => (
               <div
                 key={item.title}
@@ -289,21 +288,21 @@ export default function DashboardAdmin() {
               >
                 <button
                   onClick={() => router.push(item.submenu[0].href)}
-                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                  className={`flex items-center gap-1.5 rounded-xl px-5 py-2.5 text-[15px] font-semibold transition-colors ${
                     activeDropdown === item.title ? 'bg-brand text-white shadow-[0_6px_14px_-6px_rgba(255,122,61,0.65)]' : 'text-ink-muted'
                   }`}
                 >
                   {item.title}
-                  <ChevronDown size={14} />
+                  <ChevronDown size={15} />
                 </button>
 
                 {activeDropdown === item.title && (
-                  <div className="absolute left-0 top-full z-[500] min-w-[200px] overflow-hidden rounded-2xl bg-white py-1.5 shadow-soft">
+                  <div className="absolute left-0 top-full z-[500] min-w-[210px] overflow-hidden rounded-2xl bg-white py-1.5 shadow-soft">
                     {item.submenu.map((sub) => (
                       <button
                         key={sub.label}
                         onClick={() => router.push(sub.href)}
-                        className="block w-full px-4 py-2.5 text-left text-sm font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+                        className="block w-full px-5 py-3 text-left text-sm font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
                       >
                         {sub.label}
                       </button>
@@ -314,16 +313,12 @@ export default function DashboardAdmin() {
             ))}
           </div>
 
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-2.5 md:flex">
             <FontSizeToggle />
             <LanguageToggle variant="light" />
             <ThemeToggle variant="light" />
-            <button onClick={() => router.push('/alterar-senha')} className="flex h-9 items-center gap-1.5 rounded-xl bg-surface-2 px-3 text-sm font-semibold text-ink-muted">
-              <User size={15} />
-              Perfil
-            </button>
-            <button onClick={handleLogout} className="flex h-9 items-center gap-1.5 rounded-xl bg-coral-tint px-3 text-sm font-semibold text-coral">
-              <LogOut size={15} />
+            <button onClick={handleLogout} className="flex h-10 items-center gap-1.5 rounded-xl bg-coral-tint px-4 text-sm font-semibold text-coral">
+              <LogOut size={16} />
               Sair
             </button>
           </div>
@@ -352,9 +347,6 @@ export default function DashboardAdmin() {
                 <FontSizeToggle />
                 <LanguageToggle variant="light" />
                 <ThemeToggle variant="light" />
-                <button onClick={() => router.push('/alterar-senha')} className="flex-1 rounded-xl bg-surface-2 px-3 py-2 text-sm font-semibold text-ink-muted">
-                  Perfil
-                </button>
                 <button onClick={handleLogout} className="flex-1 rounded-xl bg-coral-tint px-3 py-2 text-sm font-semibold text-coral">
                   Sair
                 </button>
