@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { ColaboradorSelect, type ColaboradorOpcao } from '@/components/ColaboradorSelect'
 
 type Template = {
   id: string
@@ -67,7 +68,7 @@ export default function CriarChecklistFuturoPage() {
   const [horaLimite, setHoraLimite] = useState('')
 
   const [empresas, setEmpresas] = useState<{id: string, nome_fantasia: string}[]>([])
-  const [colaboradores, setColaboradores] = useState<{id: string, nome: string}[]>([])
+  const [colaboradores, setColaboradores] = useState<ColaboradorOpcao[]>([])
   const [empresaId, setEmpresaId] = useState('')
   const [colaboradorId, setColaboradorId] = useState('')
 
@@ -93,10 +94,7 @@ export default function CriarChecklistFuturoPage() {
     setColaboradorId('')
     if (!empId || !userId) { setColaboradores([]); return }
     const res = await fetch(`/api/aluno/colaboradores?aluno_id=${userId}`)
-    if (res.ok) {
-      const todos = await res.json()
-      setColaboradores(todos.filter((c: any) => c.empresa_id === empId))
-    }
+    if (res.ok) setColaboradores(await res.json())
   }
 
   async function buscarTemplates() {
@@ -736,17 +734,13 @@ export default function CriarChecklistFuturoPage() {
 
               <div>
                 <label className={labelClass}>Colaborador responsável</label>
-                <select
+                <ColaboradorSelect
+                  colaboradores={colaboradores}
+                  empresaId={empresaId}
                   value={colaboradorId}
-                  onChange={(e) => setColaboradorId(e.target.value)}
-                  disabled={!empresaId}
+                  onChange={setColaboradorId}
                   className={`${inputClass} cursor-pointer`}
-                >
-                  <option value="">Selecione o colaborador...</option>
-                  {colaboradores.map(c => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
 

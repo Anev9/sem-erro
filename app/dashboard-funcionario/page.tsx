@@ -115,6 +115,12 @@ function ChecklistCard({
 
       {(checklist.status === 'pendente' || checklist.status === 'atrasado') && (
         <div className="flex flex-col gap-1.5 text-sm text-ink-muted">
+          {checklist.empresas?.nome_fantasia && (
+            <div className="flex items-center gap-2">
+              <Building2 size={14} />
+              {checklist.empresas.nome_fantasia}
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <Calendar size={14} />
             {checklist.proxima_execucao ? `Execução: ${formatarDataLocal(checklist.proxima_execucao)}` : ''}

@@ -31,11 +31,12 @@ export async function GET(request: NextRequest) {
     .eq('ativo', true)
     .order('proxima_execucao', { ascending: false })
 
-  // Checklists atribuídos a este colaborador OU a toda a empresa (colaborador_id nulo)
+  // Checklists atribuídos a este colaborador (em qualquer loja — um gerente pode atuar em várias)
+  // OU da empresa dele sem colaborador específico (colaborador_id nulo)
   const { data: checklists, error } = empresa_id
-    ? await query
-        .eq('empresa_id', empresa_id)
-        .or(`colaborador_id.eq.${colaborador_id},colaborador_id.is.null`)
+    ? await query.or(
+        `colaborador_id.eq.${colaborador_id},and(empresa_id.eq.${empresa_id},colaborador_id.is.null)`
+      )
     : await query.eq('colaborador_id', colaborador_id)
 
   if (error) {

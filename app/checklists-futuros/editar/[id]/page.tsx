@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { ColaboradorSelect, type ColaboradorOpcao } from '@/components/ColaboradorSelect'
 
 type ItemEdit = {
   id?: string
@@ -48,7 +49,7 @@ export default function EditarChecklistPage() {
   const [itensRemovidos, setItensRemovidos] = useState<string[]>([])
 
   const [empresas, setEmpresas] = useState<{ id: string; nome_fantasia: string }[]>([])
-  const [colaboradores, setColaboradores] = useState<{ id: string; nome: string }[]>([])
+  const [colaboradores, setColaboradores] = useState<ColaboradorOpcao[]>([])
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -118,14 +119,7 @@ export default function EditarChecklistPage() {
 
         if (checklist.empresa_id) {
           const resColab = await fetch(`/api/aluno/colaboradores?aluno_id=${alunoId}`)
-          if (resColab.ok) {
-            const todos = await resColab.json()
-            setColaboradores(
-              todos.filter((c: { id: string; nome: string; empresa_id: string }) =>
-                c.empresa_id === checklist.empresa_id
-              )
-            )
-          }
+          if (resColab.ok) setColaboradores(await resColab.json())
         }
       }
     } finally {
@@ -138,12 +132,7 @@ export default function EditarChecklistPage() {
     setColaboradorId('')
     if (!empId) { setColaboradores([]); return }
     const res = await fetch(`/api/aluno/colaboradores?aluno_id=${userId}`)
-    if (res.ok) {
-      const todos = await res.json()
-      setColaboradores(
-        todos.filter((c: { id: string; nome: string; empresa_id: string }) => c.empresa_id === empId)
-      )
-    }
+    if (res.ok) setColaboradores(await res.json())
   }
 
   function adicionarItem() {
@@ -409,15 +398,13 @@ export default function EditarChecklistPage() {
 
               <div>
                 <label className={labelClass}>Colaborador responsável</label>
-                <select
+                <ColaboradorSelect
+                  colaboradores={colaboradores}
+                  empresaId={empresaId}
                   value={colaboradorId}
-                  onChange={(e) => setColaboradorId(e.target.value)}
-                  disabled={!empresaId}
+                  onChange={setColaboradorId}
                   className={`${inputClass} cursor-pointer`}
-                >
-                  <option value="">Selecione o colaborador...</option>
-                  {colaboradores.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                </select>
+                />
               </div>
             </div>
 
