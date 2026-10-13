@@ -70,7 +70,7 @@ export default function CriarChecklistFuturoPage() {
   const [empresas, setEmpresas] = useState<{id: string, nome_fantasia: string}[]>([])
   const [colaboradores, setColaboradores] = useState<ColaboradorOpcao[]>([])
   const [empresaId, setEmpresaId] = useState('')
-  const [colaboradorId, setColaboradorId] = useState('')
+  const [colaboradorIds, setColaboradorIds] = useState<string[]>([])
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -91,7 +91,7 @@ export default function CriarChecklistFuturoPage() {
 
   async function handleEmpresaChange(empId: string) {
     setEmpresaId(empId)
-    setColaboradorId('')
+    setColaboradorIds([])
     if (!empId || !userId) { setColaboradores([]); return }
     const res = await fetch(`/api/aluno/colaboradores?aluno_id=${userId}`)
     if (res.ok) setColaboradores(await res.json())
@@ -295,7 +295,8 @@ export default function CriarChecklistFuturoPage() {
         hora_limite: horaLimite || null,
         aluno_id: Number(userId),
         empresa_id: empresaId || null,
-        colaborador_id: colaboradorId || null,
+        colaborador_id: colaboradorIds[0] || null,
+        colaborador_ids: colaboradorIds,
         ativo: true
       })
       .select()
@@ -357,7 +358,8 @@ export default function CriarChecklistFuturoPage() {
         template_id: templateSelecionado,
         aluno_id: Number(userId),
         empresa_id: empresaId || null,
-        colaborador_id: colaboradorId || null,
+        colaborador_id: colaboradorIds[0] || null,
+        colaborador_ids: colaboradorIds,
         ativo: true
       })
       .select()
@@ -425,7 +427,8 @@ export default function CriarChecklistFuturoPage() {
         hora_limite: horaLimite || null,
         aluno_id: Number(userId),
         empresa_id: empresaId || null,
-        colaborador_id: colaboradorId || null,
+        colaborador_id: colaboradorIds[0] || null,
+        colaborador_ids: colaboradorIds,
         ativo: true
       })
       .select()
@@ -733,13 +736,12 @@ export default function CriarChecklistFuturoPage() {
               </div>
 
               <div>
-                <label className={labelClass}>Colaborador responsável</label>
+                <label className={labelClass}>Colaboradores responsáveis</label>
                 <ColaboradorSelect
                   colaboradores={colaboradores}
                   empresaId={empresaId}
-                  value={colaboradorId}
-                  onChange={setColaboradorId}
-                  className={`${inputClass} cursor-pointer`}
+                  value={colaboradorIds}
+                  onChange={setColaboradorIds}
                 />
               </div>
             </div>

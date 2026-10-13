@@ -26,8 +26,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'Checklist não encontrado' }, { status: 404 })
   }
 
-  // Checklist atribuído a outro colaborador específico — bloqueia
-  if (checklist.colaborador_id !== null && checklist.colaborador_id !== colaboradorId) {
+  // Checklist atribuído a outros colaboradores específicos — bloqueia
+  const responsaveis: string[] = checklist.colaborador_ids?.length
+    ? checklist.colaborador_ids
+    : checklist.colaborador_id ? [checklist.colaborador_id] : []
+  if (responsaveis.length > 0 && !responsaveis.includes(colaboradorId)) {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 

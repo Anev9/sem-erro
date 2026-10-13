@@ -639,6 +639,7 @@ export type Database = {
           ativo: boolean | null
           chave_compartilhamento: string | null
           colaborador_id: string | null
+          colaborador_ids: string[]
           concluido_em: string | null
           concluido_por: string | null
           created_at: string | null
@@ -670,6 +671,7 @@ export type Database = {
           ativo?: boolean | null
           chave_compartilhamento?: string | null
           colaborador_id?: string | null
+          colaborador_ids?: string[]
           concluido_em?: string | null
           concluido_por?: string | null
           created_at?: string | null
@@ -701,6 +703,7 @@ export type Database = {
           ativo?: boolean | null
           chave_compartilhamento?: string | null
           colaborador_id?: string | null
+          colaborador_ids?: string[]
           concluido_em?: string | null
           concluido_por?: string | null
           created_at?: string | null

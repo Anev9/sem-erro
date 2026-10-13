@@ -33,11 +33,10 @@ export async function GET(request: NextRequest) {
 
   // Checklists atribuídos a este colaborador (em qualquer loja — um gerente pode atuar em várias)
   // OU da empresa dele sem colaborador específico (colaborador_id nulo)
+  const atribuidos = `colaborador_id.eq.${colaborador_id},colaborador_ids.cs.{${colaborador_id}}`
   const { data: checklists, error } = empresa_id
-    ? await query.or(
-        `colaborador_id.eq.${colaborador_id},and(empresa_id.eq.${empresa_id},colaborador_id.is.null)`
-      )
-    : await query.eq('colaborador_id', colaborador_id)
+    ? await query.or(`${atribuidos},and(empresa_id.eq.${empresa_id},colaborador_id.is.null)`)
+    : await query.or(atribuidos)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

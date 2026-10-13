@@ -43,7 +43,7 @@ export default function EditarChecklistPage() {
   const [horaLimite, setHoraLimite] = useState('')
   const [tipoNegocio, setTipoNegocio] = useState('')
   const [empresaId, setEmpresaId] = useState('')
-  const [colaboradorId, setColaboradorId] = useState('')
+  const [colaboradorIds, setColaboradorIds] = useState<string[]>([])
 
   const [itens, setItens] = useState<ItemEdit[]>([])
   const [itensRemovidos, setItensRemovidos] = useState<string[]>([])
@@ -84,7 +84,9 @@ export default function EditarChecklistPage() {
       setHoraLimite(checklist.hora_limite?.slice(0, 5) || '')
       setTipoNegocio(checklist.tipo_negocio || '')
       setEmpresaId(checklist.empresa_id || '')
-      setColaboradorId(checklist.colaborador_id || '')
+      setColaboradorIds(
+        checklist.colaborador_ids?.length ? checklist.colaborador_ids : checklist.colaborador_id ? [checklist.colaborador_id] : []
+      )
 
       // Carregar itens e verificar quais têm respostas
       const { data: itensData } = await supabase
@@ -129,7 +131,7 @@ export default function EditarChecklistPage() {
 
   async function handleEmpresaChange(empId: string) {
     setEmpresaId(empId)
-    setColaboradorId('')
+    setColaboradorIds([])
     if (!empId) { setColaboradores([]); return }
     const res = await fetch(`/api/aluno/colaboradores?aluno_id=${userId}`)
     if (res.ok) setColaboradores(await res.json())
@@ -195,7 +197,8 @@ export default function EditarChecklistPage() {
           dias_tolerancia: diasTolerancia,
           tipo_negocio: tipoNegocio,
           empresa_id: empresaId || null,
-          colaborador_id: colaboradorId || null,
+          colaborador_id: colaboradorIds[0] || null,
+          colaborador_ids: colaboradorIds,
           prazo_alerta: prazoAlerta || null,
           hora_limite: horaLimite || null,
         })
@@ -397,13 +400,12 @@ export default function EditarChecklistPage() {
               </div>
 
               <div>
-                <label className={labelClass}>Colaborador responsável</label>
+                <label className={labelClass}>Colaboradores responsáveis</label>
                 <ColaboradorSelect
                   colaboradores={colaboradores}
                   empresaId={empresaId}
-                  value={colaboradorId}
-                  onChange={setColaboradorId}
-                  className={`${inputClass} cursor-pointer`}
+                  value={colaboradorIds}
+                  onChange={setColaboradorIds}
                 />
               </div>
             </div>

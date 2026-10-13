@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
 
   const { data: checklists } = await supabase
     .from('checklists_futuros')
-    .select('id, nome, empresa_id, colaborador_id, recorrencia, hora_limite, ultimo_alerta_prazo_enviado_em')
+    .select('id, nome, empresa_id, colaborador_id, colaborador_ids, recorrencia, hora_limite, ultimo_alerta_prazo_enviado_em')
     .eq('ativo', true)
     .not('hora_limite', 'is', null)
 
@@ -172,14 +172,17 @@ export async function POST(request: NextRequest) {
     // Destinatários: colaborador responsável (ou toda a empresa) + quem configurou alerta adicional
     const emails = new Set<string>()
 
-    if (checklist.colaborador_id) {
-      const { data: colab } = await supabase
+    const responsaveis: string[] = checklist.colaborador_ids?.length
+      ? checklist.colaborador_ids
+      : checklist.colaborador_id ? [checklist.colaborador_id] : []
+
+    if (responsaveis.length > 0) {
+      const { data: colabs } = await supabase
         .from('colaboradores')
         .select('email')
-        .eq('id', checklist.colaborador_id)
+        .in('id', responsaveis)
         .eq('ativo', true)
-        .single()
-      if (colab?.email) emails.add(colab.email)
+      colabs?.forEach(c => c.email && emails.add(c.email))
     } else if (checklist.empresa_id) {
       const { data: colabs } = await supabase
         .from('colaboradores')
