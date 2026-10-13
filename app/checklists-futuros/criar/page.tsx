@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ColaboradorSelect, type ColaboradorOpcao } from '@/components/ColaboradorSelect'
+import { extrairItensDeArquivo, EXTENSOES_ACEITAS } from '@/lib/importar-itens'
 
 type Template = {
   id: string
@@ -31,7 +32,7 @@ const labelClass = 'mb-2 block text-sm font-semibold text-ink-muted'
 const OPCOES_CRIACAO = [
   { value: 'proprio', label: 'Fazer do meu jeito', icon: FileText, tone: 'brand' },
   { value: 'modelo', label: 'Copiar um modelo pronto', icon: Copy, tone: 'brand' },
-  { value: 'importar', label: 'Importar de planilha (CSV/Excel)', icon: Upload, tone: 'teal' },
+  { value: 'importar', label: 'Importar de arquivo (Excel, Word ou CSV)', icon: Upload, tone: 'teal' },
 ] as const
 
 const toneClasses = {
@@ -179,50 +180,27 @@ export default function CriarChecklistFuturoPage() {
     URL.revokeObjectURL(url)
   }
 
-  function decodeCsvBuffer(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer)
-    // BOM UTF-8 (EF BB BF) — o arquivo é UTF-8 de verdade
-    if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
-      return new TextDecoder('utf-8').decode(bytes)
-    }
-    const utf8 = new TextDecoder('utf-8').decode(bytes)
-    // Se a decodificação UTF-8 gerar caracteres inválidos (�), o arquivo
-    // provavelmente foi salvo pelo Excel como CSV ANSI (Windows-1252), que é
-    // o padrão do Windows em português — refaz a leitura com essa codificação.
-    if (utf8.includes('�')) {
-      return new TextDecoder('windows-1252').decode(bytes)
-    }
-    return utf8
-  }
-
-  function importarCSV(e: React.ChangeEvent<HTMLInputElement>) {
+  async function importarArquivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const buffer = ev.target?.result as ArrayBuffer
-      const text = decodeCsvBuffer(buffer)
-      const linhas = text.split(/\r?\n/).filter(l => l.trim())
-      // Ignora cabeçalho se começar com "Título" ou "titulo"
-      const inicio = linhas[0]?.toLowerCase().startsWith('título') || linhas[0]?.toLowerCase().startsWith('titulo') ? 1 : 0
-      const novosItens: ItemChecklist[] = linhas.slice(inicio).map((linha, i): ItemChecklist => {
-        const partes = linha.split(/[;,\t]/)
-        return {
-          titulo: partes[0]?.trim() || '',
-          descricao: partes[1]?.trim() || '',
-          ordem: i + 1,
-          foto_obrigatoria: false
-        }
-      }).filter(item => item.titulo)
-      if (novosItens.length === 0) {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.warning('Arquivo muito grande (máx. 10MB).')
+      return
+    }
+    try {
+      const importados = await extrairItensDeArquivo(file)
+      if (importados.length === 0) {
         toast.warning('Nenhum item encontrado no arquivo. Verifique o formato.')
         return
       }
-      setItens(novosItens)
+      setItens(importados.map((item, i) => ({ ...item, ordem: i + 1, foto_obrigatoria: false })))
       setRecorrente('proprio')
+      toast.success(`${importados.length} itens importados — revise antes de salvar`)
+    } catch (error: any) {
+      console.error('Erro ao importar arquivo:', error)
+      toast.error(error?.message || 'Não foi possível ler o arquivo.')
     }
-    reader.readAsArrayBuffer(file)
-    e.target.value = ''
   }
 
   function adicionarItem() {
@@ -633,10 +611,10 @@ export default function CriarChecklistFuturoPage() {
             {/* SEÇÃO: IMPORTAR PLANILHA */}
             {recorrente === 'importar' && (
               <div className="mb-8 rounded-2xl border-2 border-dashed border-teal bg-teal-tint p-6">
-                <h4 className="mb-1 text-sm font-semibold text-ink">Importar itens de planilha</h4>
+                <h4 className="mb-1 text-sm font-semibold text-ink">Importar itens de arquivo</h4>
                 <p className="mb-5 text-sm text-ink-muted">
-                  Faça o upload de um arquivo <strong>.csv</strong> ou <strong>.txt</strong> com um item por linha.
-                  Você pode separar título e descrição com ponto e vírgula (<code>;</code>).
+                  Envie um arquivo <strong>Excel (.xlsx)</strong>, <strong>Word (.docx)</strong> ou <strong>.csv</strong> com uma pergunta por linha.
+                  Na planilha (ou tabela do Word), a 1ª coluna vira o título e a 2ª a descrição. Sem tabela, cada parágrafo do Word vira um item.
                 </p>
 
                 <div className="mb-5">
@@ -648,8 +626,8 @@ export default function CriarChecklistFuturoPage() {
                 <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-ink-faint/30 bg-white p-6">
                   <Upload size={32} className="text-teal" />
                   <span className="text-sm font-medium text-ink">Clique para selecionar o arquivo</span>
-                  <span className="text-xs text-ink-faint">CSV, TXT — máx. 1MB</span>
-                  <input type="file" accept=".csv,.txt" onChange={importarCSV} className="hidden" />
+                  <span className="text-xs text-ink-faint">XLSX, DOCX, CSV, TXT — máx. 10MB</span>
+                  <input type="file" accept={EXTENSOES_ACEITAS} onChange={importarArquivo} className="hidden" />
                 </label>
 
                 {itens.length > 0 && itens[0].titulo && (
