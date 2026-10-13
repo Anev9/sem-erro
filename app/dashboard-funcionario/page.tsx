@@ -15,7 +15,7 @@ import {
   Smartphone,
   History
 } from 'lucide-react'
-import { calcularAlertaHorario } from '@/lib/prazo-horario'
+import { calcularAlertaHorario, parseDataLocal, formatarDataLocal } from '@/lib/prazo-horario'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -66,7 +66,7 @@ const STATUS_CONFIG = {
 }
 
 function calcularJanela(dataStr: string, dias: number) {
-  const data = new Date(dataStr)
+  const data = parseDataLocal(dataStr)
   const inicio = new Date(data)
   inicio.setDate(inicio.getDate() - dias)
   const fim = new Date(data)
@@ -81,7 +81,7 @@ function ChecklistCard({
   checklist, isNovo, onClick,
 }: { checklist: Checklist; isNovo: boolean; onClick: () => void }) {
   const config = STATUS_CONFIG[checklist.status]
-  const alertaHorario = checklist.status !== 'concluido' ? calcularAlertaHorario(checklist.hora_limite) : null
+  const alertaHorario = checklist.status !== 'concluido' ? calcularAlertaHorario(checklist.hora_limite, undefined, checklist.proxima_execucao, checklist.dias_tolerancia ?? 0) : null
   const borderClass = alertaHorario?.nivel === 'vencido' ? 'border-coral/40' : alertaHorario?.nivel === 'proximo' ? 'border-amber/40' : config.border
 
   return (
@@ -117,7 +117,7 @@ function ChecklistCard({
         <div className="flex flex-col gap-1.5 text-sm text-ink-muted">
           <div className="flex items-center gap-2">
             <Calendar size={14} />
-            {checklist.proxima_execucao ? `Execução: ${new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}` : ''}
+            {checklist.proxima_execucao ? `Execução: ${formatarDataLocal(checklist.proxima_execucao)}` : ''}
           </div>
           {checklist.status === 'pendente' && (checklist.dias_tolerancia ?? 0) > 0 && checklist.proxima_execucao && (
             <div>🕐 {(() => { const j = calcularJanela(checklist.proxima_execucao!, checklist.dias_tolerancia!); return `Disponível: ${j.inicio} – ${j.fim}` })()}</div>
@@ -274,7 +274,7 @@ export default function DashboardColaborador() {
         // então nunca marcamos como 'atrasado' com base no proxima_execucao original.
         // Apenas checklists sem recorrência usam proxima_execucao + tolerância para atraso.
         if (status !== 'concluido' && checklist.proxima_execucao && (!checklist.recorrencia || checklist.recorrencia === 'nenhuma')) {
-          const dataLimite = new Date(checklist.proxima_execucao)
+          const dataLimite = parseDataLocal(checklist.proxima_execucao)
           dataLimite.setDate(dataLimite.getDate() + (checklist.dias_tolerancia || 0))
           dataLimite.setHours(23, 59, 59, 999)
           if (new Date() > dataLimite) status = 'atrasado'
@@ -322,11 +322,11 @@ export default function DashboardColaborador() {
 
   const checklistsComPrazoProximo = checklists.filter(c => {
     if (c.status === 'concluido') return false
-    return calcularAlertaHorario(c.hora_limite)?.nivel === 'proximo'
+    return calcularAlertaHorario(c.hora_limite, undefined, c.proxima_execucao, c.dias_tolerancia ?? 0)?.nivel === 'proximo'
   })
   const checklistsComPrazoVencidoHoje = checklists.filter(c => {
     if (c.status === 'concluido') return false
-    return calcularAlertaHorario(c.hora_limite)?.nivel === 'vencido'
+    return calcularAlertaHorario(c.hora_limite, undefined, c.proxima_execucao, c.dias_tolerancia ?? 0)?.nivel === 'vencido'
   })
 
   // Dispara uma notificação do navegador (1x por dia por checklist) quando o prazo estiver próximo
@@ -336,7 +336,7 @@ export default function DashboardColaborador() {
     checklistsComPrazoProximo.forEach(c => {
       const chave = `notif_prazo_${colaborador.id}_${c.id}_${hoje}`
       if (localStorage.getItem(chave)) return
-      const alerta = calcularAlertaHorario(c.hora_limite)
+      const alerta = calcularAlertaHorario(c.hora_limite, undefined, c.proxima_execucao, c.dias_tolerancia ?? 0)
       if (!alerta) return
       new Notification(`⏰ Prazo próximo: ${c.nome}`, {
         body: `Responda até ${alerta.horaFormatada} — faltam ${alerta.minutosRestantes} minuto(s).`,

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Calendar, Clock, CheckCircle, AlertCircle, PlayCircle, Trash2, Pencil } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
-import { calcularAlertaHorario } from '@/lib/prazo-horario'
+import { calcularAlertaHorario, parseDataLocal } from '@/lib/prazo-horario'
 import { inicioPeriodo } from '@/lib/periodo'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -184,7 +184,7 @@ export default function ChecklistsFuturosPage() {
 
   function formatarData(data: string | null) {
     if (!data) return ''
-    return new Date(data).toLocaleDateString('pt-BR', {
+    return parseDataLocal(data).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
@@ -192,7 +192,7 @@ export default function ChecklistsFuturosPage() {
   }
 
   function calcularJanela(dataStr: string, dias: number) {
-    const data = new Date(dataStr)
+    const data = parseDataLocal(dataStr)
     const inicio = new Date(data)
     inicio.setDate(inicio.getDate() - dias)
     const fim = new Date(data)
@@ -267,7 +267,7 @@ export default function ChecklistsFuturosPage() {
               const StatusIcon = info.icon
               const progresso = checklist.progresso_percentual || 0
               const alertaPrazo = obterAlertaPrazo(checklist.prazo_alerta)
-              const alertaHorario = checklist.status !== 'concluido' ? calcularAlertaHorario(checklist.hora_limite) : null
+              const alertaHorario = checklist.status !== 'concluido' ? calcularAlertaHorario(checklist.hora_limite, undefined, checklist.proxima_execucao, checklist.dias_tolerancia ?? 0) : null
 
               return (
                 <Card key={checklist.id} className="p-6">

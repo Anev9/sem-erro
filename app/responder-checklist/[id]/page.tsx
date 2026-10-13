@@ -27,7 +27,7 @@ import {
   contarRespostasPendentes,
 } from '@/lib/offline-db'
 import { toast } from 'sonner'
-import { calcularAlertaHorario } from '@/lib/prazo-horario'
+import { calcularAlertaHorario, formatarDataLocal } from '@/lib/prazo-horario'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -580,7 +580,7 @@ export default function ResponderChecklistPage() {
             {checklist.proxima_execucao && (
               <span className="flex items-center gap-1.5 text-sm text-ink-muted">
                 <Calendar size={14} />
-                {new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}
+                {formatarDataLocal(checklist.proxima_execucao)}
               </span>
             )}
             <span className="flex items-center gap-1.5 text-sm text-ink-muted">
@@ -590,7 +590,7 @@ export default function ResponderChecklistPage() {
           </div>
 
           {checklist.hora_limite && (() => {
-            const alerta = calcularAlertaHorario(checklist.hora_limite)
+            const alerta = calcularAlertaHorario(checklist.hora_limite, undefined, checklist.proxima_execucao)
             const tone = alerta?.nivel === 'vencido' ? 'danger' : alerta?.nivel === 'proximo' ? 'warning' : 'neutral'
             return (
               <div className="mt-3 inline-block">

@@ -9,6 +9,7 @@ import { diaBrasil, hojeBrasil } from '@/lib/periodo'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { formatarDataLocal } from '@/lib/prazo-horario'
 
 interface ChecklistFuturo {
   id: string
@@ -234,7 +235,7 @@ export default function DetalhesChecklistFuturoPage() {
               {checklist.proxima_execucao && (
                 <div className="flex items-center gap-1.5">
                   <Calendar size={15} />
-                  {new Date(checklist.proxima_execucao).toLocaleDateString('pt-BR')}
+                  {formatarDataLocal(checklist.proxima_execucao)}
                 </div>
               )}
               {checklist.empresas && (
