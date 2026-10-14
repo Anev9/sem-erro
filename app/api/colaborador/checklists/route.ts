@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getColaboradorId } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { inicioPeriodo } from '@/lib/periodo'
+import { inicioPeriodo, ocorrenciaAtual } from '@/lib/periodo'
 
 const db = createAdminClient
 
@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
 
     return {
       ...checklist,
+      proxima_execucao: ocorrenciaAtual(checklist.proxima_execucao, checklist.recorrencia),
       total_perguntas: totalPerguntasPorChecklist.get(checklist.id) ?? 0,
       respostas_count: respostasCount,
     }

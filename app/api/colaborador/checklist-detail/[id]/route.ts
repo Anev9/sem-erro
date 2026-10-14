@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getColaboradorId } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { inicioPeriodo } from '@/lib/periodo'
+import { inicioPeriodo, ocorrenciaAtual } from '@/lib/periodo'
 
 const db = createAdminClient
 
@@ -73,7 +73,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { data: respostas } = await queryRespostas
 
   return NextResponse.json({
-    checklist,
+    checklist: {
+      ...checklist,
+      proxima_execucao: ocorrenciaAtual(checklist.proxima_execucao, checklist.recorrencia),
+    },
     itens: itens || [],
     respostas: respostas || [],
   })

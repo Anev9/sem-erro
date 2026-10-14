@@ -38,3 +38,43 @@ export function diaBrasil(dataIso: string | null | undefined): string | null {
 export function hojeBrasil(): string {
   return diaBrasil(new Date().toISOString())!
 }
+
+// Data (YYYY-MM-DD) da ocorrência do período atual de um checklist recorrente.
+// proxima_execucao guarda só a primeira ocorrência; aqui ela é projetada para o
+// período corrente (mesmo dia da semana na semana atual, mesmo dia do mês no mês
+// atual, ou hoje para diários). Se a primeira ocorrência ainda não chegou, é mantida.
+export function ocorrenciaAtual(
+  proximaExecucao: string | null | undefined,
+  recorrencia: string | null | undefined
+): string | null {
+  if (!proximaExecucao) return null
+  const original = proximaExecucao.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(original)) return proximaExecucao
+
+  const hoje = hojeBrasil()
+  const [ah, mh, dh] = hoje.split('-').map(Number)
+  const [ao, mo, dO] = original.split('-').map(Number)
+  const dataHoje = new Date(Date.UTC(ah, mh - 1, dh))
+  const dataOriginal = new Date(Date.UTC(ao, mo - 1, dO))
+
+  if (recorrencia === 'diaria') {
+    return original > hoje ? original : hoje
+  }
+  if (recorrencia === 'semanal') {
+    // Semana de domingo a sábado, igual a inicioPeriodo('semanal')
+    const inicioSemana = new Date(dataHoje)
+    inicioSemana.setUTCDate(dataHoje.getUTCDate() - dataHoje.getUTCDay())
+    if (dataOriginal >= inicioSemana) return original
+    const ocorrencia = new Date(inicioSemana)
+    ocorrencia.setUTCDate(inicioSemana.getUTCDate() + dataOriginal.getUTCDay())
+    return ocorrencia.toISOString().slice(0, 10)
+  }
+  if (recorrencia === 'mensal') {
+    if (ao > ah || (ao === ah && mo >= mh)) return original
+    // Dia 31 em mês de 30 dias (ou fevereiro) cai no último dia do mês
+    const ultimoDia = new Date(Date.UTC(ah, mh, 0)).getUTCDate()
+    const dia = Math.min(dO, ultimoDia)
+    return `${ah}-${String(mh).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+  }
+  return proximaExecucao
+}
