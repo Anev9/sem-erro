@@ -88,6 +88,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // O auth_id salvo pode apontar para a conta Auth de um e-mail antigo (e-mail do aluno
+    // alterado depois). Nesse caso, descartá-lo: senão a senha da conta errada seria
+    // sobrescrita e o login abaixo (feito com o e-mail atual) falharia.
+    if (authId) {
+      const { data: byId } = await supabase.auth.admin.getUserById(authId)
+      if (byId?.user?.email?.toLowerCase() !== emailNorm) {
+        logger.warn('login-aluno', 'auth_id aponta para outro e-mail, buscando conta por email', { aluno_id: aluno.id })
+        authId = null
+        await supabase.from('alunos').update({ auth_id: null }).eq('id', aluno.id)
+      }
+    }
+
     if (authId) {
       const { error: updateAuthError } = await supabase.auth.admin.updateUserById(authId, {
         password,
