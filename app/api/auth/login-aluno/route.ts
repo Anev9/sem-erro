@@ -25,12 +25,14 @@ export async function POST(request: NextRequest) {
     const { email, password } = parsed.data
 
     const supabase = createAdminClient()
+    const emailNorm = email.toLowerCase().trim()
 
-    // Coluna de email na tabela se chama 'e-mail' (com hífen)
+    // Coluna de email na tabela se chama 'e-mail' (com hífen).
+    // ilike: o celular costuma capitalizar a primeira letra do e-mail digitado
     const { data: aluno, error } = await supabase
       .from('alunos')
       .select('*')
-      .eq('e-mail', email)
+      .ilike('e-mail', emailNorm)
       .single()
 
     if (!aluno || error) {
@@ -67,7 +69,6 @@ export async function POST(request: NextRequest) {
     await supabase.from('alunos').update({ ultimo_login: new Date().toISOString() }).eq('id', aluno.id)
 
     // Sincronizar com Supabase Auth para centralizar autenticação
-    const emailNorm = email.toLowerCase().trim()
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
     let authId: string | null = aluno['auth_id'] ?? null

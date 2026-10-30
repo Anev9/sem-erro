@@ -3,6 +3,24 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import bcrypt from 'bcryptjs'
 import { logger } from '@/lib/logger'
 
+// A sessão vem do cookie httpOnly criado no login (invisível ao navegador) ou,
+// no fluxo do link de recuperação por e-mail, do token Supabase enviado no header.
+async function getUsuario(request: NextRequest) {
+  const bearer = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+  const token = bearer || request.cookies.get('sem-erro-token')?.value
+  if (!token) return null
+
+  const { data: { user }, error } = await createAdminClient().auth.getUser(token)
+  if (error || !user) return null
+  return user
+}
+
+export async function GET(request: NextRequest) {
+  const user = await getUsuario(request)
+  if (!user) return NextResponse.json({ autenticado: false }, { status: 401 })
+  return NextResponse.json({ autenticado: true })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { novaSenha } = await request.json()
@@ -11,30 +29,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'A senha deve ter no mínimo 6 caracteres.' }, { status: 400 })
     }
 
-    const token = request.cookies.get('sem-erro-token')?.value
-    if (!token) {
-      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+    const user = await getUsuario(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Sessão expirada. Faça login novamente.' }, { status: 401 })
     }
 
     const supabase = createAdminClient()
 
-    // Verificar JWT e obter o usuário
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
-    if (authErr || !user) {
-      return NextResponse.json({ error: 'Sessão inválida.' }, { status: 401 })
+    // Atualiza no Supabase Auth
+    const { error: authUpdateErr } = await supabase.auth.admin.updateUserById(user.id, { password: novaSenha })
+    if (authUpdateErr) {
+      logger.error('alterar-senha', authUpdateErr.message)
+      return NextResponse.json({ error: 'Erro ao salvar nova senha.' }, { status: 500 })
     }
 
-    // Buscar aluno pelo auth_id
-    const { data: aluno, error: findErr } = await supabase
+    // Buscar aluno pelo auth_id (ou pelo e-mail, se o vínculo ainda não existir)
+    let { data: aluno } = await supabase
       .from('alunos')
       .select('id')
       .eq('auth_id', user.id)
       .maybeSingle()
 
-    if (findErr || !aluno) {
-      logger.error('alterar-senha', `Aluno não encontrado para auth_id ${user.id}`)
-      return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 })
+    if (!aluno && user.email) {
+      const { data: porEmail } = await supabase
+        .from('alunos')
+        .select('id')
+        .ilike('e-mail', user.email.toLowerCase())
+        .maybeSingle()
+      aluno = porEmail
     }
+
+    // Colaborador não tem senha na tabela — a do Supabase Auth basta
+    if (!aluno) return NextResponse.json({ ok: true })
 
     const hash = await bcrypt.hash(novaSenha, 12)
 

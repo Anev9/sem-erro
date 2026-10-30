@@ -19,10 +19,22 @@ function AlterarSenhaInner() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
+  // Token Supabase do navegador — só existe no fluxo do link de recuperação por e-mail.
+  // Após o login normal, a sessão fica no cookie httpOnly, verificado pela API.
+  const [recoveryToken, setRecoveryToken] = useState<string | null>(null)
+
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setMode(user ? 'change' : 'forgot')
-    })
+    const verificar = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        setRecoveryToken(session.access_token)
+        setMode('change')
+        return
+      }
+      const res = await fetch('/api/auth/alterar-senha').catch(() => null)
+      setMode(res?.ok ? 'change' : 'forgot')
+    }
+    verificar()
   }, [])
 
   // Fluxo "Esqueci minha senha" — envia e-mail de recuperação
@@ -66,16 +78,17 @@ function AlterarSenhaInner() {
 
     setLoading(true)
     try {
-      // Atualiza no Supabase Auth
-      const { error } = await supabase.auth.updateUser({ password: novaSenha })
-      if (error) throw error
-
-      // Sincroniza senha e limpa flag senha_temporaria no banco alunos
-      await fetch('/api/auth/alterar-senha', {
+      // Atualiza no Supabase Auth, sincroniza senha e limpa flag senha_temporaria no banco alunos
+      const res = await fetch('/api/auth/alterar-senha', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(recoveryToken ? { Authorization: `Bearer ${recoveryToken}` } : {}),
+        },
         body: JSON.stringify({ novaSenha }),
       })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'Erro ao alterar senha. Tente novamente.')
 
       setMessage({ type: 'success', text: 'Senha alterada com sucesso! Redirecionando...' })
       setNovaSenha('')

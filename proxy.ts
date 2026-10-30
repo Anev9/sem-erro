@@ -9,6 +9,7 @@ const PUBLIC_API_PATHS = [
   '/api/auth/login-colaborador',
   '/api/auth/logout',
   '/api/auth/check-admin',
+  '/api/auth/alterar-senha', // valida a sessão na própria rota (cookie ou token do link de recuperação)
   '/api/sw',
   '/api/asaas/criar-assinatura',
   '/api/asaas/webhook',
