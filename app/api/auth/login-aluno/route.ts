@@ -51,16 +51,38 @@ export async function POST(request: NextRequest) {
 
     // Verificar senha (bcrypt ou plaintext legado)
     const isBcrypt = senhaCorreta.startsWith('$2b$') || senhaCorreta.startsWith('$2a$')
-    const senhaOk = isBcrypt
+    let senhaOk = isBcrypt
       ? await bcrypt.compare(password, senhaCorreta)
       : password === senhaCorreta
+
+    // Dono de loja que também é gerente (colaborador ativo com o mesmo e-mail):
+    // os dois acessos usam a mesma conta do Supabase Auth, cuja senha pode ter
+    // sido trocada pelo lado do gerente. Aceitar essa senha e sincronizá-la aqui.
+    const colaboradorAtivo = await supabase
+      .from('colaboradores')
+      .select('id')
+      .ilike('email', emailNorm)
+      .or('ativo.is.null,ativo.eq.true')
+      .limit(1)
+    const tambemGerente = (colaboradorAtivo.data?.length ?? 0) > 0
+
+    let senhaViaAuth = false
+    if (!senhaOk && tambemGerente) {
+      const authCheck = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+      const { data: authOk } = await authCheck.auth.signInWithPassword({ email: emailNorm, password })
+      senhaViaAuth = !!authOk?.session
+      senhaOk = senhaViaAuth
+    }
 
     if (!senhaOk) {
       return NextResponse.json({ error: 'E-mail ou senha incorretos' }, { status: 401 })
     }
 
-    // Migrar senha plaintext para bcrypt silenciosamente
-    if (!isBcrypt) {
+    // Migrar senha plaintext para bcrypt silenciosamente (ou sincronizar com a senha do Auth)
+    if (!isBcrypt || senhaViaAuth) {
       const hash = await bcrypt.hash(password, 12)
       await supabase.from('alunos').update({ senha: hash }).eq('id', aluno.id)
     }
@@ -175,10 +197,13 @@ export async function POST(request: NextRequest) {
       senha_temporaria: aluno['senha_temporaria'] ?? false,
     }
 
-    const response = NextResponse.json(userData)
+    // tambemGerente: a tela de login pergunta em qual painel entrar
+    const response = NextResponse.json({ ...userData, tambemGerente })
     setSessionCookies(response, session.session.access_token, session.session.refresh_token, [
       { name: 'sem-erro-aluno-id', value: String(aluno.id) },
     ])
+    // Troca de perfil no mesmo navegador: não deixar a identidade de colaborador anterior para trás
+    response.cookies.set('semerro-colaborador-id', '', { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 0 })
 
     return response
   } catch (err) {

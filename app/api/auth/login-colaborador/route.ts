@@ -180,10 +180,22 @@ export async function POST(request: NextRequest) {
       created_at: colaborador.created_at,
     }
 
-    const response = NextResponse.json({ isColaborador: true, profile })
+    // O mesmo e-mail também é dono de loja (aluno com acesso)? A tela de login
+    // pergunta em qual painel entrar, em vez de sempre cair no de colaborador.
+    const { data: alunosMesmoEmail } = await supabase
+      .from('alunos')
+      .select('id, tipo, senha')
+      .ilike('e-mail', emailNorm)
+      .limit(1)
+    const alunoMesmoEmail = alunosMesmoEmail?.[0]
+    const tambemDono = !!alunoMesmoEmail && alunoMesmoEmail.tipo !== 'admin' && !!alunoMesmoEmail.senha
+
+    const response = NextResponse.json({ isColaborador: true, profile, tambemDono })
     setSessionCookies(response, accessToken, refreshToken, [
       { name: 'semerro-colaborador-id', value: String(colaborador.id) },
     ])
+    // Troca de perfil no mesmo navegador: não deixar a identidade de aluno anterior para trás
+    response.cookies.set('sem-erro-aluno-id', '', { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 0 })
     return response
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno'

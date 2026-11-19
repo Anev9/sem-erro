@@ -12,6 +12,11 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  // E-mail com acesso de dono de loja (aluno) e de gerente (colaborador): perguntar o painel.
+  // Guarda a resposta do perfil que já autenticou; o outro é autenticado ao ser escolhido.
+  type PerfilData = Record<string, unknown>;
+  const [escolha, setEscolha] = useState<{ gerente?: PerfilData; dono?: PerfilData } | null>(null);
+  const [erroEscolha, setErroEscolha] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem('remembered-email')
@@ -33,6 +38,45 @@ export default function LoginPage() {
       throw err;
     } finally {
       clearTimeout(timer);
+    }
+  }
+
+  function entrarComoGerente(colabProfile: PerfilData) {
+    localStorage.setItem('user', JSON.stringify({ ...colabProfile, role: 'colaborador' }));
+    localStorage.setItem('userType', 'colaborador');
+    window.location.href = '/dashboard-funcionario';
+  }
+
+  function entrarComoDono(alunoData: PerfilData) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { tambemGerente, ...perfil } = alunoData;
+    localStorage.setItem('user', JSON.stringify(perfil));
+    localStorage.removeItem('userType');
+    window.location.href = perfil.senha_temporaria ? '/alterar-senha?primeiro_acesso=true' : '/dashboard-aluno';
+  }
+
+  async function escolherPerfil(perfil: 'gerente' | 'dono') {
+    if (!escolha) return;
+    if (perfil === 'gerente' && escolha.gerente) return entrarComoGerente(escolha.gerente);
+    if (perfil === 'dono' && escolha.dono) return entrarComoDono(escolha.dono);
+
+    // O perfil escolhido ainda não foi autenticado: autentica agora com a mesma senha
+    setLoading(true);
+    setErroEscolha('');
+    try {
+      const url = perfil === 'gerente' ? '/api/auth/login-colaborador' : '/api/auth/login-aluno';
+      const res = await fetchComTimeout(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Não foi possível entrar com esse perfil.');
+      if (perfil === 'gerente') entrarComoGerente(data.profile);
+      else entrarComoDono(data);
+    } catch (error: unknown) {
+      setErroEscolha(error instanceof Error ? error.message : 'Não foi possível entrar com esse perfil.');
+      setLoading(false);
     }
   }
 
@@ -97,10 +141,12 @@ export default function LoginPage() {
         const colabData = await colabRes.json();
 
         if (colabRes.ok && colabData.isColaborador && colabData.profile) {
-          const perfil = { ...colabData.profile, role: 'colaborador' };
-          localStorage.setItem('user', JSON.stringify(perfil));
-          localStorage.setItem('userType', 'colaborador');
-          window.location.href = '/dashboard-funcionario';
+          if (colabData.tambemDono) {
+            setEscolha({ gerente: colabData.profile });
+            setLoading(false);
+            return;
+          }
+          entrarComoGerente(colabData.profile);
           return;
         }
 
@@ -117,12 +163,12 @@ export default function LoginPage() {
         const alunoData = alunoRes.ok ? await alunoRes.json() : await alunoRes.json().catch(() => ({}));
 
         if (alunoRes.ok) {
-          localStorage.setItem('user', JSON.stringify(alunoData));
-          if (alunoData.senha_temporaria) {
-            window.location.href = '/alterar-senha?primeiro_acesso=true';
-          } else {
-            window.location.href = '/dashboard-aluno';
+          if (alunoData.tambemGerente) {
+            setEscolha({ dono: alunoData });
+            setLoading(false);
+            return;
           }
+          entrarComoDono(alunoData);
           return;
         }
 
@@ -242,7 +288,76 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            {escolha && (
+              <div>
+                <p style={{ textAlign: 'center', color: '#1f2937', fontWeight: 600, fontSize: '1.125rem', marginBottom: '0.25rem' }}>
+                  Como você quer entrar?
+                </p>
+                <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                  Este e-mail tem acesso de dono da loja e de gerente.
+                </p>
+                {([
+                  { perfil: 'dono' as const, titulo: 'Dono da loja', desc: 'Painel da loja, com os checklists de todos os funcionários' },
+                  { perfil: 'gerente' as const, titulo: 'Gerente', desc: 'Painel do colaborador, com os seus checklists' },
+                ]).map((op) => (
+                  <button
+                    key={op.perfil}
+                    type="button"
+                    onClick={() => escolherPerfil(op.perfil)}
+                    disabled={loading}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '1rem 1.25rem',
+                      marginBottom: '0.75rem',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '0.75rem',
+                      backgroundColor: 'white',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      opacity: loading ? 0.6 : 1,
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!loading) {
+                        e.currentTarget.style.borderColor = '#f97316';
+                        e.currentTarget.style.backgroundColor = '#fff7ed';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                      e.currentTarget.style.backgroundColor = 'white';
+                    }}
+                  >
+                    <span style={{ display: 'block', fontWeight: 'bold', color: '#1f2937', fontSize: '1rem' }}>{op.titulo}</span>
+                    <span style={{ display: 'block', color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>{op.desc}</span>
+                  </button>
+                ))}
+                {erroEscolha && (
+                  <span style={{ color: '#ef4444', fontSize: '0.875rem', display: 'block', marginBottom: '0.75rem', marginLeft: '0.5rem' }}>
+                    {erroEscolha}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setEscolha(null); setErroEscolha(''); }}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                    fontWeight: 600
+                  }}
+                >
+                  {loading ? 'Entrando...' : 'Voltar'}
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} style={{ display: escolha ? 'none' : undefined }}>
               <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ position: 'relative' }}>
                   <Mail style={{
